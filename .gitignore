@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+codes.txt
 
 node_modules
 dist
@@ -34,5 +35,5 @@ dist-ssr
 .env.*
 !.env.example
 
-# Netlify
-.netlify
+# Vercel
+.vercel

@@ -29,18 +29,20 @@ The dev server runs at http://localhost:5173.
 - Vite + React 19 + TypeScript
 - Tailwind CSS v4 (configured in `src/index.css`, no config file)
 - oxlint + Prettier
-- Deployed as a static site on Netlify
+- Vercel: static front end plus server functions in `api/`
 
-## Deploying to Netlify
+## Deploying to Vercel
 
-`netlify.toml` is already set up — build command `npm run build`, publish
-directory `dist`, with an SPA redirect so client-side routes survive a refresh.
+`vercel.json` sends every path except `/api/*` to the SPA, so client-side
+routes survive a refresh.
 
-1. Go to [Netlify](https://app.netlify.com) → **Add new site** → **Import an existing project**
-2. Connect GitHub and pick this repository
-3. Netlify reads `netlify.toml`, so accept the detected settings and deploy
+1. Go to [Vercel](https://vercel.com/new) and import this GitHub repository
+2. Vercel detects Vite. Accept the defaults and add the Hyperswitch keys under
+   **Environment Variables**
+3. Deploy
 
-Every push to the connected branch triggers a new deploy.
+Every push to the connected branch triggers a new deploy. Locally, run
+`npx vercel dev` to serve the front end and the `api/` functions together.
 
 ## Working on this with Claude Code
 
