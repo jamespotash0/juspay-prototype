@@ -247,7 +247,7 @@ cleanly with them rather than leaving a hole.
 
 ## 9. Security boundaries
 
-`HYPERSWITCH_API_KEY` in `.env` and Vercel settings, read only inside `api/`,
+`JUSPAY_API_TEST_KEY` in `.env` and Vercel settings, read only inside `api/`,
 with **no `VITE_` prefix** — Vite inlines `VITE_*` into the bundle, so the
 prefix is the whole attack.
 
@@ -274,8 +274,8 @@ not by the redirect query string.
 | **Webhooks** | **Defer.** Cannot demonstrate what they are for without durable storage and a stable URL — §8 |
 | **3DS** | **Configure only.** Leave the `three_ds` default; the simulated processors' 3DS card `4000003800000446` exercises `requires_customer_action` |
 | **Vault** | **Defer.** Pay-Then-Vault, `on_session` — Buy Now means the amount is known at intent time, so Vault-Then-Pay's advantage is inert |
-| **Smart Retries** | **Refused.** See below |
-| **Routing** | **Configure (dashboard → Workflow → Routing, rule-based).** Cards ≥ $500 → `stripe_test`; cards < $500 → 50/50 `fauxpay` / `pretendpay`; PayPal → `paypal_test` (only eligible connector); default fallback `stripe_test` then `paypal_test`. The `connector` field on each payment shows the choice. **Not yet live:** on 2026-09-16 every card payment went to `paypal_test` |
+| **Smart Retries** | **Refused.** See below. Auto Retries was on by default (max 3); turned off and verified `is_auto_retries_enabled: false` 2026-09-16 |
+| **Routing** | **Configure (dashboard → Workflow → Routing, rule-based).** Rule 1: card AND amount < 50000 → volume split 80 `stripe_test` / 20 `fauxpay`. Rule 2: card AND amount > 49999 → priority `stripe_test` (the dashboard has no ≥). PayPal → `paypal_test` (only eligible connector, no rule). Default fallback, drag order: `stripe_test`, `fauxpay`, `paypal_test`. The `connector` field on each payment shows the choice. **Live and verified 2026-09-16** (`Marketplace-Proto-Routing`, `routing_Wuodl6r3z8u3uEXw8dVZ`): $900 → `stripe_test`; 20 × $40 → 12 `stripe_test` / 8 `fauxpay`; PayPal at $40 and $900 → `paypal_test`. Amounts in the rule are **cents**; a first attempt with `500` split at $5. Rule 2 is `> 49999`, so $500.00 matches it directly (verified). Conditions inside one rule are AND: a rule with both `> 50000` and `= 50000` never matches |
 | **PayPal wallet** | **Build.** Enabled on `paypal_test`; the SDK shows the button with no code change. Redirect flow, confirmed by `GET /api/payment` on return |
 | **Affirm (pay later)** | **Defer.** Offered by `stripe_test` today; turn it off in the dashboard until design covers its states (product §4) |
 | **Auth-rate / elimination routing** | **Defer.** Picks before the attempt, so compatible with no-retries, but needs ~25 finished payments per connector and a second real processor. The simulator (hyperswitch-ten.vercel.app) fakes failure rates and sends the API key through a third-party proxy; throwaway key only, if at all |
@@ -296,6 +296,23 @@ that this build has **no dispute strategy** rather than dressing 3DS up as one.
 
 ### Smart Retries is the one feature we actively refuse
 
+**Observed live, then switched off.** With `stripe_test` added alongside
+`paypal_test`, the business profile retried a failed payment on the second
+processor automatically. Payment `cka_37640e24372c6d7b55460d`, decline card
+`…9995`:
+
+```
+attempt _1 · paypal_test · failure   "Internal Server Error from Connector"
+attempt _2 · stripe_test · charged   1.3 seconds later
+```
+
+The retried failure was a *server error*, not a clean decline — precisely the
+ambiguous category argued below — and the attempt ids carry the `_1` / `_2`
+suffix, so neither processor could have recognised a duplicate. On the sandbox
+it cost nothing; on a real processor it is the double charge. **Decision:
+automatic retries off; amount-based routing between connectors stays on.** One
+payment, one attempt, one processor.
+
 It retries across connectors, keeping one `payment_id` but **appending the
 attempt number before the processor sees it** — connector A gets `pay_x_1`,
 connector B gets `pay_x_2`, so connector-side idempotency won't dedupe them
@@ -308,16 +325,13 @@ un-charge the card.
 
 ### Connectors
 
-**In the build: four simulated processors on one profile** — `stripe_test`,
-`fauxpay`, `pretendpay`, `paypal_test`. All take credit and debit cards;
-`paypal_test` also has the PayPal wallet. Setup left to do in the control
-center:
+**In the build: three simulated processors on one profile** — `stripe_test`,
+`fauxpay`, `paypal_test` (`pretendpay` deactivated). All take credit and debit cards;
+`paypal_test` also has the PayPal wallet. Control center setup done 2026-09-16: routing rule active, Affirm off, Auto
+Retries off, Default Fallback `stripe_test`, `fauxpay`, `paypal_test`.
 
-1. Configure the routing rule (above).
-2. Turn off Pay Later → Affirm on `stripe_test`.
-
-**Verified on 2026-09-16** with direct API calls (all went to `paypal_test`,
-since routing isn't live yet):
+**Test cards, verified on 2026-09-16** with direct API calls (before routing
+was live, so all on `paypal_test`):
 
 | Case | Test data | Result |
 | --- | --- | --- |
@@ -345,8 +359,7 @@ connectors once routing is live.
 
 ## 11. Risks
 
-**Routing is not live yet**, so until it is configured every card payment lands
-on `paypal_test` and the routing demo shows nothing · decline messages come from
+Decline messages come from
 a simulator, not an issuer, and all share code `DC_08` · the simulated
 processors' capture accounting is unfaithful · `/update_metadata` returns a
 connector-layer 400 on every simulated connector even when the write lands, so

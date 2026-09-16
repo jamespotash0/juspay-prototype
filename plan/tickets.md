@@ -317,8 +317,8 @@ a batched round.
 
 ## Known constraints every ticket inherits
 
-- **No real Stripe.** Four simulated processors (`stripe_test`, `fauxpay`,
-  `pretendpay`, `paypal_test`); PayPal wallet on `paypal_test`; Affirm deferred.
+- **No real Stripe.** Three simulated processors (`stripe_test`, `fauxpay`,
+  `paypal_test`); PayPal wallet on `paypal_test`; Affirm deferred.
   Connector choice is a dashboard setting, never code. Test cards: engineering §10.
 - **Shipping is a seller-set price per listing, charged per item** — no
   combined shipping, no carrier rates. Untaxed and commission-free; it passes

@@ -284,7 +284,7 @@ code. *Changes our mind:* if we only ever needed Stripe, we would integrate
 Stripe directly and skip the orchestrator.
 
 **Providers — Stripe and PayPal, nothing else.** This is the production
-choice. **The build uses the sandbox's four simulated processors** instead
+choice. **The build uses the sandbox's three simulated processors** instead
 (below), so every provider argument here is reasoning, not something the build
 proves.
 
@@ -392,7 +392,7 @@ support is unverified. Both deferred; nothing in the build reaches `paid_out`.
 a support ticket for raw card data access with unknown lead time. The sandbox's
 simulated processors cover every state the core flow needs: distinct decline
 reasons, a 3DS challenge, and a PayPal redirect (verified, engineering §10).
-Four of them on one profile make routing something a reviewer can see. What
+Three of them on one profile make routing something a reviewer can see. What
 we give up: decline messages come from a simulator, not an issuer, and bank
 debit's `processing` state has no connector, so ACH is deferred (approach
 above). The README says plainly that the processors are simulated.
@@ -404,11 +404,33 @@ the processor. Set in the dashboard, no code:
 | --- | --- | --- |
 | PayPal | `paypal_test` | The only connector offering the PayPal wallet, so no rule is needed. The payment method decides this, not a routing choice |
 | Card, $500 or more | `stripe_test` | High-value slabs go to the established primary processor, with 3DS liability shift on a stolen card |
-| Card, under $500 | 50/50 `fauxpay` / `pretendpay` | The volume split a marketplace uses to trial new processors on low-risk orders before trusting them with big ones |
-| Fallback | `stripe_test`, then `paypal_test` | If the chosen connector is unavailable |
+| Card, under $500 | 80% `stripe_test` / 20% `fauxpay` | Trialling a challenger processor against the trusted one, on orders where a failure costs a $40 sale, not a one-of-one slab |
+| Fallback | `stripe_test`, `fauxpay`, then `paypal_test` | If the chosen connector is unavailable. `paypal_test` is last so a card payment never shows up as "PayPal" |
 
-The real routing decision is the card rows: four connectors can take a card,
-so something has to choose. It shows orchestration, not optimisation: nothing
+The real routing decision is the card rows: three connectors can take a card,
+so something has to choose.
+
+**Why split small card payments, and why 80/20.** A marketplace adds a second
+processor for fees, negotiating leverage and outage cover, but can't judge one
+without sending it real traffic: approval rate on *our* buyers is the only
+number that matters, and Auth Rate Based routing (deferred) needs ~25 finished
+payments per connector before it can score anything. The split collects that
+data. Our price range decides where: most orders are small, most money is in
+the few large ones, so orders under $500 produce data fast while risking a $40
+sale, not a $6,000 slab another collector may buy first. Above $500 the goal is
+first-attempt approval, and with Smart Retries refused there is no second
+attempt, so those always go to the proven processor. 80/20, not 50/50, because
+the point is a challenger measured against the incumbent, starting small and
+raising its share if the numbers hold. The sandbox processors approve and
+decline identically, so the build shows the mechanism, not a real difference
+in approval rate.
+
+**PayPal is the buyer's choice, never routing.** Unified Checkout shows the
+PayPal button; a buyer who clicks it goes to `paypal_test`, the only connector
+with the wallet. `paypal_test` can also take cards, which is why it sits last
+in fallback. We offer PayPal to every buyer at every price because collectors
+expect it; limiting it by price or category (it doesn't protect gold coins) is
+a later option. It shows orchestration, not optimisation: nothing
 learns, and none of the processors is real. Failure and 3DS states are tested
 on listings of $500 or more, so they always hit one known connector. This is
 **routing before an attempt, not retrying after one**. Smart Retries stays

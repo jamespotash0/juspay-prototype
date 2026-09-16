@@ -4,8 +4,9 @@
 a buyer from browsing through to a real, completed payment in the Hyperswitch
 sandbox.
 
-Status: **Re-approval needed** on sections 1, 2, 4 and 9 (processors and
-routing changed); the rest stay signed off. Sandbox verified end to end.
+Status: **Signed off — ready for execution.** All twelve sections approved
+(1, 2, 4 and 9 re-approved 2026-09-16 after the switch to simulated processors,
+PayPal and 80/20 routing). Sandbox verified end to end.
 
 | File | Owner | Holds |
 | --- | --- | --- |
@@ -28,15 +29,15 @@ Each section is approved, changed, or moved out of scope before any code.
 
 | # | Section | Status |
 | --- | --- | --- |
-| 1 | Product — Framing | 🔄 changed — point 6 added: multiple providers are structural, which is why we use an orchestrator. Needs re-approval |
-| 2 | Product — Scope | 🔄 changed — **Simulated processors replace real Stripe** (`stripe_test`, `fauxpay`, `pretendpay`, `paypal_test`). **PayPal wallet added to build.** ACH and **Affirm deferred** with written approaches. Needs re-approval |
+| 1 | Product — Framing | ✅ approved 2026-09-16 — point 6 added: multiple providers are structural, which is why we use an orchestrator. |
+| 2 | Product — Scope | ✅ approved 2026-09-16 — **Simulated processors replace real Stripe** (`stripe_test`, `fauxpay`, `paypal_test`). **PayPal wallet added to build.** ACH and **Affirm deferred** with written approaches. |
 | 3 | Product — Money model | ✅ approved — flat tax (per-state out of scope); build `pending → available` only, `held`/`negative` documented |
-| 4 | Product — Decisions | 🔄 changed — Stripe + PayPal stays the *production* provider choice; build uses simulated processors. **Routing proposed:** PayPal → `paypal_test`; card ≥ $500 → `stripe_test`; card < $500 → 50/50 `fauxpay`/`pretendpay`; fallback `stripe_test`, `paypal_test`. Affirm deferral written up. Needs re-approval |
+| 4 | Product — Decisions | ✅ approved 2026-09-16 — Stripe + PayPal stays the *production* provider choice; build uses simulated processors. **Routing:** PayPal → `paypal_test`; card ≥ $500 → `stripe_test`; card < $500 → 80/20 `stripe_test`/`fauxpay` (challenger trial); fallback `stripe_test`, `fauxpay`, `paypal_test`; PayPal is buyer choice, not routing. Affirm deferral written up. |
 | 5 | Engineering — Endpoints & sequence | ✅ approved — six endpoints; fulfilment state in payment metadata via `/update_metadata` |
 | 6 | Engineering — State machine & idempotency | ✅ approved — all 17 statuses kept; "operator alert" replaced with what the code does |
 | 7 | Engineering — Availability & read model | ✅ approved — **concurrency out of scope**; no locks, guards or revalidation; read model unchanged |
 | 8 | Engineering — Webhooks & security | ✅ approved — **webhooks out of scope**, approach documented; security boundaries unchanged |
-| 9 | Engineering — Hyperswitch surface (§10) | 🔄 changed — PayPal wallet Build, Affirm Defer; connector setup and test cards **verified against the sandbox 2026-09-16**; routing not yet live. Needs re-approval |
+| 9 | Engineering — Hyperswitch surface (§10) | ✅ approved 2026-09-16 — PayPal wallet Build, Affirm Defer; connector setup and test cards **verified against the sandbox 2026-09-16**; routing live and verified; Auto Retries off. |
 | 10 | Design — Direction & system | ✅ approved — top bar + grid, every screen a page; system tokens approved |
 | 11 | Design — Screens | ✅ approved — ten screens; confirmation = order detail; disputes = a transactions filter |
 | 12 | Design — States, edge cases, empty states | ✅ approved — stale hold copy fixed; added "action didn't save" and "refund failed" |
@@ -47,8 +48,7 @@ Each section is approved, changed, or moved out of scope before any code.
 
 Thinnest path to a real payment first:
 
-0. **Today, in the control center:** set the routing rule and turn off Affirm
-   (engineering §10)
+0. ~~Control center: routing rule, Affirm off, Auto Retries off~~ — done and verified 2026-09-16
 1. Catalogue constant, seeded with ~10 sellers and ~30 listings
 2. `POST /api/checkout` → SDK mount → `GET /api/payment` → confirmation
    *(this is the whole grade; everything else is around it)*
@@ -61,9 +61,9 @@ Thinnest path to a real payment first:
 8. Listing creation form
 9. Role switcher, empty states, polish
 
-**Sandbox verified.** Four simulated processors on the profile; PayPal wallet
+**Sandbox verified.** Three simulated processors on the profile; PayPal wallet
 on `paypal_test`. First real completed payment: **`vfy1789575028`** — `succeeded`,
-$1,900.00. Decline, 3DS and PayPal redirect verified 2026-09-16; routing not yet live. `/update_metadata` confirmed working, with a write-then-verify
+$1,900.00. Decline, 3DS, PayPal redirect and routing verified 2026-09-16. `/update_metadata` confirmed working, with a write-then-verify
 workaround for a connector-layer 400 (engineering §3).
 
 ## Definition of done
