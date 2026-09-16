@@ -50,16 +50,25 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T>(path: string, body: unknown) =>
   call<T>(path, { method: 'POST', body: JSON.stringify(body) })
 
+// Every order this tab has already read, so the order page can render at once from a list the
+// buyer, seller or admin just looked at, and refresh from the server behind it.
+// ponytail: in-memory only, gone on reload; the order page always re-reads, so it's never the truth.
+const orderCache = new Map<string, OrderView>()
+const remember = (o: OrderView) => (orderCache.set(o.paymentId, o), o)
+export const cachedOrder = (id: string) => orderCache.get(id)
+
 export const api = {
   checkout: (req: CheckoutRequest) => post<CheckoutResponse>('/api/checkout', req),
-  payment: (id: string) => call<OrderView>(`/api/payment?id=${encodeURIComponent(id)}`),
-  orderState: (req: OrderStateRequest) => post<OrderView>('/api/order-state', req),
-  refund: (req: RefundRequest) => post<OrderView>('/api/refund', req),
+  payment: (id: string) =>
+    call<OrderView>(`/api/payment?id=${encodeURIComponent(id)}`).then(remember),
+  orderState: (req: OrderStateRequest) =>
+    post<OrderView>('/api/order-state', req).then(remember),
+  refund: (req: RefundRequest) => post<OrderView>('/api/refund', req).then(remember),
   orders: (filter: { buyer: PersonaId } | { seller: string } | { all: true }) =>
     call<OrdersResponse>(
       '/api/orders?' +
         new URLSearchParams(
           'all' in filter ? { all: '1' } : (filter as Record<string, string>),
         ),
-    ),
+    ).then((r) => (r.orders.forEach(remember), r)),
 }

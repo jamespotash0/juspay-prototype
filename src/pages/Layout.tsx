@@ -92,8 +92,7 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
         {children}
       </main>
       <footer className="border-t border-rule">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p>{COPY.shell.footer}</p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-end sm:gap-6">
           <div className="flex items-center gap-3 sm:max-w-md">
             <Button variant="secondary" className="h-8 shrink-0 px-3" onClick={resetDemo}>
               {COPY.shell.reset}

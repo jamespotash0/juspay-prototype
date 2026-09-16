@@ -12,6 +12,7 @@ import { PageLayout } from './Layout.tsx'
 type Chip = 'coin' | 'card' | 'graded' | 'raw' | 'free'
 
 const CHIPS = Object.entries(COPY.catalogue.chips) as [Chip, string][]
+const PAGE_SIZE = 24
 
 // Chips in the same pair (Coins/Cards, Graded/Raw) widen; different pairs narrow.
 function matches(l: Listing, on: Set<Chip>, q: string): boolean {
@@ -42,17 +43,30 @@ export default function Catalogue() {
   const sold = useSoldIds()
   // Sold one-of-ones leave the catalogue; the listing page still says Sold for anyone with the link.
   const listings = useListings().filter((l) => !sold.has(l.id))
-  const q = (useSearchParams().get('q') ?? '').trim()
+  const params = useSearchParams()
+  const q = (params.get('q') ?? '').trim()
   const [on, setOn] = useState<Set<Chip>>(new Set())
 
   const newestFirst = [...listings].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const shown = newestFirst.filter((l) => matches(l, on, q))
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
+  const page = Math.min(pages, Math.max(1, Number(params.get('page')) || 1))
+
+  /** Same search, another page. */
+  function pageHref(n: number) {
+    const next = new URLSearchParams(params)
+    if (n === 1) next.delete('page')
+    else next.set('page', String(n))
+    const qs = next.toString()
+    return qs ? `/?${qs}` : '/'
+  }
 
   function toggle(chip: Chip) {
     const next = new Set(on)
     if (next.has(chip)) next.delete(chip)
     else next.add(chip)
     setOn(next)
+    if (page !== 1) navigate(pageHref(1), { replace: true })
   }
 
   function clear() {
@@ -96,18 +110,67 @@ export default function Catalogue() {
           <h2 className="mt-8 mb-4 font-display text-lg font-bold">
             {COPY.catalogue.allListings}
           </h2>
-          <Grid listings={newestFirst} />
+          <Grid listings={newestFirst.slice(0, PAGE_SIZE)} />
         </>
       ) : (
-        <Grid listings={shown} />
+        <>
+          <Grid listings={shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)} />
+          {pages > 1 && (
+            <nav
+              aria-label={COPY.catalogue.pagination}
+              className="money mt-8 flex items-center justify-center gap-4 text-sm"
+            >
+              <PageLink href={pageHref(page - 1)} disabled={page === 1}>
+                {COPY.catalogue.prev}
+              </PageLink>
+              <span className="text-ink-muted" aria-current="page">
+                {COPY.catalogue.page} {page} {COPY.catalogue.of} {pages}
+              </span>
+              <PageLink href={pageHref(page + 1)} disabled={page === pages}>
+                {COPY.catalogue.next}
+              </PageLink>
+            </nav>
+          )}
+        </>
       )}
     </PageLayout>
   )
 }
 
+function PageLink({
+  href,
+  disabled,
+  children,
+}: {
+  href: string
+  disabled: boolean
+  children: string
+}) {
+  const box = 'inline-flex h-9 items-center rounded-slab border px-3 font-semibold'
+  if (disabled)
+    return (
+      <span aria-disabled="true" className={`${box} border-rule text-ink-muted`}>
+        {children}
+      </span>
+    )
+  return (
+    <a
+      href={href}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return
+        e.preventDefault()
+        navigate(href)
+      }}
+      className={`${box} border-accent text-accent hover:bg-accent/5`}
+    >
+      {children}
+    </a>
+  )
+}
+
 function Grid({ listings }: { listings: Listing[] }) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {listings.map((l) => {
         const seller = SELLERS.find((s) => s.id === l.sellerId)
         if (!seller) return null

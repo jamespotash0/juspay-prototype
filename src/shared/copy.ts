@@ -154,8 +154,6 @@ export const COPY = {
     orders: 'Orders',
     sell: 'Sell',
     admin: 'Admin',
-    footer:
-      'A demo marketplace. Sellers, listings, photos and ratings are synthetic; payments are real Hyperswitch sandbox payments.',
     signIn: 'Sign in',
     signOut: 'Sign out',
     switchAccount: 'Switch demo account',
@@ -206,6 +204,10 @@ export const COPY = {
     of: 'of',
     for: 'for',
     allListings: 'All listings',
+    pagination: 'Pages',
+    page: 'Page',
+    prev: 'Previous',
+    next: 'Next',
   },
 
   listing: {
@@ -218,7 +220,8 @@ export const COPY = {
     cert: 'Cert',
     buyNow: 'Buy now',
     addToCart: 'Add to cart',
-    inCart: 'In cart — view cart',
+    inCart: 'In your cart ·',
+    viewCart: 'View cart',
     own: 'This is your listing.',
     ownLink: 'See it on your seller page',
     adminCantBuy: "Admins can't buy. Switch to a collector to buy this.",
@@ -279,6 +282,10 @@ export const COPY = {
 
   order: {
     title: 'Order',
+    loading: 'Loading order…',
+    backToOrders: 'Back to orders',
+    backToSales: 'Back to sales',
+    backToAdmin: 'Back to transactions',
     notFound: "We couldn't find this order",
     notFoundFact: 'Orders are read straight from the payment record, by reference.',
     toOrders: 'Your orders',

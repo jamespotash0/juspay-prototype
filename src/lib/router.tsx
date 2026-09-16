@@ -25,7 +25,8 @@ export function Router({
   const path = usePath()
   for (const { path: pattern, component: Page } of routes) {
     const params = matchPath(pattern, path)
-    if (params) return <Page params={params} />
+    // Keyed by path: /order/A → /order/B is a fresh page, never A's state showing under B's URL.
+    if (params) return <Page key={path} params={params} />
   }
   return <NotFound />
 }
