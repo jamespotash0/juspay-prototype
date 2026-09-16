@@ -5,6 +5,7 @@ import type {
   OrderStateRequest,
   OrderView,
   OrdersResponse,
+  PaymentMethodsResponse,
   PersonaId,
   RefundRequest,
 } from '../shared/types.ts'
@@ -71,6 +72,15 @@ export const api = {
           'all' in filter ? { all: '1' } : (filter as Record<string, string>),
         ),
     ).then((r) => (r.orders.forEach(remember), r)),
+  paymentMethods: (customer: PersonaId) =>
+    call<PaymentMethodsResponse>(
+      `/api/payment-methods?customer=${encodeURIComponent(customer)}`,
+    ).then((r) => r.methods),
+  removePaymentMethod: (customer: PersonaId, id: string) =>
+    call<PaymentMethodsResponse>(
+      `/api/payment-methods?${new URLSearchParams({ customer, id })}`,
+      { method: 'DELETE' },
+    ).then((r) => r.methods),
   /** Every seller's order in one purchase, in cart order. */
   purchase: (paymentId: string) =>
     call<OrdersResponse>(`/api/orders?payment=${encodeURIComponent(paymentId)}`).then(

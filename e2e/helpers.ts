@@ -7,10 +7,10 @@ export function logPayment(label: string, id: string) {
   console.log(`PAYMENT_ID ${label} ${id}`)
 }
 
-/** Switch persona the way a reviewer does: the top-bar select. */
+/** Switch persona the way a reviewer does: the demo account select on the account page. */
 export async function switchPersona(page: Page, persona: PersonaId) {
-  if (!page.url().startsWith('http')) await page.goto('/')
-  await page.getByLabel('Signed in as').selectOption(persona)
+  await page.goto('/account')
+  await page.getByLabel('Demo account').selectOption(persona)
 }
 
 /** Listing page → Buy now → demo sign-in → Continue to payment. Leaves the SDK mounted. */

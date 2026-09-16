@@ -218,6 +218,19 @@ export interface RefundRequest {
   reason?: string
 }
 
+/** A card Hyperswitch saved for a buyer at checkout. Safe to show: no token, no full number. */
+export interface SavedCard {
+  id: string
+  network?: string
+  last4: string
+  expiry?: string
+}
+
+/** GET /api/payment-methods?customer=<id>, and DELETE …&id=<id> */
+export interface PaymentMethodsResponse {
+  methods: SavedCard[]
+}
+
 /** GET /api/orders?buyer=<id> | ?seller=<id> | ?all=1 | ?payment=<paymentId> (every order in one purchase) */
 export interface OrdersResponse {
   orders: OrderView[]

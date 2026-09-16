@@ -2,10 +2,10 @@ import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
 import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
 import { resetDemo } from '../lib/reset.ts'
-import { signIn, signOut, useSession } from '../lib/session.ts'
+import { setMode, useDisplayName, useMode, type Mode } from '../lib/profile.ts'
+import { useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
-import type { PersonaId } from '../shared/types.ts'
 import { TopBar } from '../ui/TopBar.tsx'
 
 export function PageLayout({
@@ -33,17 +33,19 @@ export function PageLayout({
   const params = useSearchParams()
   const isAdmin = PERSONAS.find((p) => p.id === session?.persona)?.kind === 'admin'
 
-  function switchAccount(persona: PersonaId) {
-    if (!session) return
-    // A different account starts fresh on its home page, like signing out and back in.
-    navigate(persona === 'admin' ? '/admin' : '/')
-    signIn(persona, session.provider)
-  }
+  const name = useDisplayName(session?.persona ?? 'alex')
+  const storedMode = useMode()
+  // Selling pages mean selling, and your orders or cart mean buying, however you got there.
+  const mode: Mode = path.startsWith('/sell')
+    ? 'selling'
+    : /^\/(orders|order|cart|checkout)(\/|$)/.test(path)
+      ? 'buying'
+      : storedMode
+  useEffect(() => setMode(mode), [mode])
 
-  function leave() {
-    // Home first, so a guarded page doesn't bounce to /signin as the session clears.
-    navigate('/')
-    signOut()
+  function changeMode(next: Mode) {
+    setMode(next)
+    navigate(next === 'selling' ? '/sell' : '/')
   }
 
   useEffect(() => {
@@ -53,11 +55,15 @@ export function PageLayout({
   const links = (
     isAdmin
       ? [{ label: COPY.shell.admin, href: '/admin' }]
-      : [
-          { label: COPY.shell.shop, href: '/' },
-          { label: COPY.shell.orders, href: '/orders' },
-          { label: COPY.shell.sell, href: '/sell' },
-        ]
+      : mode === 'selling'
+        ? [
+            { label: COPY.shell.sell, href: '/sell' },
+            { label: COPY.shell.shop, href: '/' },
+          ]
+        : [
+            { label: COPY.shell.shop, href: '/' },
+            { label: COPY.shell.orders, href: '/orders' },
+          ]
   ).map((l) => ({
     ...l,
     current: l.href === '/' ? path === '/' : path.startsWith(l.href),
@@ -66,10 +72,9 @@ export function PageLayout({
   return (
     <div className="flex min-h-dvh flex-col">
       <TopBar
-        personas={PERSONAS}
-        activePersonaId={session?.persona ?? null}
-        onPersonaChange={switchAccount}
-        onSignOut={leave}
+        account={session ? { name } : null}
+        accountCurrent={path === '/account'}
+        {...(session && !isAdmin ? { mode, onModeChange: changeMode } : {})}
         onSignIn={() => {
           const here = path + (params.size ? `?${params}` : '')
           navigate(`/signin?next=${encodeURIComponent(here)}`)

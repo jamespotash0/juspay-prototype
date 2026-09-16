@@ -143,6 +143,7 @@ export const COPY = {
     tryAgain: 'Try again',
     cancel: 'Cancel',
     back: 'Back',
+    save: 'Save',
     saving: 'Saving…',
     freeShipping: 'Free shipping',
     plusShipping: 'shipping',
@@ -168,11 +169,15 @@ export const COPY = {
     admin: 'Admin',
     signIn: 'Sign in',
     signOut: 'Sign out',
+    account: 'Account',
+    buying: 'Buying',
+    selling: 'Selling',
+    modeLabel: 'Buying or selling',
     switchAccount: 'Switch demo account',
     /** What each demo account stands in for, shown wherever you pick one. */
     personaRole: {
-      alex: { short: 'Buyer', long: 'Buyer: browses, pays, tracks orders' },
-      mike: { short: 'Seller', long: 'Seller: lists items, ships sales' },
+      alex: { short: 'Collector', long: 'Collector: buys and sells' },
+      mike: { short: 'Collector', long: 'Collector: buys and sells' },
       admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
     },
     reset: 'Reset demo',
@@ -182,6 +187,36 @@ export const COPY = {
       'Slabbed is a demo. Listings, sellers and accounts are synthetic; payments run in the Hyperswitch sandbox.',
     resetBody:
       "Clears this browser's cart, created listings, sold markers and sign-in. Real sandbox orders are never touched.",
+  },
+
+  account: {
+    title: 'Account',
+    profile: 'Profile',
+    name: 'Name',
+    nameHint: 'Shown in the top bar and filled in as your ship-to name at checkout.',
+    email: 'Email',
+    signedInWith: (provider: string) => `Signed in with ${provider}`,
+    saved: 'Saved',
+    mode: 'Buying and selling',
+    modeFact:
+      'Every Slabbed account can buy and sell. Choose what the app leads with; you can switch any time.',
+    buyingFact: 'Shop and your orders',
+    sellingFact: 'Your listings, sales and earnings',
+    methods: 'Payment methods',
+    methodsLoading: 'Loading saved cards…',
+    methodsFailed: "We couldn't load your saved cards.",
+    noCards:
+      'No saved cards yet. Tick "Save card" when you pay, and the card shows up here.',
+    card: (network: string | undefined, last4: string) =>
+      `${network ?? 'Card'} ending in ${last4}`,
+    expires: (expiry: string) => `Expires ${expiry}`,
+    remove: 'Remove',
+    removeConfirm: (label: string) => `Remove ${label} from your account?`,
+    removeFailed: "That card wasn't removed. Try again.",
+    otherMethods:
+      'Bank accounts and PayPal can be used at checkout but aren’t saved to your account yet. Only cards are stored, with Hyperswitch, never by Slabbed.',
+    demo: 'Demo account',
+    demoFact: 'Switch to another demo person to see the marketplace from their side.',
   },
 
   signIn: {

@@ -2,6 +2,7 @@ import { useEffect, type ComponentType } from 'react'
 import { navigate, type Params } from './lib/navigation.ts'
 import { Router, type Route } from './lib/router.tsx'
 import { useSession } from './lib/session.ts'
+import Account from './pages/Account.tsx'
 import Admin from './pages/Admin.tsx'
 import AdminPayment from './pages/AdminPayment.tsx'
 import Cart from './pages/Cart.tsx'
@@ -41,6 +42,7 @@ const routes: Route[] = [
   // A bare payment id shows every seller's order in that purchase; <paymentId>.<sellerId> shows one.
   { path: '/order/:paymentId', component: signedIn(Order) },
   { path: '/orders', component: signedIn(Orders) },
+  { path: '/account', component: signedIn(Account) },
   { path: '/sell', component: signedIn(Sell) },
   { path: '/sell/new', component: signedIn(SellNew) },
   { path: '/admin', component: signedIn(Admin) },

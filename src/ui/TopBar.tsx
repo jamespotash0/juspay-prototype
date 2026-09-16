@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 import { COPY } from '../shared/copy'
 import { Icon } from './Icon'
-import type { Persona, PersonaId } from '../shared/types'
+import type { Mode } from '../lib/profile'
 
 export interface NavLink {
   label: string
@@ -10,11 +10,14 @@ export interface NavLink {
 }
 
 interface TopBarProps {
-  personas: Persona[]
-  /** null while signed out: the bar shows a Sign in button instead of the account area. */
-  activePersonaId: PersonaId | null
-  onPersonaChange: (id: PersonaId) => void
-  onSignOut: () => void
+  /** null while signed out: the bar shows a Sign in button instead of the account link. */
+  account: { name: string } | null
+  accountHref?: string
+  /** True on the account page itself. */
+  accountCurrent?: boolean
+  /** Collectors only: whether the app leads with buying or selling. */
+  mode?: Mode
+  onModeChange?: (mode: Mode) => void
   onSignIn: () => void
   /** Clears this browser's demo state. The bar asks for confirmation first. */
   onReset: () => void
@@ -34,10 +37,11 @@ const PILL =
 // Desktop: one row — wordmark, links, account, cart, reset. Search lives on the catalogue.
 // Below sm: row 1 wordmark · links · cart · reset; row 2 account. Nothing is hidden.
 export function TopBar({
-  personas,
-  activePersonaId,
-  onPersonaChange,
-  onSignOut,
+  account,
+  accountHref = '/account',
+  accountCurrent,
+  mode,
+  onModeChange,
   onSignIn,
   onReset,
   links,
@@ -60,7 +64,12 @@ export function TopBar({
           onClick={go(homeHref)}
           className="order-1 inline-flex items-center gap-1.5 font-wordmark text-base font-bold tracking-tight sm:order-none sm:mr-3 sm:text-lg"
         >
-          <img src="/favicon.svg" alt="" aria-hidden="true" className="h-[1.25em] w-auto" />
+          <img
+            src="/favicon.svg"
+            alt=""
+            aria-hidden="true"
+            className="h-[1.25em] w-auto"
+          />
           {S.wordmark}
         </a>
 
@@ -78,37 +87,42 @@ export function TopBar({
           ))}
         </nav>
 
-        {activePersonaId ? (
-          <div className="order-5 flex min-w-0 items-center gap-1 max-sm:w-full sm:order-none">
-            {/* The select shows the signed-in name; switching keeps the provider. */}
-            <label className="sr-only" htmlFor="topbar-persona">
-              {S.switchAccount}
-            </label>
-            <span className="relative inline-flex min-w-0">
-              <select
-                id="topbar-persona"
-                value={activePersonaId}
-                onChange={(e) => onPersonaChange(e.target.value as PersonaId)}
-                className={`${PILL} min-w-0 cursor-pointer appearance-none truncate pr-8 pl-3.5`}
+        {account ? (
+          <div className="order-5 flex min-w-0 items-center gap-1.5 max-sm:w-full sm:order-none">
+            {mode && onModeChange && (
+              <div
+                role="group"
+                aria-label={S.modeLabel}
+                className="flex shrink-0 rounded-full border border-rule-strong bg-paper p-0.5 text-[13px]"
               >
-                {personas.map((p) => (
-                  <option key={p.id} value={p.id} title={S.personaRole[p.id].long}>
-                    {p.name} · {S.personaRole[p.id].short}
-                  </option>
+                {(['buying', 'selling'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={mode === m}
+                    onClick={() => onModeChange(m)}
+                    className="h-6.5 rounded-full px-3 font-medium text-ink-muted hover:text-ink aria-pressed:bg-primary aria-pressed:text-primary-ink"
+                  >
+                    {m === 'buying' ? S.buying : S.selling}
+                  </button>
                 ))}
-              </select>
-              <Icon
-                name="chevronDown"
-                className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-ink-muted"
-              />
-            </span>
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="inline-flex h-8 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap text-ink-muted transition-colors hover:bg-bone hover:text-ink"
+              </div>
+            )}
+            <a
+              href={accountHref}
+              onClick={go(accountHref)}
+              aria-current={accountCurrent ? 'page' : undefined}
+              aria-label={`${S.account}: ${account.name}`}
+              className={`${PILL} min-w-0 gap-2 pr-3.5 pl-1 aria-[current=page]:border-ink`}
             >
-              {S.signOut}
-            </button>
+              <span
+                aria-hidden="true"
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold"
+              >
+                {account.name.trim().charAt(0).toUpperCase()}
+              </span>
+              <span className="truncate">{account.name}</span>
+            </a>
           </div>
         ) : (
           <button

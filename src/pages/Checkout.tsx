@@ -6,11 +6,11 @@ import { checkoutLines, useCart } from '../lib/cart.ts'
 import { useListings, userListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
+import { useDisplayName } from '../lib/profile.ts'
 import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
-import { PERSONAS } from '../shared/seed.ts'
 import type { Breakdown, CheckoutResponse, ShipTo } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
@@ -27,13 +27,14 @@ const input =
 
 export default function Checkout() {
   const persona = usePersona()
+  const displayName = useDisplayName(persona)
   const listings = useListings()
   const sold = useSoldIds()
   // The whole cart in one payment. A sold one-of-one can't be bought again, and your own listings
   // stay in the cart but out of the charge.
   const lines = checkoutLines(useCart(), listings, sold, persona)
   const [shipTo, setShipTo] = useState<ShipTo>({
-    name: PERSONAS.find((p) => p.id === persona)?.name ?? '',
+    name: displayName,
     line1: '1 Main St',
     city: 'Austin',
     state: 'TX',
