@@ -54,7 +54,8 @@ export async function GET(request: Request): Promise<Response> {
       return true
     })
 
-    const views = await Promise.all(mine.map(toOrderView))
+    // Wrapped: .map would pass the index as toOrderView's second (refunds) argument.
+    const views = await Promise.all(mine.map((p) => toOrderView(p)))
     const orders = views
       .filter((o) => all || !NOT_AN_ORDER.includes(o.state))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))

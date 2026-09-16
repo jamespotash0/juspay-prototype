@@ -3,6 +3,7 @@ import type { Listing, Seller } from '../shared/types'
 import { COPY } from '../shared/copy'
 import { gradeLabel } from './format'
 import { Money } from './Money'
+import { Slab } from './Slab'
 
 interface ListingTileProps {
   listing: Listing
@@ -25,17 +26,12 @@ export function ListingTile({ listing, seller, href, onNavigate }: ListingTilePr
       onClick={open}
       className="group flex flex-col overflow-hidden rounded-slab border border-rule bg-paper hover:border-ink"
     >
-      <div className="aspect-square border-b border-rule bg-bone">
-        <img
-          src={listing.imageUrl}
-          alt={listing.title}
-          loading="lazy"
-          className="size-full object-contain p-3"
-        />
+      <div className="aspect-[4/5] min-h-0 border-b border-rule bg-bone p-2">
+        <Slab listing={listing} />
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <Money cents={listing.priceCents} className="text-lg font-bold" />
-        <h3 className="line-clamp-2 text-sm leading-snug group-hover:underline">
+      <div className="flex flex-1 flex-col gap-0.5 p-2.5">
+        <Money cents={listing.priceCents} className="text-base font-bold" />
+        <h3 className="line-clamp-2 text-[13px] leading-snug group-hover:underline">
           {listing.title}
         </h3>
         <p className="text-xs text-ink-muted">

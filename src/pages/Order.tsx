@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { clearAttempt } from '../checkout/attempt.ts'
-import { api } from '../lib/api.ts'
+import { api, cachedOrder } from '../lib/api.ts'
 import { clearCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
 import { navigate, type Params } from '../lib/navigation.ts'
+import { Link } from '../lib/router.tsx'
 import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
@@ -28,7 +29,10 @@ export default function Order({ params }: { params: Params }) {
   const paymentId = params.paymentId
   const persona = usePersona()
   const listings = useListings()
-  const [order, setOrder] = useState<OrderView | null>(null)
+  // Render at once from a list the viewer just saw; the read below refreshes it straight away.
+  const [order, setOrder] = useState<OrderView | null>(
+    () => cachedOrder(paymentId) ?? null,
+  )
   const [ambiguous, setAmbiguous] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [round, setRound] = useState(0)
@@ -80,10 +84,25 @@ export default function Order({ params }: { params: Params }) {
     )
 
   const isSeller = !!order && persona === order.sellerId && persona !== order.buyerId
+  // Back to the list this viewer reaches orders from — not browser history, which after a
+  // checkout would land on a checkout page for a payment that's already done.
+  const back =
+    persona === 'admin'
+      ? { to: '/admin', label: TEXT.backToAdmin }
+      : isSeller
+        ? { to: '/sell', label: TEXT.backToSales }
+        : { to: '/orders', label: TEXT.backToOrders }
 
   return (
     <PageLayout title={TEXT.title}>
       <div className="flex max-w-3xl flex-col gap-6">
+        <Link
+          to={back.to}
+          className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-accent hover:underline"
+        >
+          <Icon name="arrowLeft" className="size-4" />
+          {back.label}
+        </Link>
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {order && !ambiguous && (
             <StatusPill
@@ -194,7 +213,14 @@ function Row({ label, cents, bold }: { label: string; cents: number; bold?: bool
 }
 
 function StateNotice({ order }: { order: OrderView | null }) {
-  if (!order || order.state === 'awaiting_payment' || order.state === 'unknown')
+  // Nothing read yet: that's loading, not "confirming" — an order paid weeks ago isn't in flight.
+  if (!order)
+    return (
+      <p role="status" className="text-sm text-ink-muted">
+        {TEXT.loading}
+      </p>
+    )
+  if (order.state === 'awaiting_payment' || order.state === 'unknown')
     return <Notice tone="warning" title={COPY.checkout.confirming} body={null} />
   switch (order.state) {
     case 'action_required':

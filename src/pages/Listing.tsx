@@ -9,6 +9,7 @@ import { PERSONAS, SELLERS } from '../shared/seed.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
+import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
 import { gradeLabel, plural } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
@@ -58,12 +59,8 @@ export default function Listing({ params }: { params: Params }) {
       </Link>
 
       <div className="mt-4 grid gap-6 md:grid-cols-2 lg:gap-10">
-        <div className="aspect-square rounded-slab border border-rule bg-paper md:sticky md:top-20 md:self-start">
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="size-full object-contain p-6"
-          />
+        <div className="aspect-square min-h-0 rounded-slab border border-rule bg-paper p-6 md:sticky md:top-20 md:self-start">
+          <Slab listing={listing} />
         </div>
 
         <div className="flex flex-col gap-6">
@@ -114,12 +111,21 @@ export default function Listing({ params }: { params: Params }) {
                 <Button onClick={buyNow} className="min-w-40">
                   {T.buyNow}
                 </Button>
+                {/* One-of-ones: a second click never adds a second copy. */}
                 <Button
                   variant="secondary"
-                  onClick={() => (inCart ? navigate('/cart') : addToCart(listing.id))}
+                  onClick={() => inCart || addToCart(listing.id)}
                 >
-                  {inCart ? T.inCart : T.addToCart}
+                  {T.addToCart}
                 </Button>
+                {inCart && (
+                  <p className="self-center text-sm text-ink-muted">
+                    {T.inCart}{' '}
+                    <Link to="/cart" className="font-medium text-accent hover:underline">
+                      {T.viewCart}
+                    </Link>
+                  </p>
+                )}
               </div>
             )}
             <p className="max-w-[60ch] text-sm">{COPY.hold}</p>

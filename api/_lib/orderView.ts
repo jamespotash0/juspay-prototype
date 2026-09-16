@@ -10,7 +10,7 @@ import {
   type PaymentState,
   type RefundState,
 } from '../../src/shared/types.js'
-import { hsFetch } from './hyperswitch.js'
+import { hsFetch, type HsResult } from './hyperswitch.js'
 
 /** The fields of a Hyperswitch v1 payment we read. */
 export interface HsPayment {
@@ -45,7 +45,17 @@ const int = (v: string | undefined) => {
 }
 
 /** Builds the one read shape from a payment; fetches its refunds (a refunded payment still reads succeeded). */
-export async function toOrderView(p: HsPayment): Promise<OrderView> {
+const readRefunds = (paymentId: string) =>
+  hsFetch<HsRefundList>('/refunds/list', {
+    method: 'POST',
+    body: JSON.stringify({ payment_id: paymentId }),
+  })
+
+export async function toOrderView(
+  p: HsPayment,
+  /** Already started by the caller, so it runs alongside the payment read. */
+  refundsRead?: Promise<HsResult<HsRefundList>>,
+): Promise<OrderView> {
   const m = p.metadata ?? {}
   const itemsCents = int(m[META.itemsCents])
   const shippingCents = int(m[META.shippingCents])
@@ -61,10 +71,7 @@ export async function toOrderView(p: HsPayment): Promise<OrderView> {
   const state = mapStatus(p.status)
   // Only money that moved can be refunded, so skip the lookup otherwise (saves N calls in /api/orders).
   const refunds = REFUNDABLE.includes(state)
-    ? await hsFetch<HsRefundList>('/refunds/list', {
-        method: 'POST',
-        body: JSON.stringify({ payment_id: p.payment_id }),
-      })
+    ? await (refundsRead ?? readRefunds(p.payment_id))
     : null
   // ponytail: a failed refunds read reports 'none'; the order page re-reads, add an error field if admin needs to see it
   const list = refunds?.ok ? refunds.data.data : []
@@ -146,8 +153,11 @@ export function declineReason(
 
 /** Reads a payment as an OrderView, or the error Response to return. */
 export async function readOrder(paymentId: string): Promise<OrderView | Response> {
+  // The refunds read doesn't depend on the payment read, so run both at once rather than one
+  // after the other. For an unpaid payment the refunds result is simply unused (hsFetch never throws).
+  const refundsRead = readRefunds(paymentId)
   const res = await hsFetch<HsPayment>(`/payments/${paymentId}`)
-  if (res.ok) return toOrderView(res.data)
+  if (res.ok) return toOrderView(res.data, refundsRead)
   if (res.status === 404) return jsonError(404, 'NOT_FOUND', 'Payment not found')
   return jsonError(502, 'UPSTREAM', 'Could not read the payment')
 }
