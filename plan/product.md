@@ -42,8 +42,9 @@ dual-role user buying something pays by card like anyone else.
 2. **The payment method decides who carries the risk, not just the fee.** The
    protections buyers value most are asymmetric against a marketplace that is
    merchant of record — the claims they cover are the ones we cannot recover.
-   Detail in §4. **The build runs cards through Stripe test mode**, with bank
-   debit as a stretch; PayPal and payouts shape the argument, not the build.
+   Detail in §4. **The build offers card and PayPal**, both through the
+   sandbox's simulated processors; bank debit, Affirm and payouts shape the
+   argument, not the build.
 
 3. **Inventory is one-of-one.** There is exactly one of each item, so a
    marketplace here is a race by nature and a production build needs
@@ -59,6 +60,11 @@ dual-role user buying something pays by card like anyone else.
    is eBay's Authenticity Guarantee — a third-party authenticator in the
    shipping path. **Out of scope.** Its one payments consequence: it would turn
    our release trigger from a seller's action into an authenticator's verdict.
+
+6. **More than one payment provider is structural, not optional.** Buyers
+   expect cards, bank debit and PayPal; sellers need payouts to a bank or to
+   PayPal; high-value orders will want financing. No single provider covers all
+   of it (§4). That is the reason for an orchestrator: see *Why Hyperswitch*.
 
 ---
 
@@ -95,12 +101,11 @@ This is the grade:
 
 - ✅ Payment creation, server-side; secret key never in the browser
 - ✅ Successful payment — a real `succeeded` in the sandbox dashboard
-- ✅ Failed payment — hard and soft declines with Stripe's real decline codes
-- ✅ 3DS — `requires_customer_action` as its own state, via Stripe's challenge card
-- ✅ Routing — Stripe primary, `paypal_test` as fallback, visible per payment in the dashboard
-- ◻️ Stretch: ACH bank debit held in `processing`, with payout waiting on it
+- ✅ Failed payment — hard declines (declined, lost, stolen), each with its own message. The soft "try again" decline is handled in code but only occurs on `fauxpay` at random, so it is not demonstrated (engineering §10)
+- ✅ PayPal — a redirect to PayPal and back, confirmed server-side like any other payment
+- ✅ Routing — a $40 card and a $2,000 coin land on different connectors, visible per payment in the dashboard; the buyer sees only "Card" or "PayPal", never the processor
 - ✅ Payment status — authoritative server-side read, never the redirect
-- ✅ Refund — full and partial, reached through a buyer dispute
+- ✅ Refund — full, reached through a buyer dispute
 - ✅ Marketplace fee calculation — visible on the seller page
 - ✅ Seller balance — `pending → available`, moved by the seller shipping
 
@@ -111,11 +116,12 @@ preview URL cannot demonstrate what webhooks are for) · **concurrency** — no
 locks, reservations or sold-out races · **hold timers** — money moves on
 actions · per-state sales tax · seller onboarding and KYC · shipping and
 tracking integration · messaging · reviews · auctions · offers · saved cards ·
-wallets and PayPal as live methods (approach in §4) · Stripe Connect split
+Apple and Google Pay · **ACH bank debit** and **Affirm** (both approaches in
+§4) · a real Stripe or PayPal account behind the connectors · Stripe Connect split
 payments · real payouts · card-network dispute
 handling (our "dispute" is an in-marketplace claim, not a chargeback) ·
 authenticity guarantee · promoted listings · seller subscriptions · real auth ·
-sign-up (the mocked sign-in covers it).
+sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds** — refunds are full only · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
 
 ---
 
@@ -147,6 +153,14 @@ tracking are out of scope.
 
 The buyer never sees the commission; the seller never sees the tax. Three
 destinations, not two. **Tax is never inside the commission base.**
+
+**Shipping is a seller-set price per listing, charged per item, and may be
+free** (`shippingCents` of 0, shown as "Free shipping", never "$0.00"). It is not
+taxed, carries no commission, and passes straight through to the seller. No
+combined shipping and no carrier rates: nearly every listing is one-of-one, so
+most orders are a single item. The known cost is that several items from one
+seller pay shipping once per item. A production build would charge each seller
+group once, using its highest shipping price.
 
 ### Seller balance states
 
@@ -226,10 +240,52 @@ involuntary creditor, and it isn't mechanically available anyway.
 **Never auto-retry an ambiguous payment.** A double charge between two
 individuals is unrecoverable by reassurance and worse than a lost sale.
 
-**Providers — Stripe and PayPal, nothing else.** **Stripe is in the build**
-(test mode, connected to the Hyperswitch sandbox); PayPal and all payouts are
-production reasoning. `paypal_test` stays on the profile as a fallback, and is
-a simulated card processor, not PayPal.
+**Why Hyperswitch at all, when we pick the processors ourselves.** Choosing
+Stripe and PayPal is a business decision; Hyperswitch is what stops that
+decision from being hard-coded. It earns its place in three layers, and only
+the first is visible in a sandbox.
+
+*Now, in the build:*
+- **One integration for every provider.** One payment form and one API. Adding
+  PayPal, Affirm or Adyen later is a dashboard change, not a second checkout.
+- **One set of payment states.** Stripe and PayPal report outcomes and decline
+  reasons differently; Hyperswitch normalises them, so our order and balance
+  logic is written once, against one state machine (engineering §4).
+- **Routing set in the dashboard, not in code.** Today a static rule.
+
+*At launch:*
+- **Saved cards not tied to one processor.** Hyperswitch stores the card, so
+  moving volume off Stripe does not mean asking collectors to re-enter cards.
+  Repeat buyers are the core of this market, so that is fee negotiating power.
+- **Refunds and reconciliation in one place**, whichever rail took the money.
+
+*At volume, where Hyperswitch decides and we don't:*
+- **Routing by approval rate.** Hyperswitch learns which processor approves
+  more and shifts traffic before the attempt, not by retrying. At a ~$6,000
+  top price, one declined payment is a lost sale of that size, so a point of
+  approval rate is worth more here than in a low-ticket shop. It starts scoring
+  after about 25 finished payments per connector and keeps 20% of traffic on
+  the other connector to stay current.
+- **Routing around outages** (elimination routing): a failing processor drops
+  down the list automatically.
+- **Routing US debit over cheaper networks** (Star, Pulse, NYCE, Accel). On a
+  $2,000 debit payment the network fee difference is real money; the sandbox
+  only supports it through Adyen.
+
+These need a second *real* processor and payment history. Hyperswitch's
+routing simulator can draw the charts, but it works by sending decline cards
+at failure rates we choose, and every simulated processor declines identically on
+the same card, so any "learning" it shows is one we manufactured. We show the
+rule-based foundation honestly and write up the path: rules → add Adyen once
+volume justifies it (which also unlocks debit routing) → turn on approval-rate
+and outage routing. None of those steps changes our
+code. *Changes our mind:* if we only ever needed Stripe, we would integrate
+Stripe directly and skip the orchestrator.
+
+**Providers — Stripe and PayPal, nothing else.** This is the production
+choice. **The build uses the sandbox's three simulated processors** instead
+(below), so every provider argument here is reasoning, not something the build
+proves.
 
 A marketplace needs two jobs done: **take money from buyers** and **pay money
 to sellers**. We picked the fewest providers that cover both without overlap.
@@ -270,7 +326,8 @@ onboarding form asking for identity and a bank account.
 $1,800 purchase, and card disputes follow network rules we can predict. The
 cost is ~2.9% + 30¢: about $174 on a $6,000 slab.
 
-**Why bank debit is offered, with limits.** On that same $6,000 slab ACH
+**Why bank debit would be offered, with limits (deferred: no sandbox
+connector we use supports it).** On that same $6,000 slab ACH
 costs ~$5 against ~$174, which matters at our top price band. Robinhood funds
 accounts the same way. The risk is that a consumer can return a debit as
 unauthorised for **60 days**, versus two banking days for insufficient funds.
@@ -304,8 +361,18 @@ individual sellers already live in PayPal and would rather be paid there.
 second processor for Hyperswitch routing and failover, which pays at eBay's
 volume, not ours. *Plaid* duplicates Financial Connections. *Wallets* (Apple
 and Google Pay) add speed, not safety: Apple's terms send users to their card
-issuer for disputes. They come for free through Stripe later. *Affirm* fits
-the $6,000 end but may exclude bullion; deferred.
+issuer for disputes. They come for free through Stripe later.
+
+**Affirm is deferred, and why it's on the list at all.** Pay-later fits the top
+of this market: a collector who wants a $6,000 slab today and pays over months.
+Affirm pays the merchant up front and carries the credit risk, so it doesn't
+change our hold. Deferred because it is a second redirect method with its own
+pending and declined-application states for design to cover, and Affirm may
+exclude bullion. *Approach:* enable Pay Later → Affirm on a connector, offer it
+only above a price floor (say $500), and treat its return exactly like PayPal's:
+confirm server-side, never trust the redirect. The sandbox's `stripe_test`
+already offers it, so this is a dashboard toggle plus design states, not new
+integration code.
 
 **Seller exposure after a lost dispute.** If a refund lands after the seller
 was paid, we reverse the Stripe transfer. If their balance cannot cover it,
@@ -320,15 +387,51 @@ on the ship event. Hyperswitch's Payouts API does support Stripe in code, but
 needs a Stripe account per seller with full KYC details, and hosted-sandbox
 support is unverified. Both deferred; nothing in the build reaches `paid_out`.
 
-**Why Stripe is in the build, not just the argument.** The dummy connector
-could not show the states this vertical depends on: real decline reasons, a
-3DS challenge on a $6,000 card payment, and a debit that sits in `processing`.
-Stripe test mode shows all three, and implements `update_metadata` properly.
-With two connectors on one profile, routing becomes something a reviewer can
-see rather than a sentence.
+**Why the build uses simulated processors, not real Stripe.** Real Stripe needs
+a support ticket for raw card data access with unknown lead time. The sandbox's
+simulated processors cover every state the core flow needs: distinct decline
+reasons and a PayPal redirect (verified, engineering §10).
+Three of them on one profile make routing something a reviewer can see. What
+we give up: decline messages come from a simulator, not an issuer, and bank
+debit's `processing` state has no connector, so ACH is deferred (approach
+above). The README says plainly that the processors are simulated.
 
-**Routing rule, and why.** Stripe first for every payment; `paypal_test` only as
-fallback when Stripe is unavailable. Bank debit can only go to Stripe. This is
+**Routing rule, and why.** The buyer picks a payment method; Hyperswitch picks
+the processor. Set in the dashboard, no code:
+
+| Buyer chooses | Goes to | Why |
+| --- | --- | --- |
+| PayPal | `paypal_test` | The only connector offering the PayPal wallet, so no rule is needed. The payment method decides this, not a routing choice |
+| Card, $500 or more | `stripe_test` | High-value slabs go to the established primary processor, with 3DS liability shift on a stolen card |
+| Card, under $500 | 80% `stripe_test` / 20% `fauxpay` | Trialling a challenger processor against the trusted one, on orders where a failure costs a $40 sale, not a one-of-one slab |
+| Fallback | `stripe_test`, `fauxpay`, then `paypal_test` | If the chosen connector is unavailable. `paypal_test` is last so a card payment never shows up as "PayPal" |
+
+The real routing decision is the card rows: three connectors can take a card,
+so something has to choose.
+
+**Why split small card payments, and why 80/20.** A marketplace adds a second
+processor for fees, negotiating leverage and outage cover, but can't judge one
+without sending it real traffic: approval rate on *our* buyers is the only
+number that matters, and Auth Rate Based routing (deferred) needs ~25 finished
+payments per connector before it can score anything. The split collects that
+data. Our price range decides where: most orders are small, most money is in
+the few large ones, so orders under $500 produce data fast while risking a $40
+sale, not a $6,000 slab another collector may buy first. Above $500 the goal is
+first-attempt approval, and with Smart Retries refused there is no second
+attempt, so those always go to the proven processor. 80/20, not 50/50, because
+the point is a challenger measured against the incumbent, starting small and
+raising its share if the numbers hold. The sandbox processors approve and
+decline identically, so the build shows the mechanism, not a real difference
+in approval rate.
+
+**PayPal is the buyer's choice, never routing.** Unified Checkout shows the
+PayPal button; a buyer who clicks it goes to `paypal_test`, the only connector
+with the wallet. `paypal_test` can also take cards, which is why it sits last
+in fallback. We offer PayPal to every buyer at every price because collectors
+expect it; limiting it by price or category (it doesn't protect gold coins) is
+a later option. It shows orchestration, not optimisation: nothing
+learns, and none of the processors is real. Failure states are tested
+on listings of $500 or more, so they always hit one known connector. This is
 **routing before an attempt, not retrying after one**. Smart Retries stays
 refused (engineering §10): re-sending a timed-out $6,000 payment to a second
 processor risks charging one collector twice for another collector's coin. In

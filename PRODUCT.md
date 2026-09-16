@@ -94,8 +94,9 @@ server-side. Hyperswitch itself is the authoritative record for payment status.
 Vercel.
 
 **Payments are real, not simulated.** Card payments complete against the
-Hyperswitch sandbox. Wallets, PayPal and ACH cannot be demonstrated on the
-sandbox's dummy connector and are documented rather than built.
+Hyperswitch sandbox, through simulated processors. Buyers pay by **card or
+PayPal**; card payments are routed by amount across `stripe_test` and
+`fauxpay`. Apple and Google Pay, ACH and Affirm are documented rather than built.
 
 **Explicitly out of scope:** accessibility conformance (no standard claimed or
 audited); webhooks; concurrency and sold-out races; hold timers and inspection

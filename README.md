@@ -1,212 +1,369 @@
-# Juspay Prototype — a collectibles marketplace
+# Slabbed — a collectibles marketplace on Hyperswitch
 
-A minimal storefront that takes a buyer from browsing to a real, completed
-payment in the Hyperswitch sandbox.
+A peer-to-peer marketplace for US coins and trading cards that takes a buyer
+from browsing to a **real, completed payment in the Hyperswitch sandbox**, and
+then on through shipping, disputes and refunds.
 
-> **Status:** framing and planning complete, build not yet started.
-> [PLAN.md](PLAN.md) is the full reasoning; this file is the summary.
+> **Status:** payment path and marketplace screens built; sandbox configured
+> and verified on 2026-09-16. **Proven in a real browser against the live
+> sandbox:** 11 Playwright tests pass: card payment, hard decline, PayPal,
+> ship → receive, dispute → full refund, the ambiguous "don't pay again" state,
+> and the reviewer security checks.
+> [PLAN.md](PLAN.md) holds the full reasoning, and this file is the summary.
+> Everything under "Not built" is written up with an approach instead.
+>
+> **Live demo:** _URL to be added when this branch merges to `main` (not
+> deployed yet)._
 
-## The industry we picked
+---
 
-**A peer-to-peer marketplace for US coins and trading cards** — a scoped-down
-mix of eBay and Facebook Marketplace. Individuals list, individuals buy,
-buy-it-now only. A buyer and a seller are two different people, but any account
-can be either — which is how collectors actually behave.
+## The marketplace
+
+Individuals list, individuals buy, buy-it-now only. Any account can be buyer
+and seller, which is how collectors behave. Prices run from a $20 raw card to a
+$6,000 graded coin in the same catalogue, and that spread shapes most of the
+payment decisions below.
 
 ```
-Buyer ──pays──> Marketplace ──holds──> (seller ships directly) ──releases──> Seller
-                     │                                                          │
-                     ├── commission ──> Marketplace           payout ───────────┘
-                     └── sales tax ───> State                 to PayPal / bank
+Buyer ──pays──> Slabbed ──holds──> (seller ships directly) ──releases──> Seller
+                   │                                                       │
+                   ├── commission ──> Slabbed          payout ────────────┘
+                   └── sales tax ───> State            to PayPal / bank
 ```
 
-The buyer pays us, we hold the funds, the **seller ships directly** on their
-own schedule, and the money releases after an inspection window, minus our
-commission. We never see the item. Proceeds leave to an external payout
-instrument — there's no spendable platform wallet.
+## What payments have to get right here
 
-Prices run from a $20 raw card to a $6,000 graded coin. That spread is the
-category, not an edge case.
+1. **We hold a stranger's money until another stranger ships.** Capture
+   timing, refunds and release are one question about who carries risk in
+   that gap.
+2. **The payment method decides who carries the risk.** PayPal's buyer
+   protection covers "not authentic" and "misrepresented condition", but its
+   *seller* protection excludes not-as-described, and as merchant of record the
+   dispute names us. Cards follow network rules we can predict.
+3. **Retry safety beats conversion.** Retrying an ambiguous payment can charge
+   one collector twice for another collector's coin. A double charge between
+   two individuals can't be fixed by apologising.
+4. **More than one provider is structural.** Buyers expect cards and PayPal;
+   sellers want payouts to a bank or PayPal; high-value buyers will want
+   financing. No single provider does all of it, which is why we use an
+   orchestrator.
 
-## What it demonstrates
+---
 
-Three role views behind a dropdown — **buyer**, **seller**, **admin** — seeded
-with ~10 sellers and ~30 listings, so the marketplace payment model is visible
-end to end without building a real marketplace:
+## Architecture
 
-| | |
+No database and no custom backend server. The browser talks to a handful of
+Vercel functions, and those are the only code holding the secret key.
+Hyperswitch is the record of truth for payments, and even fulfilment state
+(shipped, received, disputed) lives in the payment's own metadata.
+
+```mermaid
+flowchart LR
+  subgraph Browser["Browser (Vite + React)"]
+    UI["Storefront, seller and admin pages"]
+    SDK["Hyperswitch Unified Checkout<br/>(card form + PayPal button, in an iframe)"]
+  end
+
+  subgraph Vercel["Vercel Functions — api/"]
+    CO["POST /api/checkout<br/>prices the order, creates the payment"]
+    PAY["GET /api/payment<br/>authoritative status read"]
+    OS["POST /api/order-state<br/>shipped / received / disputed"]
+    REF["POST /api/refund<br/>admin, full refund only"]
+    ORD["GET /api/orders"]
+  end
+
+  subgraph HS["Hyperswitch sandbox"]
+    API["Payments API"]
+    RT{"Routing rule"}
+  end
+
+  subgraph Proc["Simulated processors"]
+    ST["stripe_test"]
+    FP["fauxpay"]
+    PP["paypal_test"]
+  end
+
+  UI -- "listing ids, ship-to (no amount)" --> CO
+  CO -- "secret api-key" --> API
+  CO -- "client_secret + publishable key" --> SDK
+  SDK -- "card data / PayPal redirect" --> API
+  UI --> PAY & OS & REF & ORD
+  PAY & OS & REF & ORD -- "secret api-key" --> API
+  API --> RT
+  RT -- "card" --> ST & FP
+  RT -- "PayPal wallet" --> PP
+```
+
+**Security boundaries**
+- The secret key (`JUSPAY_API_TEST_KEY`) is read only inside `api/` and never
+  has a `VITE_` prefix, since Vite would inline it into the bundle.
+- **The server sets the amount** from its own catalogue. The checkout request
+  type has no `amount` field at all. One demo simplification: a listing a
+  collector creates in the browser (`usr_…`) isn't in the server catalogue, so
+  its price comes from the client.
+- Card numbers only ever enter Hyperswitch's iframe, so they stay out of our
+  code and our PCI scope.
+
+---
+
+## A payment, end to end
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as Browser
+  participant F as Vercel function
+  participant H as Hyperswitch
+  participant P as Processor
+
+  B->>B: generate attempt id, store it before the request
+  B->>F: POST /api/checkout (listing ids, ship-to)
+  F->>F: amount = price + shipping + tax, from server data
+  F->>H: POST /payments (payment_id = attempt id, amount, metadata)
+  H-->>F: client_secret
+  F-->>B: client_secret, publishable key, price breakdown
+  B->>H: SDK confirmPayment (card, or PayPal)
+  H->>H: routing rule picks the processor
+  H->>P: authorise
+  alt PayPal
+    H-->>B: redirect to PayPal
+    B->>B: buyer returns to /order/:paymentId
+  else no redirect needed
+    H-->>B: result
+  end
+  B->>F: GET /api/payment?id=
+  F->>H: GET /payments/{id}
+  H-->>F: status
+  F-->>B: mapped order state
+  Note over B,F: Success is shown only after this server read. A redirect never proves payment.
+```
+
+**Idempotency.** Hyperswitch has no idempotency header on `POST /payments`,
+so the browser's attempt id doubles as the `payment_id`. A duplicate submit,
+refresh or second tab re-sends the same id. Hyperswitch rejects it with
+`HE_01`, and the server reads the existing payment instead of creating a
+second one: it resumes it if it's still unattempted and the amount matches,
+and otherwise sends the buyer to the order page.
+
+**Every Hyperswitch status is mapped**, all 17 of them, not only the four in
+the quickstart. `requires_customer_action` and `processing` are their own
+states, never failures. The order page polls the server for about 30 seconds
+while a payment is in flight or its status is unrecognised (`unknown`), then
+shows "Don't pay again yet" and a **Check again** button that only re-reads.
+
+---
+
+## Payment methods and routing
+
+**The buyer chooses a payment method. Hyperswitch chooses the processor.** The
+buyer only ever sees "Card" or "PayPal", and processors stay out of sight.
+
+| Buyer chooses | Goes to | Why, for this marketplace |
+| --- | --- | --- |
+| **PayPal** | `paypal_test` | The buyer's choice, not a routing decision: it's the only connector with the PayPal wallet. Offered at every price, because collectors come from eBay and expect it |
+| **Card, $500 or more** | `stripe_test` | The primary processor, every time. With retries refused there is no second attempt, so high-value slabs aren't used for experiments |
+| **Card, under $500** | 80% `stripe_test` / 20% `fauxpay` | A challenger processor trialled against the incumbent, on orders where a failure costs a $40 sale rather than a one-of-one coin |
+| No rule matches | `stripe_test` → `fauxpay` → `paypal_test` | Default fallback. `paypal_test` is last so a card payment never shows up as "PayPal" |
+
+```mermaid
+flowchart TD
+  A["Buyer pays"] --> M{"Payment method?"}
+  M -- "PayPal" --> PP["paypal_test<br/>(only eligible connector)"]
+  M -- "Card" --> AMT{"amount in cents"}
+  AMT -- "> 49999 ($500+)" --> ST["stripe_test"]
+  AMT -- "< 50000" --> SPLIT{"volume split"}
+  SPLIT -- "80%" --> ST
+  SPLIT -- "20%" --> FP["fauxpay"]
+```
+
+**Why split small card payments at all.** A marketplace adds a second
+processor for lower fees, negotiating leverage and outage cover, but it can't
+judge one without sending it real traffic. The approval rate on *our* buyers
+is the number that matters. The split gathers that data, and it's the first
+step towards Auth Rate Based routing, which needs about 25 finished payments
+per processor before it can score anything. Our prices decide where to run
+the trial: most orders are small and most money sits in the few large ones,
+so orders under $500 produce data quickly at little risk. We chose 80/20 over
+50/50 because the point is to measure a challenger against the incumbent,
+starting small.
+
+**This is routing before an attempt, not retrying after one.** Auto Retries
+was on by default (max 3). We switched it off, because re-sending a timed-out
+$6,000 payment to a second processor can charge the buyer twice. Hyperswitch
+reconciles the two attempts afterwards but can't un-charge the card.
+
+**Verified against the live sandbox (2026-09-16):**
+
+| Test | Result |
 | --- | --- |
-| **Payment creation** | Server-side; the secret key never reaches the browser |
-| **Successful payment** | A real `succeeded` in the Hyperswitch sandbox dashboard |
-| **Failed payment** | Hard and soft declines with normalised reasons |
-| **Payment status** | Authoritative server-side read — never the redirect |
-| **Refund** | Full and partial, from the admin view |
-| **Webhook** | Signature-verified, updating the order |
-| **Marketplace fee** | Calculated and shown on the seller dashboard |
-| **Seller balance** | pending → available → paid out |
+| $900 card, $500.00 card | `stripe_test` |
+| 20 × $40 card | 12 `stripe_test`, 8 `fauxpay` |
+| PayPal at $40 and at $900 | `paypal_test`, `requires_customer_action` with a redirect |
+| `is_auto_retries_enabled` | `false` |
 
-## Why this industry makes payments interesting
+**What the sandbox can't show.** The processors are simulated and approve and
+decline identically, so the build shows the routing *mechanism* but not one
+processor genuinely out-approving another. Decline messages come from a
+simulator, not a card issuer.
 
-**The money is held across a post-ship inspection window, and that window is
-the product.** It's the mechanism every established marketplace runs: the buyer
-pays, the item ships, the buyer gets a period to check it, and only then does
-the seller get paid. Capture timing, refund policy and payout timing aren't
-three questions — they're one question about who carries risk across that
-window. Everything structural here descends from it.
+---
 
-**Authenticity is a real dispute driver, and it's a fulfilment problem.** Coins
-and cards fail in a way ordinary retail doesn't: the item arrives exactly as
-pictured and is fake or misgraded. The industry answer isn't a payments feature
-— it's eBay's Authenticity Guarantee, routing high-ticket items through a
-third-party authenticator in the middle of the shipping path. Out of scope
-here, and noted because a payments design claiming to solve it would be
-over-reaching.
+## Order and money lifecycle
 
-**The payment method a buyer picks decides who carries the risk.** PayPal is
-what buyers want here — its Purchase Protection names *"advertised as authentic
-but is not authentic"* — and it's simultaneously where we'd carry the most
-exposure, because PayPal's *Seller* Protection excludes not-as-described
-entirely, and as merchant of record the dispute names our account, not the
-individual shipper's. Bank debit runs the other way: a consumer can return an
-ACH debit as unauthorised for 60 days, which is the one window a hold could
-realistically outrun. Wallets are card presentment and add no protection of
-their own. So the method mix is a risk decision, not a convenience one.
+Money moves when someone acts, not on a timer, so every transition is
+something a reviewer can click.
 
-**One checkout serves a $20 and a $6,000 decision.** Under a few hundred
-dollars, friction reads as suspicion. Above it, the buyer *wants* to slow down
-and read what's covered. Same guarantee, different weight — a threshold in the
-price data, not a second checkout.
+```mermaid
+stateDiagram-v2
+  [*] --> Paid: payment succeeded
+  Paid --> Shipped: seller marks shipped
+  Shipped --> Received: buyer marks received
+  Received --> [*]
+  Shipped --> Disputed: buyer disputes
+  Received --> Disputed: buyer disputes
+  Disputed --> Refunded: admin refunds in full (real Hyperswitch refund)
+  Refunded --> [*]
 
-## The decisions that follow from that
+  note right of Paid
+    seller balance: pending
+  end note
+  note right of Shipped
+    seller balance: available,
+    commission deducted
+  end note
+  note right of Refunded
+    balance and commission reversed
+  end note
+```
+
+The buyer is charged **item + shipping + sales tax** (a flat 8% on items) as
+one payment. The seller is credited **item + shipping − commission** (5% of
+items) later. The buyer never sees the commission and the seller never sees the
+tax. Refunds are **full only**: the whole payment goes back, and the sale's
+commission and net drop to zero.
+
+---
+
+## Decisions
 
 | Decision | Why |
 | --- | --- |
-| **Unified Checkout SDK**, not Payment Links or our own card form | Card data stays out of our PCI scope, and payment methods become a business-profile setting rather than a code change. That second property is the argument for using an orchestrator at all. |
-| **Capture immediately**, no authorise-then-capture-on-ship | The textbook answer for delayed fulfilment fails here: card auths decay in ~7 days and an individual seller ships when they get to the post office, so auths would routinely expire before the item moved. Escrow here is a **ledger** concept, not an auth hold — funds are captured and held against a seller balance, and the reversal tool is a refund, not a void. |
-| **Our own idempotency**, via a client-generated attempt id used as the `payment_id` | Hyperswitch has no idempotency header on `POST /payments`; the documented mechanism is the client-supplied `payment_id`, and a duplicate returns an `HE_01` error rather than replaying. We generate one id per checkout attempt and treat `HE_01` as "go read the existing payment". The server still sets the amount, always. |
-| **Never auto-retry an ambiguous payment** — "Check again", not "Pay again" | A double charge between two individuals cannot be fixed with an apology, and is worse than a lost sale. The only action available re-reads status server-side and can never create a second charge. |
-| **Cart may hold several sellers; checkout runs per seller group** | One basket must become N obligations to N strangers. A single split intent cannot represent partial failure, and partial failure is the normal case. eBay's combined cart creates separate orders for the same reason. |
-| **Sign-in is mocked** (Google / Apple / email buttons, no real OAuth) | Real auth would spend the budget on the least payments-interesting part of the product. It still creates a real Hyperswitch `customer`, which keeps saved cards credible as a deferred flow. |
-| **The seller pays the commission, deducted at release** | Nothing is added to the buyer's total — a fee appearing after someone decided on a $1,800 item is the worst moment in the funnel. Taking it at release also makes refunds clean: a sale refunded before release simply never charges a fee. Matches eBay and Depop's final-value fees. |
-| **No database — Hyperswitch is the read model** | Orders and refund state are derived by querying Hyperswitch rather than duplicated into our own tables, so there's no reconciliation story to explain. One real limit, verified: `metadata` isn't filterable anywhere in the v1 API, so seller-scoped queries page through payments and filter in memory. Fine at demo volume, and the upgrade path (a KV store holding *only* an id mapping, never amounts) is written down. |
+| **Unified Checkout SDK** | Card data never touches our code, and payment methods are a dashboard setting. Affirm was removed without a code change, and PayPal needed only a return URL passed to the SDK, which is the practical argument for an orchestrator |
+| **Simulated processors, not real Stripe** | Real Stripe needs a support ticket for raw card data access, with unknown lead time. The simulators cover everything the core flow needs: distinct hard declines, a PayPal redirect, and three connectors to route between |
+| **Capture immediately; the hold is a ledger, not an authorisation** | Card authorisations expire in about 7 days, and an individual seller ships when they reach the post office. The reversal tool is a refund, not a void |
+| **Seller pays the commission, at release** | Nothing is added to a buyer's total after they've decided on a $1,800 item. A sale refunded before release never pays a fee |
+| **Never auto-retry an ambiguous payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
+| **One payment per seller in a multi-seller cart** | A single split payment can't represent one seller's half failing, and that is the normal failure |
+| **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so order lists page through the last 90 days of payments (at most 2,000) and filter in memory. Measured: 1.3–2.0 s warm, 4.6–6.5 s on a cold first call. A KV index of order ids is the upgrade |
+| **3DS out of scope for this build** | The dashboard default is untouched, but no challenge flow is built or tested. We're US-only, so it isn't a mandate. It would buy liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
 
-## What we take from Hyperswitch
+### Hyperswitch features, and what we did with each
 
-Hyperswitch is an orchestrator, so most of its value sits in things you
-configure rather than build. The honest accounting:
+| Feature | Verdict |
+| --- | --- |
+| Unified Checkout, Payments, Refunds (full only), Metadata update | **Built on** |
+| Rule-based routing (amount + volume split) | **Configured**, verified |
+| PayPal wallet | **Configured**, plus a return URL passed to the SDK |
+| 3DS | **Out of scope**: dashboard default untouched, no challenge flow built or tested |
+| Auto Retries / Smart Retries | **Turned off**, for the double-charge reason above |
+| Auth Rate Based and elimination routing | **Deferred**: needs payment history and real processors |
+| Least Cost (US debit) routing | **Deferred**: sandbox supports it through Adyen only |
+| Webhooks | **Deferred**: nothing durable to write to and no stable URL, and every flow we build has the buyer present |
+| Extended authorisation, overcapture, network tokenisation | **Off**: we capture straight away at a fixed amount and don't save cards |
+| Surcharge | **Refused**: banned on debit, restricted in several states, and we earn through commission |
 
-- **Unified Checkout SDK** — built on. The only thing between our code and card
-  data, and the reason payment methods are a dashboard setting rather than a
-  code change.
-- **3DS** — left at its `three_ds` default. SCA is an EU mandate and we're
-  US-only, so 3DS buys us exactly one thing: liability shift on *fraudulent
-  transaction* chargebacks. It does nothing for "not as described". We keep it
-  because a stolen-card chargeback on a $6,000 coin moving to the issuer is
-  worth the friction — and we say plainly that this build has no dispute
-  strategy, rather than dressing 3DS up as one.
-- **Vault** — Pay-Then-Vault with `setup_future_usage: "on_session"`, deferred
-  but designed. Buy Now means the amount is known at intent time, so
-  Vault-Then-Pay's advantage is inert. `off_session` would be claiming consent
-  we never use.
-- **Smart Retries** — **deliberately off.** Its deduplication is
-  reconciliation-level, not network-level: it keeps one payment id but appends
-  an attempt number before the processor sees it, so two connectors get two
-  distinct ids and neither dedupes. Retrying a hard decline is safe; retrying a
-  timeout is the double-charge we refuse to risk.
-- **Intelligent Routing / FRM / Surcharge** — documented, not used. Routing and
-  FRM need multiple connectors or a commercial contract. Surcharging is capped
-  by network rules, banned on debit, restricted in several US states, and
-  commercially backwards for a marketplace that monetises via seller commission.
+---
 
-**Connectors, if we went past the dummy connector:** Stripe sandbox first — the
-only one that changes what the architecture can *prove* (real normalised
-decline codes, real 3DS, faithful capture accounting). PayPal second, for a
-genuinely different code path and because buyer trust matters disproportionately
-here. Apple Pay last and probably never — domain verification is fatal on
-rotating preview URLs. **Link is not supported by Hyperswitch**; it's absent
-from the payment-method and connector enums, and the generic `link_wallet`
-payment experience is a different thing.
+## Not built, with the approach
 
-## What we deliberately did not build
+- **Affirm (pay later).** It fits the top of this market: a collector who
+  wants a $6,000 slab now and pays over months. Affirm pays us up front and
+  takes the credit risk, so our hold doesn't change. It's deferred because it
+  adds a second redirect method with its own pending and declined-application
+  states. *Approach:* enable Pay Later → Affirm on a connector (the sandbox's
+  `stripe_test` already offers it), show it only above about $500, and confirm
+  on the server exactly as for PayPal.
+- **ACH bank debit.** It costs about $5 against about $174 in card fees on a
+  $6,000 slab, but a consumer can return a debit as unauthorised for 60 days.
+  *Approach:* only for buyers with a completed purchase, payout held until the
+  debit clears, and the payment shown as `processing` meanwhile. Needs real
+  Stripe.
+- **Limiting PayPal where it hurts us.** Gold coins aren't covered by PayPal's
+  buyer protection but can still be charged back to us. *Approach:* the server
+  passes `allowed_payment_method_types` when it creates the payment (verified
+  in the sandbox), so gold coins or large orders show cards only.
+- **Real Stripe and real PayPal** behind the same routing rule. This changes
+  dashboard configuration only, not code.
+- **Auth Rate Based routing,** once about 25 real payments per processor
+  exist. It's the next step after the 80/20 trial.
+- **Apple and Google Pay.** They add speed, not protection, and Apple Pay
+  needs a stable verified domain, which preview deployments don't have.
+- **Seller payouts.** Stripe Connect separate charges and transfers, called
+  when the seller ships. Hyperswitch's split payments only support
+  direct/destination charges, which pay the seller too early.
+- **3DS challenges, partial refunds, soft declines on demand, and an
+  abandoned PayPal payment** (the message exists; the flow isn't tested).
+- **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
+  release, authenticity checks, seller KYC, saved cards.**
 
-The brief asks for the purchase journey through to a completed payment, so
-that is what gets built. Everything below is reasoned through in
-[PLAN.md](PLAN.md) with a written approach, not implemented:
+**Known gaps in what is built**
+- `update_metadata` returns a connector error (`IR_20`, seen on both
+  `paypal_test` and `stripe_test`) even though the write lands, so every write
+  is read back before the UI reports success.
+- Order lists take 4.6–6.5 s on a cold first call (see the read-model decision
+  above).
 
-- **Wallets and PayPal** — the sandbox's dummy connector cannot mint wallet
-  session tokens, and Apple Pay additionally needs Developer enrolment and a
-  stable verified domain. Enabling them later is a dashboard change with no
-  front-end code change, which is precisely why we chose the SDK.
-- **Seller payouts and the release window** — needs a separately configured
-  payout processor; `split_payments` is Stripe Connect underneath.
-- **Authenticity guarantee / third-party authentication** — the industry answer
-  to counterfeits on high-ticket collectibles, and a fulfilment programme
-  rather than a payments feature. Its one payments consequence is worth stating:
-  it converts the release trigger from a timer into an authentication verdict.
-- **Disputes and chargebacks** — no dispute trigger exists on the dummy
-  connector, and disputes arrive as inbound connector webhooks.
-- **Real payouts** — the seller balance and its states are shown, but no money
-  moves; payouts need a separately configured payout processor.
-- **Seller onboarding, KYC, shipping and tracking, messaging, reviews,
-  auctions, offers, saved cards.**
-- **ACH, promoted listings, seller subscriptions.**
+---
 
-## Getting started
+## Running it
 
-Requires Node 22+.
+Requires Node 20.19+ (Vite 8's minimum) and a Hyperswitch sandbox account with
+the setup below.
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env   # secret key, publishable key, merchant id
+npm run dev            # Vite serves the front end and api/ functions together
 ```
 
-The dev server runs at http://localhost:5173.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | App and API functions locally (Vite middleware runs `api/`) |
+| `npm run build` | Typecheck and production build |
+| `npm run test:unit` | 39 money, cart, attempt-id and state-mapping tests. No keys needed |
+| `npm run test:sandbox` | 21 tests that call the `api/` handlers against the live sandbox. Needs `.env`; skipped without the key. Creates real payments tagged `test` |
+| `npm run e2e` | 11 Playwright tests in a real browser against the real sandbox. Needs `.env` and `npx playwright install chromium`; starts its own dev server on port 5190 |
+| `npm run lint` / `npm run format` | oxlint / Prettier |
 
-## Scripts
+### Sandbox setup
 
-| Command             | What it does                         |
-| ------------------- | ------------------------------------ |
-| `npm run dev`       | Start the dev server with hot reload |
-| `npm run build`     | Typecheck and build to `dist/`       |
-| `npm run typecheck` | Typecheck only                       |
-| `npm run lint`      | Lint with oxlint                     |
-| `npm run format`    | Format with Prettier                 |
-| `npm run preview`   | Serve the production build locally   |
+1. **Connectors:** `stripe_test`, `fauxpay` and `paypal_test`, all with credit
+   and debit cards. Enable Wallet → PayPal on `paypal_test` only.
+2. **Default fallback order:** `stripe_test`, `fauxpay`, `paypal_test`.
+3. **Workflow → Routing → Rule Based**, then activate it:
+   - card AND amount < `50000` → volume split 80 `stripe_test` / 20 `fauxpay`
+   - card AND amount > `49999` → priority `stripe_test`
+   - Amounts are **cents**. There's no "greater than or equal", hence `49999`.
+4. **Payment settings:** Auto Retries **off**, then save.
+
+### Test cards
+
+Any future expiry, any CVC. These cards behave the same on `stripe_test` and
+`fauxpay`, so routing doesn't change the result.
+
+| Case | Card | Buyer sees |
+| --- | --- | --- |
+| Success | `4242 4242 4242 4242` | Paid |
+| Declined | `4000 0000 0000 0002` | "Your bank declined this payment." |
+| Lost / stolen | `4000 0000 0000 9987` / `…9979` | "Your bank declined this card." |
+| PayPal | PayPal button | Redirect to simulated PayPal, then back |
+
+A soft decline (`4000 0000 0000 9995`) can't be shown on demand: it succeeds on
+`stripe_test` and only fails on `fauxpay`, which routing reaches at random.
 
 ## Stack
 
-- Vite + React 19 + TypeScript
-- Tailwind CSS v4 (configured in `src/index.css`, no config file)
-- oxlint + Prettier
-- Vercel: static front end plus server functions in `api/`
-
-## Deploying to Vercel
-
-`vercel.json` sends every path except `/api/*` to the SPA, so client-side
-routes survive a refresh.
-
-1. Go to [Vercel](https://vercel.com/new) and import this GitHub repository
-2. Vercel detects Vite. Accept the defaults and add the Hyperswitch keys under
-   **Environment Variables**
-3. Deploy
-
-Every push to the connected branch triggers a new deploy. Locally, run
-`npx vercel dev` to serve the front end and the `api/` functions together.
-
-## Working on this with Claude Code
-
-This repo is set up for [Claude Code](https://claude.com/claude-code):
-
-- `CLAUDE.md` gives Claude the project's stack, commands, layout, and conventions
-- `.claude/settings.json` pre-approves the routine commands (build, lint, git status)
-  so you get fewer permission prompts
-- `.vscode/extensions.json` recommends the Claude Code extension
-
-To use it in VS Code:
-
-1. Clone the repo and open the folder in VS Code
-2. Accept the recommended extensions prompt, or install **Claude Code** from the
-   Extensions panel
-3. Open the Claude Code panel and run `/login` if you haven't authenticated
-
-Claude picks up `CLAUDE.md` automatically when the repo is the workspace root.
+Vite · React 19 · TypeScript · Tailwind CSS v4 · Vercel Functions (standard
+`Request`/`Response`) · `@juspay-tech/react-hyper-js` · Vitest · Playwright.
+`vercel.json` sends every path except `/api/*` to the SPA. Set the same `.env`
+keys in Vercel's project settings to deploy.

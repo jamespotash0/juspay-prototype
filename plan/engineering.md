@@ -96,11 +96,10 @@ to propagate it to the processor. The dummy connector does not implement that
 second step, so the call reports failure after the part we depend on has
 already succeeded.
 
-****On Stripe this goes away:** the Stripe connector implements metadata update
-and pushes it to the Stripe PaymentIntent. We keep the read-back anyway, because
-fallback payments still land on `paypal_test`.
+Every connector in the build is simulated, so expect this on all of them. (A
+real Stripe connector implements metadata update and would not return it.)
 
-So: write, then verify by reading.** `POST /update_metadata`, treat
+**So: write, then verify by reading.** `POST /update_metadata`, treat
 `CE_00` / `IR_20` as non-fatal, then `GET /payments/{id}` and confirm the value
 actually landed before reporting success to the UI. Any other error is fatal.
 
@@ -248,7 +247,7 @@ cleanly with them rather than leaving a hole.
 
 ## 9. Security boundaries
 
-`HYPERSWITCH_API_KEY` in `.env` and Vercel settings, read only inside `api/`,
+`JUSPAY_API_TEST_KEY` in `.env` and Vercel settings, read only inside `api/`,
 with **no `VITE_` prefix** — Vite inlines `VITE_*` into the bundle, so the
 prefix is the whole attack.
 
@@ -273,10 +272,14 @@ not by the redirect query string.
 | **Refunds** | **Build.** `POST /refunds` with our own `refund_id` as the idempotency key |
 | **Metadata update** | **Build.** `POST /payments/{id}/update_metadata` carries fulfilment state, so there is no database |
 | **Webhooks** | **Defer.** Cannot demonstrate what they are for without durable storage and a stable URL — §8 |
-| **3DS** | **Configure only.** Leave the `three_ds` default; Stripe's challenge card `4000002760003184` exercises `requires_customer_action` |
+| **3DS** | **Configure only.** Leave the `three_ds` default; the simulated processors' 3DS card `4000003800000446` exercises `requires_customer_action` |
 | **Vault** | **Defer.** Pay-Then-Vault, `on_session` — Buy Now means the amount is known at intent time, so Vault-Then-Pay's advantage is inert |
-| **Smart Retries** | **Refused.** See below |
-| **Routing** | **Configure (dashboard, no code).** Stripe primary, `paypal_test` fallback, bank debit Stripe-only. The connector per payment shows in the control center. Auth-rate routing deferred until there's a second *real* processor |
+| **Smart Retries** | **Refused.** See below. Auto Retries was on by default (max 3); turned off and verified `is_auto_retries_enabled: false` 2026-09-16 |
+| **Routing** | **Configure (dashboard → Workflow → Routing, rule-based).** Rule 1: card AND amount < 50000 → volume split 80 `stripe_test` / 20 `fauxpay`. Rule 2: card AND amount > 49999 → priority `stripe_test` (the dashboard has no ≥). PayPal → `paypal_test` (only eligible connector, no rule). Default fallback, drag order: `stripe_test`, `fauxpay`, `paypal_test`. The `connector` field on each payment shows the choice. **Live and verified 2026-09-16** (`Marketplace-Proto-Routing`, `routing_Wuodl6r3z8u3uEXw8dVZ`): $900 → `stripe_test`; 20 × $40 → 12 `stripe_test` / 8 `fauxpay`; PayPal at $40 and $900 → `paypal_test`. Amounts in the rule are **cents**; a first attempt with `500` split at $5. Rule 2 is `> 49999`, so $500.00 matches it directly (verified). Conditions inside one rule are AND: a rule with both `> 50000` and `= 50000` never matches |
+| **PayPal wallet** | **Build.** Enabled on `paypal_test`; the SDK shows the button with no code change. Redirect flow, confirmed by `GET /api/payment` on return |
+| **Affirm (pay later)** | **Defer.** Offered by `stripe_test` today; turn it off in the dashboard until design covers its states (product §4) |
+| **Auth-rate / elimination routing** | **Defer.** Picks before the attempt, so compatible with no-retries, but needs ~25 finished payments per connector and a second real processor. The simulator (hyperswitch-ten.vercel.app) fakes failure rates and sends the API key through a third-party proxy; throwaway key only, if at all |
+| **Least-cost US debit routing** | **Defer.** Sandbox supports it through Adyen only |
 | **Stripe split payments** | **Defer.** Only `direct` / `destination` charge types exist; we need separate charges and transfers (product §4) |
 | **Payouts API** | **Defer.** Stripe supported in code; per-seller KYC accounts needed, hosted-sandbox support unverified |
 | **FRM** | **Defer.** Needs a commercial Signifyd/Riskified contract |
@@ -293,6 +296,23 @@ that this build has **no dispute strategy** rather than dressing 3DS up as one.
 
 ### Smart Retries is the one feature we actively refuse
 
+**Observed live, then switched off.** With `stripe_test` added alongside
+`paypal_test`, the business profile retried a failed payment on the second
+processor automatically. Payment `cka_37640e24372c6d7b55460d`, decline card
+`…9995`:
+
+```
+attempt _1 · paypal_test · failure   "Internal Server Error from Connector"
+attempt _2 · stripe_test · charged   1.3 seconds later
+```
+
+The retried failure was a *server error*, not a clean decline — precisely the
+ambiguous category argued below — and the attempt ids carry the `_1` / `_2`
+suffix, so neither processor could have recognised a duplicate. On the sandbox
+it cost nothing; on a real processor it is the double charge. **Decision:
+automatic retries off; amount-based routing between connectors stays on.** One
+payment, one attempt, one processor.
+
 It retries across connectors, keeping one `payment_id` but **appending the
 attempt number before the processor sees it** — connector A gets `pay_x_1`,
 connector B gets `pay_x_2`, so connector-side idempotency won't dedupe them
@@ -305,34 +325,36 @@ un-charge the card.
 
 ### Connectors
 
-**In the build: Stripe test mode + `paypal_test`.** Setup:
+**In the build: three simulated processors on one profile** — `stripe_test`,
+`fauxpay`, `paypal_test` (`pretendpay` deactivated). All take credit and debit cards;
+`paypal_test` also has the PayPal wallet. Control center setup done 2026-09-16: routing rule active, Affirm off, Auto
+Retries off, Default Fallback `stripe_test`, `fauxpay`, `paypal_test`.
 
-1. **Open a Stripe support ticket for "raw card data APIs" first.** Hyperswitch
-   sends card numbers to Stripe server-side, and Stripe refuses that without
-   the flag, in test mode too. Not self-serve; lead time unknown. Until it
-   lands, every Stripe card payment fails and `paypal_test` carries the demo.
-2. Stripe → Settings → Payment methods: enable Cards and ACH Direct Debit.
-3. Hyperswitch control center: add Stripe with the `sk_test_` key on the same
-   profile as `paypal_test`; enable card credit/debit and `bank_debit` ACH.
-4. Configure the routing rule. No Stripe webhook; we poll.
+**Test cards, re-verified per connector on 2026-09-16 after routing went live**
+(QA-4a probed each card on each processor before asserting anything):
 
-| Case | Test data |
-| --- | --- |
-| Success | `4242424242424242` |
-| Hard decline | `4000000000000002` generic · `4000000000009987` lost · `4000000000009979` stolen |
-| Soft decline | `4000000000009995` insufficient funds · `4000000000000119` processing error |
-| 3DS challenge | `4000002760003184` |
-| ACH (stretch) | routing `110000000`; success `000123456789`; fails `000222222227` / `000111111113`; **stays `processing`** `000000000009`; microdeposits `SM11AA` or `32` / `45` |
+| Card | `stripe_test` | `fauxpay` | Our `decline.reason` |
+| --- | --- | --- | --- |
+| `4242424242424242` | succeeded | succeeded | — |
+| `4000000000000002` | failed · DC_08 "Card declined" | same | `generic`, hard |
+| `4000000000009987` | failed · DC_08 "Lost card" | same | `lost_or_stolen`, hard |
+| `4000000000009979` | failed · DC_08 "Stolen card" | same | `lost_or_stolen`, hard |
+| `4000000000000119` | failed · DC_04 "Card not supported" | same | `generic`, hard |
+| `4000000000009995` | **succeeded** | failed · DC_08 "Internal Server Error from Connector" | `processing_error`, **soft** (retriable) |
 
-ACH through the SDK is a manual account-number form, then a redirect to
-Stripe's microdeposit page (`requires_customer_action`), then `processing`.
-End-to-end through the web SDK is unverified.
+**A soft decline cannot be demonstrated on demand.** `9995` only declines on
+`fauxpay`, which routing reaches at random on ~20% of orders under $500. The
+demo therefore shows **hard** declines; tests pin cards to `stripe_test` with a
+listing of $500 or more, so they are deterministic. Every decline returns
+`unified_code` `UE_9000`, so the UI tells reasons apart by `error_message`.
+PayPal uses wallet `paypal_redirect` on `paypal_test`. 3DS is out of scope.
 
 **Further connectors, if we went on:**
 
 | Rank | Connector | Setup |
 | --- | --- | --- |
-| 1 | **PayPal sandbox** — a genuinely different code path (`redirect_to_url`) | ~1–2 h |
+| 1 | **Real Stripe test mode** — real issuer decline codes, ACH with sticky `processing` (`000000000009`). Needs the raw-card-data support ticket first | lead time unknown |
+| 2 | **Real PayPal sandbox** — the same redirect path we already build, against real PayPal | ~1–2 h |
 | 2 | **Google Pay** — same lifecycle, prettier button | ~2–3 h |
 | 3 | **Apple Pay** — domain verification is fatal on rotating preview URLs | ~4–8 h |
 | — | **Link** — **not supported.** Absent from Hyperswitch's payment-method and connector enums | — |
@@ -341,10 +363,9 @@ End-to-end through the web SDK is unverified.
 
 ## 11. Risks
 
-**Stripe raw card data access** is the critical path: without it Stripe card
-payments fail outright, and the build falls back to `paypal_test` with fake
-decline reasons · ACH through the web SDK is unverified end to end · the dummy
-connector's unfaithful capture accounting (fallback payments only) ·
-`/update_metadata` returns a connector-layer 400 on `paypal_test` even when the
-write lands, so it must always be read back (§3). Sticky `processing` is now
-covered by Stripe's `000000000009` test account.
+Decline messages come from
+a simulator, not an issuer, and all share code `DC_08` · the simulated
+processors' capture accounting is unfaithful · `/update_metadata` returns a
+connector-layer 400 on every simulated connector even when the write lands, so
+it must always be read back (§3) · no connector produces a sticky `processing`,
+so that state is designed but can't be triggered.

@@ -100,6 +100,7 @@ Where the design work actually is — and what the prototype is judged on.
 | --- | --- | --- |
 | Submitting | Form locked, no navigation | Not yet charged |
 | 3DS in flight | "Your bank needs to confirm it's you. You'll come right back." | Not yet charged |
+| PayPal in flight | The buyer is on PayPal's page; our tab shows nothing. On return, the same "Confirming your payment…" state as 3DS. A buyer who abandons PayPal leaves the payment in `requires_customer_action`. The order page reads `payment_method_type` and shows "You didn't finish paying on PayPal. Nothing has been charged." instead of the 3DS line (verified in the browser 2026-09-16) | Not yet charged |
 | Returned, unconfirmed | "Confirming your payment…" while the **server** polls | Unknown to them, known to us |
 | Processing | "Payment sent — waiting on your bank. You don't need to do anything." | Committed |
 | Soft decline | Inline, everything retained except the card | No |

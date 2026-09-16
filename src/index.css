@@ -1,1 +1,159 @@
 @import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  /* Archivo Expanded = Archivo at wdth 125. Pair with the `font-display` utility below. */
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+
+  /* Ground and ink */
+  --color-bone: #f6f3ec;
+  --color-paper: #fcfbf7;
+  --color-ink: #16150f;
+  --color-ink-muted: #5c5a52;
+  --color-rule: #dcd7cb;
+
+  /* The one accent. Only on things that can be pressed. */
+  --color-accent: #1f45d6;
+  --color-accent-hover: #1636ad;
+  --color-accent-ink: #ffffff;
+
+  /* State colours. Reserved for state; never decoration, never the accent. */
+  --color-state-paid: #13703f;
+  --color-state-paid-bg: #e3f1e7;
+  --color-state-pending: #8a5a00;
+  --color-state-pending-bg: #f8edd2;
+  --color-state-shipped: #0d6b78;
+  --color-state-shipped-bg: #ddf0f1;
+  --color-state-disputed: #a3401a;
+  --color-state-disputed-bg: #f8e4da;
+  --color-state-failed: #b3261e;
+  --color-state-failed-bg: #f9e1df;
+  --color-state-refunded: #6a3fa0;
+  --color-state-refunded-bg: #ece4f5;
+  --color-state-review: #7a4f86;
+  --color-state-review-bg: #f1e6f2;
+  --color-state-neutral: #5c5a52;
+  --color-state-neutral-bg: #ebe7dd;
+
+  /* Form: square-ish, hairlines, no shadow above 1dp */
+  --radius-*: initial;
+  --radius-slab: 4px;
+  --radius-full: 9999px;
+  --shadow-*: initial;
+  --shadow-hair: 0 1px 1px rgb(22 21 15 / 0.08);
+}
+
+/* Archivo Expanded for display type. */
+@utility font-display {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+}
+
+/* Every amount of money. Aligns columns; totals don't jitter. */
+@utility money {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-bone font-sans text-ink antialiased;
+    caret-color: var(--color-accent);
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  dialog::backdrop {
+    background: rgb(22 21 15 / 0.45);
+  }
+}
+
+/* Seller balance: one orchestrated release when a sale moves pending → available
+   (design.md §2 rule 3). Pending strikes out, the Available pill slides in from it,
+   then the net and the totals settle. Every end state is the resting state, so
+   reduced motion just skips to it. */
+@keyframes release-strike {
+  from {
+    text-decoration-color: transparent;
+  }
+}
+@keyframes release-pill {
+  from {
+    opacity: 0;
+    transform: translateX(-2.25rem) scale(0.92);
+  }
+}
+@keyframes release-glow {
+  from {
+    background-color: var(--color-state-paid-bg);
+  }
+}
+@keyframes release-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  40% {
+    opacity: 0.35;
+    transform: translateY(0.25rem);
+  }
+}
+@keyframes release-in {
+  from {
+    opacity: 0.2;
+    transform: translateY(-0.5rem);
+    color: var(--color-state-paid);
+  }
+  60% {
+    color: var(--color-state-paid);
+  }
+}
+@keyframes release-note {
+  from {
+    opacity: 0;
+  }
+}
+
+@layer components {
+  .release-struck {
+    animation: release-strike 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .release-pill {
+    animation: release-pill 700ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+  }
+  .release-note {
+    animation: release-note 500ms ease-out 650ms both;
+  }
+  .release-amount {
+    animation: release-glow 1600ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+  }
+  .release-out {
+    display: inline-block;
+    animation: release-out 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+  }
+  .release-in {
+    display: inline-block;
+    animation: release-in 1100ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-struck,
+  .release-pill,
+  .release-note,
+  .release-amount,
+  .release-out,
+  .release-in {
+    animation: none;
+  }
+}
