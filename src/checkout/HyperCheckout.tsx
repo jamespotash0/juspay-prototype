@@ -1,13 +1,16 @@
 import { loadHyper, type HyperInstance } from '@juspay-tech/hyper-js'
 import { HyperElements, UnifiedCheckout, useHyper } from '@juspay-tech/react-hyper-js'
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { COPY } from '../shared/copy.ts'
 import { Button } from '../ui/Button.tsx'
+import { Money } from '../ui/Money.tsx'
 
 interface Props {
   clientSecret: string
   publishableKey: string
   paymentId: string
+  /** Server-set total from the checkout session, shown on the Pay button. */
+  totalCents?: number
   /** Payment handed to Hyperswitch without a redirect. Go to /order/<paymentId>; the server read decides. */
   onSubmitted(): void
   /** Nothing was submitted (e.g. an incomplete card field). Stay on the page. */
@@ -25,19 +28,45 @@ function hyperFor(key: string) {
 
 /** Card data stays inside the SDK iframe. We never read the outcome client-side. */
 export default function HyperCheckout(props: Props) {
+  // react-hyper-js (dist/bundle.js) re-runs hyper.elements() whenever `options` changes identity,
+  // which tears down and rebuilds the card iframes. A fresh object each render meant clicking Pay
+  // (which sets state) wiped the card fields before confirm. Keep it stable per client secret.
+  const options = useMemo(
+    () => ({ clientSecret: props.clientSecret }),
+    [props.clientSecret],
+  )
   return (
-    <HyperElements
-      hyper={hyperFor(props.publishableKey)}
-      options={{ clientSecret: props.clientSecret }}
-    >
+    <HyperElements hyper={hyperFor(props.publishableKey)} options={options}>
       <PayForm {...props} />
     </HyperElements>
   )
 }
 
-function PayForm({ paymentId, onSubmitted, onError, onSubmittingChange }: Props) {
+function PayForm({
+  paymentId,
+  totalCents,
+  onSubmitted,
+  onError,
+  onSubmittingChange,
+}: Props) {
   const hyper = useHyper()
   const [busy, setBusy] = useState(false)
+  // react-hyper-js calls elements.create() on every render of UnifiedCheckout, which restarts the
+  // SDK iframes. Build the element once per payment so submit-time state changes can't reset it.
+  const element = useMemo(
+    () => (
+      <UnifiedCheckout
+        id="unified-checkout"
+        options={{
+          // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
+          wallets: { walletReturnUrl: `${location.origin}/order/${paymentId}` },
+          // Saved cards are out of scope.
+          displaySavedPaymentMethodsCheckbox: false,
+        }}
+      />
+    ),
+    [paymentId],
+  )
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -45,7 +74,7 @@ function PayForm({ paymentId, onSubmitted, onError, onSubmittingChange }: Props)
     setBusy(true)
     onSubmittingChange?.(true)
     try {
-      // 3DS and other redirects leave the page and come back to return_url, the same order page.
+      // Redirects (PayPal) leave the page and come back to return_url, the same order page.
       const result = await hyper.confirmPayment({
         confirmParams: { return_url: `${location.origin}/order/${paymentId}` },
         redirect: 'if_required',
@@ -65,9 +94,17 @@ function PayForm({ paymentId, onSubmitted, onError, onSubmittingChange }: Props)
 
   return (
     <form onSubmit={submit}>
-      <UnifiedCheckout id="unified-checkout" options={{}} />
+      {element}
       <Button type="submit" disabled={busy} className="mt-4 w-full">
-        {busy ? COPY.checkout.submitting : 'Pay'}
+        {busy ? (
+          COPY.checkout.submitting
+        ) : totalCents === undefined ? (
+          'Pay'
+        ) : (
+          <>
+            Pay <Money cents={totalCents} />
+          </>
+        )}
       </Button>
     </form>
   )

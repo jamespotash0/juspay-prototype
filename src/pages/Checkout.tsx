@@ -197,6 +197,7 @@ export default function Checkout({ params }: { params: Params }) {
                     clientSecret={session.clientSecret}
                     publishableKey={session.publishableKey}
                     paymentId={session.paymentId}
+                    totalCents={session.breakdown.totalCents}
                     onSubmitted={() => navigate(`/order/${session.paymentId}`)}
                     onError={setMessage}
                     onSubmittingChange={setPaying}
