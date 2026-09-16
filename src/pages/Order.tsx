@@ -218,7 +218,18 @@ function StateNotice({ order }: { order: OrderView | null }) {
     return <Notice tone="warning" title={COPY.checkout.confirming} body={null} />
   switch (order.state) {
     case 'action_required':
-      return <Notice tone="warning" title={COPY.checkout.threeDs} body={null} />
+      // PayPal and 3DS both wait on the buyer; only the copy differs.
+      return (
+        <Notice
+          tone="warning"
+          title={
+            order.paymentMethodType === 'paypal'
+              ? COPY.checkout.paypalUnfinished
+              : COPY.checkout.threeDs
+          }
+          body={null}
+        />
+      )
     case 'pending':
       return <Notice tone="warning" title={COPY.checkout.processing} body={null} />
     case 'paid':

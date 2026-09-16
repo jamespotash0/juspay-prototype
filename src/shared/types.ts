@@ -143,6 +143,8 @@ export interface OrderView {
   listingIds: string[]
   createdAt: string
   connector?: string
+  /** Hyperswitch payment_method_type: 'credit', 'debit', 'paypal'… */
+  paymentMethodType?: string
   decline?: Decline
 }
 

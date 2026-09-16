@@ -20,6 +20,7 @@ export interface HsPayment {
   client_secret: string | null
   created: string
   connector?: string | null
+  payment_method_type?: string | null
   metadata?: Record<string, string> | null
   error_code?: string | null
   error_message?: string | null
@@ -102,6 +103,7 @@ export async function toOrderView(p: HsPayment): Promise<OrderView> {
     listingIds: m[META.listingIds] ? m[META.listingIds].split(',') : [],
     createdAt: p.created,
     ...(p.connector ? { connector: p.connector } : {}),
+    ...(p.payment_method_type ? { paymentMethodType: p.payment_method_type } : {}),
     ...(decline ? { decline } : {}),
   }
 }

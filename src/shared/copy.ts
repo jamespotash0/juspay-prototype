@@ -62,6 +62,7 @@ export const COPY = {
   checkout: {
     submitting: 'Sending your payment…',
     threeDs: "Your bank needs to confirm it's you. You'll come right back.",
+    paypalUnfinished: "You didn't finish paying on PayPal. Nothing has been charged.",
     confirming: 'Confirming your payment…',
     processing: "Payment sent — waiting on your bank. You don't need to do anything.",
     softDecline:
