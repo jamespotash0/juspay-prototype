@@ -105,16 +105,12 @@ export default function Catalogue() {
             className="h-10 w-full rounded-slab border border-rule bg-paper pr-3 pl-9 text-sm placeholder:text-ink-muted focus-visible:border-accent"
           />
         </form>
-        <Filters on={on} toggle={toggle} reset={() => setOn(new Set())} />
-        <p className="money ml-auto text-sm text-ink-muted" aria-live="polite">
-          {shown.length} {COPY.catalogue.of} {listings.length}
-          {q && (
-            <>
-              {' '}
-              {COPY.catalogue.for} <span className="font-semibold text-ink">“{q}”</span>
-            </>
-          )}
-        </p>
+        <Filters
+          on={on}
+          toggle={toggle}
+          reset={() => setOn(new Set())}
+          count={`${shown.length} ${COPY.catalogue.of} ${listings.length}`}
+        />
       </div>
 
       {shown.length === 0 ? (
@@ -160,10 +156,13 @@ function Filters({
   on,
   toggle,
   reset,
+  count,
 }: {
   on: Set<Chip>
   toggle: (chip: Chip) => void
   reset: () => void
+  /** "6 of 100": the results counter lives with the filters that change it. */
+  count: string
 }) {
   const ref = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
@@ -220,15 +219,20 @@ function Filters({
             ))}
           </fieldset>
         ))}
-        {on.size > 0 && (
-          <button
-            type="button"
-            onClick={reset}
-            className="border-t border-rule pt-2 text-sm font-medium text-accent hover:underline"
-          >
-            {T.clearFilters}
-          </button>
-        )}
+        <div className="flex items-center justify-between gap-2 border-t border-rule pt-2 text-sm">
+          <p className="money text-ink-muted" aria-live="polite">
+            {count} {T.results}
+          </p>
+          {on.size > 0 && (
+            <button
+              type="button"
+              onClick={reset}
+              className="font-medium text-accent hover:underline"
+            >
+              {T.clearFilters}
+            </button>
+          )}
+        </div>
       </div>
     </details>
   )
