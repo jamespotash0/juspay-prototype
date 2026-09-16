@@ -43,6 +43,8 @@ export interface Listing {
   priceCents: Cents
   shippingCents: Cents
   imageUrl: string
+  /** The photo already shows the grading holder, so the UI must not draw one around it. */
+  photoShowsSlab?: boolean
   graded: boolean
   service?: GradingService
   grade?: string // "MS-65", "PSA 9"

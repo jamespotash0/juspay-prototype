@@ -37,6 +37,17 @@ export function Slab({
     />
   )
 
+  // A real slab photo: show the whole holder, uncropped.
+  if (l.photoShowsSlab)
+    return (
+      <img
+        src={l.imageUrl}
+        alt={l.title}
+        loading="lazy"
+        className={`size-full object-contain ${className}`}
+      />
+    )
+
   // Raw: no holder. Coins sit bare; cards sit in a plain toploader.
   if (!l.graded || !l.service)
     return (
