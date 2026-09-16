@@ -303,7 +303,7 @@ drop to zero.
 - **Seller payouts.** Stripe Connect separate charges and transfers, called
   when the seller ships. Hyperswitch's split payments only support
   direct/destination charges, which pay the seller too early.
-- **3DS challenges, partial refunds, soft declines on demand, and an
+- **3DS challenges, refunding part of one seller's order, soft declines on demand, and an
   abandoned PayPal payment** (the message exists; the flow isn't tested).
 - **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
   release, authenticity checks, seller KYC, saved bank accounts and PayPal.**
