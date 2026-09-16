@@ -3,7 +3,7 @@ import type { RefundRequest } from '../src/shared/types.ts'
 import { hsFetch } from './_lib/hyperswitch.ts'
 import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.ts'
 
-/** POST /api/refund — admin only, full or partial. Returns the re-read OrderView. */
+/** POST /api/refund — admin only, always a full refund. Returns the re-read OrderView. */
 export async function POST(request: Request): Promise<Response> {
   try {
     return await refund(request)
@@ -14,7 +14,7 @@ export async function POST(request: Request): Promise<Response> {
 
 async function refund(request: Request): Promise<Response> {
   const body = (await request.json().catch(() => null)) as Partial<RefundRequest> | null
-  const { paymentId, actorId, amountCents, reason } = body ?? {}
+  const { paymentId, actorId, reason } = body ?? {}
   if (typeof paymentId !== 'string' || !PAYMENT_ID.test(paymentId))
     return jsonError(400, 'BAD_REQUEST', 'Invalid payment id')
   if (actorId !== 'admin') return jsonError(403, 'FORBIDDEN', 'Only an admin can refund')
@@ -24,25 +24,26 @@ async function refund(request: Request): Promise<Response> {
   if (order.state !== 'paid')
     return jsonError(409, 'INVALID_TRANSITION', 'Only a paid order can be refunded')
 
-  const remaining = order.breakdown.totalCents - order.refund.refundedCents
-  const amount = amountCents ?? remaining
-  if (!Number.isInteger(amount) || amount <= 0 || amount > remaining)
+  // Refunds are full only (product decision). A refund already done or still in flight means
+  // there is nothing to send — a second request would refund twice.
+  if (order.refund.state === 'succeeded')
+    return jsonError(409, 'ALREADY_REFUNDED', 'This order has already been refunded')
+  if (order.refund.state === 'pending')
     return jsonError(
-      400,
-      'INVALID_AMOUNT',
-      'Refund amount must be more than $0 and no more than what is left',
+      409,
+      'REFUND_PENDING',
+      'A refund for this order is already in progress',
     )
+  const amount = order.breakdown.totalCents
 
-  // Idempotency key: same payment + same amount + same refunded-so-far = same refund, so a
-  // double-click or retransmission can't refund twice. Hyperswitch caps refund_id at 30 chars.
+  // Idempotency key: one full refund per payment, so a double-click or retransmission can't
+  // refund twice. Hyperswitch caps refund_id at 30 chars.
   // ponytail: refund.state in the key allows one retry after a failed refund; a second identical
   // failure dedupes to the first. Add a refund count to OrderView if admins need repeated retries.
   const refundId =
     'ckr_' +
     createHash('sha256')
-      .update(
-        `${paymentId}:${amount}:${order.refund.refundedCents}:${order.refund.state}`,
-      )
+      .update(`${paymentId}:full:${order.refund.state}`)
       .digest('hex')
       .slice(0, 22)
 

@@ -15,11 +15,12 @@ import type {
 } from '../../src/shared/types.ts'
 
 // Live Hyperswitch sandbox. Two payments per run, both tagged source 'test':
-// A = ship → receive, then a partial refund. B = ship → dispute → full refund.
+// A = ship → receive → full refund. B = ship → dispute → full refund. Refunds are full only.
 const HS = 'https://sandbox.hyperswitch.io'
 const KEY = process.env.JUSPAY_API_TEST_KEY
 const ORIGIN = 'http://localhost:5190'
-const LISTING = LISTINGS.find((l) => l.id === 'lst_002')! // Mike's
+// Mike's, total $1,225: >= $500, so routing always sends the card to stripe_test.
+const LISTING = LISTINGS.find((l) => l.id === 'lst_024')!
 const SELLER = LISTING.sellerId as PersonaId
 
 const json = (path: string, body: unknown) =>
@@ -126,7 +127,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
   })
 
   it('write-then-verify: the connector 400 from update_metadata is not a failure', async () => {
-    // The raw call really does 400 on paypal_test (rewriting a value that is already there)…
+    // The raw call really does 400 (rewriting a value that is already there)…
     const raw = await fetch(`${HS}/payments/${A}/update_metadata`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-key': KEY! },
@@ -176,6 +177,12 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     const hs = await fetch(`${HS}/payments/${B}`, { headers: { 'api-key': KEY! } })
     const meta = ((await hs.json()) as { metadata: Record<string, string> }).metadata
     expect(meta.disputeReason).toBe('Coin looks cleaned')
+    expect(disputed.body.disputeReason).toBe('Coin looks cleaned')
+    expect(Object.keys(disputed.body.fulfilledAt ?? {}).sort()).toEqual([
+      'disputedAt',
+      'shippedAt',
+    ])
+    expect(Date.parse(disputed.body.fulfilledAt!.disputedAt!)).not.toBeNaN()
 
     const refunded = await refundReq({ paymentId: B, actorId: 'admin' })
     expect(refunded.status, JSON.stringify(refunded.body)).toBe(200)
@@ -187,6 +194,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
       balance: 'reversed',
       commissionCents: 0,
       netCents: 0,
+      refundedCents: refunded.body.breakdown.totalCents,
       grossCents: LISTING.priceCents + LISTING.shippingCents,
     })
 
@@ -199,19 +207,23 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     expect([again.status, again.body.error?.code]).toEqual([409, 'INVALID_TRANSITION'])
   })
 
-  it('partial refund records that part; exceeding the remainder is 400 INVALID_AMOUNT', async () => {
-    const part = 1_000
-    const r = await refundReq({ paymentId: A, actorId: 'admin', amountCents: part })
+  it('refunds are full only: A refunds its whole total, and a second refund is 409', async () => {
+    const r = await refundReq({ paymentId: A, actorId: 'admin' })
     expect(r.status, JSON.stringify(r.body)).toBe(200)
-    expect(r.body.refund).toEqual({ state: 'succeeded', refundedCents: part })
-
-    const over = await refundReq({
-      paymentId: A,
-      actorId: 'admin',
-      amountCents: r.body.breakdown.totalCents - part + 1,
+    expect(r.body.refund).toEqual({
+      state: 'succeeded',
+      refundedCents: r.body.breakdown.totalCents,
     })
-    expect([over.status, over.body.error?.code]).toEqual([400, 'INVALID_AMOUNT'])
-    expect((await read(A)).refund.refundedCents).toBe(part)
+    expect(r.body.ledger).toMatchObject({
+      balance: 'reversed',
+      commissionCents: 0,
+      netCents: 0,
+    })
+    expect(r.body.fulfilledAt?.receivedAt).toBeDefined()
+    expect(r.body.disputeReason).toBeUndefined()
+
+    const again = await refundReq({ paymentId: A, actorId: 'admin' })
+    expect([again.status, again.body.error?.code]).toEqual([409, 'ALREADY_REFUNDED'])
   })
 
   it.each([['buyer=alex'], [`seller=${SELLER}`], ['all=1']])(

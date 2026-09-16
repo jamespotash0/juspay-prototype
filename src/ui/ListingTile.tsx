@@ -1,5 +1,7 @@
 import type { MouseEvent } from 'react'
 import type { Listing, Seller } from '../shared/types'
+import { COPY } from '../shared/copy'
+import { gradeLabel } from './format'
 import { Money } from './Money'
 
 interface ListingTileProps {
@@ -15,9 +17,7 @@ export function ListingTile({ listing, seller, href, onNavigate }: ListingTilePr
     e.preventDefault()
     onNavigate(href)
   }
-  const grade = listing.graded
-    ? [listing.service, listing.grade].filter(Boolean).join(' ')
-    : 'Raw'
+  const grade = gradeLabel(listing)
 
   return (
     <a
@@ -38,6 +38,15 @@ export function ListingTile({ listing, seller, href, onNavigate }: ListingTilePr
         <h3 className="line-clamp-2 text-sm leading-snug group-hover:underline">
           {listing.title}
         </h3>
+        <p className="text-xs text-ink-muted">
+          {listing.shippingCents === 0 ? (
+            <span className="font-semibold text-ink">{COPY.common.freeShipping}</span>
+          ) : (
+            <>
+              + <Money cents={listing.shippingCents} /> {COPY.common.plusShipping}
+            </>
+          )}
+        </p>
         <dl className="money mt-auto flex flex-wrap items-center gap-x-1.5 border-t border-rule pt-2 text-xs text-ink-muted">
           <dt className="sr-only">Grade</dt>
           <dd className="font-semibold text-ink">{grade}</dd>

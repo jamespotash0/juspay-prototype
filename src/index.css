@@ -77,3 +77,83 @@
     background: rgb(22 21 15 / 0.45);
   }
 }
+
+/* Seller balance: one orchestrated release when a sale moves pending → available
+   (design.md §2 rule 3). Pending strikes out, the Available pill slides in from it,
+   then the net and the totals settle. Every end state is the resting state, so
+   reduced motion just skips to it. */
+@keyframes release-strike {
+  from {
+    text-decoration-color: transparent;
+  }
+}
+@keyframes release-pill {
+  from {
+    opacity: 0;
+    transform: translateX(-2.25rem) scale(0.92);
+  }
+}
+@keyframes release-glow {
+  from {
+    background-color: var(--color-state-paid-bg);
+  }
+}
+@keyframes release-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  40% {
+    opacity: 0.35;
+    transform: translateY(0.25rem);
+  }
+}
+@keyframes release-in {
+  from {
+    opacity: 0.2;
+    transform: translateY(-0.5rem);
+    color: var(--color-state-paid);
+  }
+  60% {
+    color: var(--color-state-paid);
+  }
+}
+@keyframes release-note {
+  from {
+    opacity: 0;
+  }
+}
+
+@layer components {
+  .release-struck {
+    animation: release-strike 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .release-pill {
+    animation: release-pill 700ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+  }
+  .release-note {
+    animation: release-note 500ms ease-out 650ms both;
+  }
+  .release-amount {
+    animation: release-glow 1600ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+  }
+  .release-out {
+    display: inline-block;
+    animation: release-out 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+  }
+  .release-in {
+    display: inline-block;
+    animation: release-in 1100ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-struck,
+  .release-pill,
+  .release-note,
+  .release-amount,
+  .release-out,
+  .release-in {
+    animation: none;
+  }
+}

@@ -1,6 +1,7 @@
 import { groupBySeller, removeFromCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
-import { Link, navigate } from '../lib/router.tsx'
+import { navigate } from '../lib/navigation.ts'
+import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
@@ -9,10 +10,13 @@ import type { Cents } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
-import { gradeLabel, PageLayout } from './Layout.tsx'
+import { gradeLabel } from '../ui/format.ts'
+import { PageLayout } from './Layout.tsx'
+
+const T = COPY.cart
 
 function Shipping({ cents }: { cents: Cents }) {
-  return cents === 0 ? <span>Free shipping</span> : <Money cents={cents} />
+  return cents === 0 ? <span>{COPY.common.freeShipping}</span> : <Money cents={cents} />
 }
 
 export default function Cart() {
@@ -23,7 +27,7 @@ export default function Cart() {
 
   if (groups.length === 0)
     return (
-      <PageLayout title="Cart">
+      <PageLayout title={T.title}>
         <EmptyState
           title={COPY.empty.cart.title}
           fact={COPY.empty.cart.fact}
@@ -33,12 +37,10 @@ export default function Cart() {
     )
 
   return (
-    <PageLayout title="Cart">
+    <PageLayout title={T.title}>
       <div className="max-w-3xl">
         <p className="-mt-3 mb-6 max-w-[65ch] text-sm text-ink-muted">
-          {groups.length > 1
-            ? `Items from ${groups.length} sellers. Each seller is checked out and paid separately.`
-            : 'Each seller is checked out and paid separately.'}
+          {groups.length > 1 ? T.manySellers(groups.length) : T.oneSeller}
         </p>
 
         <div className="flex flex-col gap-6">
@@ -61,7 +63,8 @@ export default function Cart() {
                   </h2>
                   {seller && (
                     <p className="money text-xs text-ink-muted">
-                      {seller.rating.toFixed(1)} rating · Ships from {seller.shipsFrom}
+                      {seller.rating.toFixed(1)} {COPY.listing.rating} ·{' '}
+                      {COPY.common.shipsFrom} {seller.shipsFrom}
                     </p>
                   )}
                 </header>
@@ -89,14 +92,14 @@ export default function Cart() {
                           <p className="money text-xs text-ink-muted">
                             {gradeLabel(l)}
                             {l.certNumber && ` · #${l.certNumber}`}
-                            {line.qty > 1 && ` · Qty ${line.qty}`}
+                            {line.qty > 1 && ` · ${T.qty} ${line.qty}`}
                           </p>
                           <button
                             type="button"
                             onClick={() => removeFromCart(l.id)}
                             className="mt-1 self-start text-xs font-medium text-accent hover:underline"
                           >
-                            Remove
+                            {T.remove}
                           </button>
                         </div>
                         <div className="text-right text-sm">
@@ -106,10 +109,11 @@ export default function Cart() {
                           />
                           <p className="text-xs text-ink-muted">
                             {l.shippingCents === 0 ? (
-                              'Free shipping'
+                              COPY.common.freeShipping
                             ) : (
                               <>
-                                + <Money cents={l.shippingCents * line.qty} /> shipping
+                                + <Money cents={l.shippingCents * line.qty} />{' '}
+                                {COPY.common.plusShipping}
                               </>
                             )}
                           </p>
@@ -121,33 +125,27 @@ export default function Cart() {
 
                 <div className="flex flex-col gap-3 border-t border-rule bg-bone/60 px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
                   <dl className="money grid grid-cols-[auto_auto] gap-x-6 gap-y-0.5 text-sm sm:min-w-56">
-                    <dt className="text-ink-muted">Items</dt>
+                    <dt className="text-ink-muted">{T.items}</dt>
                     <dd className="text-right">
                       <Money cents={b.itemsCents} />
                     </dd>
-                    <dt className="text-ink-muted">Shipping</dt>
+                    <dt className="text-ink-muted">{T.shipping}</dt>
                     <dd className="text-right">
                       <Shipping cents={b.shippingCents} />
                     </dd>
-                    <dt className="font-semibold">Subtotal</dt>
+                    <dt className="font-semibold">{T.subtotal}</dt>
                     <dd className="text-right font-semibold">
                       <Money cents={b.itemsCents + b.shippingCents} />
                     </dd>
-                    <dd className="col-span-2 text-xs text-ink-muted">
-                      Sales tax is added at checkout.
-                    </dd>
+                    <dd className="col-span-2 text-xs text-ink-muted">{T.taxLater}</dd>
                   </dl>
                   {sellerId === persona ? (
-                    <p className="text-sm font-semibold">
-                      This is your listing — you can't buy it.
-                    </p>
+                    <p className="text-sm font-semibold">{T.own}</p>
                   ) : isAdmin ? (
-                    <p className="text-sm text-ink-muted">
-                      Admins can't buy. Switch to a collector to check out.
-                    </p>
+                    <p className="text-sm text-ink-muted">{T.admin}</p>
                   ) : (
                     <Button onClick={() => navigate(`/checkout/${sellerId}`)}>
-                      Check out with {handle}
+                      {T.checkOutWith(handle)}
                     </Button>
                   )}
                 </div>

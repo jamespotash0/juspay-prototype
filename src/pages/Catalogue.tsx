@@ -1,22 +1,16 @@
 import { useState } from 'react'
 import { useListings } from '../lib/listings.ts'
-import { navigate } from '../lib/router.tsx'
+import { navigate, useSearchParams } from '../lib/navigation.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { Listing } from '../shared/types.ts'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { ListingTile } from '../ui/ListingTile.tsx'
-import { PageLayout, setSearchQuery, useSearchQuery } from './Layout.tsx'
+import { PageLayout } from './Layout.tsx'
 
 type Chip = 'coin' | 'card' | 'graded' | 'raw' | 'free'
 
-const CHIPS: { id: Chip; label: string }[] = [
-  { id: 'coin', label: 'Coins' },
-  { id: 'card', label: 'Cards' },
-  { id: 'graded', label: 'Graded' },
-  { id: 'raw', label: 'Raw' },
-  { id: 'free', label: 'Free shipping' },
-]
+const CHIPS = Object.entries(COPY.catalogue.chips) as [Chip, string][]
 
 // Chips in the same pair (Coins/Cards, Graded/Raw) widen; different pairs narrow.
 function matches(l: Listing, on: Set<Chip>, q: string): boolean {
@@ -45,7 +39,7 @@ function matches(l: Listing, on: Set<Chip>, q: string): boolean {
 
 export default function Catalogue() {
   const listings = useListings()
-  const q = useSearchQuery().trim()
+  const q = (useSearchParams().get('q') ?? '').trim()
   const [on, setOn] = useState<Set<Chip>>(new Set())
 
   const newestFirst = [...listings].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -60,29 +54,29 @@ export default function Catalogue() {
 
   function clear() {
     setOn(new Set())
-    setSearchQuery('')
+    navigate('/', { replace: true })
   }
 
   return (
     <PageLayout>
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        {CHIPS.map((c) => (
+        {CHIPS.map(([id, label]) => (
           <button
-            key={c.id}
+            key={id}
             type="button"
-            aria-pressed={on.has(c.id)}
-            onClick={() => toggle(c.id)}
+            aria-pressed={on.has(id)}
+            onClick={() => toggle(id)}
             className="h-8 rounded-full border border-rule bg-paper px-3 text-sm font-medium hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-accent-ink"
           >
-            {c.label}
+            {label}
           </button>
         ))}
         <p className="money ml-auto text-sm text-ink-muted" aria-live="polite">
-          {shown.length} of {listings.length}
+          {shown.length} {COPY.catalogue.of} {listings.length}
           {q && (
             <>
               {' '}
-              for <span className="font-semibold text-ink">“{q}”</span>
+              {COPY.catalogue.for} <span className="font-semibold text-ink">“{q}”</span>
             </>
           )}
         </p>
@@ -96,7 +90,9 @@ export default function Catalogue() {
             action={{ label: COPY.empty.noResults.action, onClick: clear }}
           />
           {/* Never a bare page: the real catalogue sits under the empty state. */}
-          <h2 className="mt-8 mb-4 font-display text-lg font-bold">All listings</h2>
+          <h2 className="mt-8 mb-4 font-display text-lg font-bold">
+            {COPY.catalogue.allListings}
+          </h2>
           <Grid listings={newestFirst} />
         </>
       ) : (
@@ -113,18 +109,13 @@ function Grid({ listings }: { listings: Listing[] }) {
         const seller = SELLERS.find((s) => s.id === l.sellerId)
         if (!seller) return null
         return (
-          <li key={l.id} className="relative grid">
+          <li key={l.id} className="grid">
             <ListingTile
               listing={l}
               seller={seller}
               href={`/listing/${l.id}`}
               onNavigate={navigate}
             />
-            {l.shippingCents === 0 && (
-              <span className="pointer-events-none absolute top-2 left-2 rounded-slab border border-rule bg-paper px-1.5 py-0.5 text-xs font-semibold">
-                Free shipping
-              </span>
-            )}
           </li>
         )
       })}

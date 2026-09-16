@@ -19,8 +19,11 @@ const SHIP_TO = {
   zip: '78701',
 }
 
-// lst_002 is Mike's; Alex buys it.
-const LISTING = LISTINGS.find((l) => l.id === 'lst_002')!
+// Routing (engineering.md §10): cards with amount >= 50000 cents always go to stripe_test; below
+// that, a volume split 80/20 stripe_test/fauxpay. lst_024 is Mike's, total $1,225, so every card
+// test on it is deterministic. lst_002 is Mike's too, total $101.12, for the split.
+const LISTING = LISTINGS.find((l) => l.id === 'lst_024')!
+const SMALL = LISTINGS.find((l) => l.id === 'lst_002')!
 
 const post = (body: unknown) =>
   checkout(
@@ -38,11 +41,15 @@ const order = async (id: string) => {
   return (await res.json()) as OrderView
 }
 
-async function startCheckout(attemptId = newAttemptId(), extra: object = {}) {
+async function startCheckout(
+  attemptId = newAttemptId(),
+  extra: object = {},
+  listingId = LISTING.id,
+) {
   const res = await post({
     attemptId,
     buyerId: 'alex',
-    items: [{ listingId: LISTING.id, qty: 1 }],
+    items: [{ listingId, qty: 1 }],
     shipTo: SHIP_TO,
     ...extra,
   })
@@ -52,14 +59,14 @@ async function startCheckout(attemptId = newAttemptId(), extra: object = {}) {
 }
 
 /** Server-side confirm: the SDK is browser-only. */
-async function confirm(paymentId: string, cardNumber: string) {
+async function confirm(paymentId: string, cardNumber: string, auth = 'no_three_ds') {
   const res = await fetch(`${HS}/payments/${paymentId}/confirm`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'api-key': KEY! },
     body: JSON.stringify({
       payment_method: 'card',
       payment_method_type: 'credit',
-      authentication_type: 'no_three_ds',
+      authentication_type: auth,
       payment_method_data: {
         card: {
           card_number: cardNumber,
@@ -77,22 +84,28 @@ async function confirm(paymentId: string, cardNumber: string) {
     error_message?: string | null
     unified_code?: string | null
     unified_message?: string | null
+    connector?: string | null
+    next_action?: { type?: string } | null
     error?: { code: string; message: string }
   }
 }
 
 describe.skipIf(!KEY)('payment path (live sandbox)', () => {
-  it('4242 succeeds and reads back as paid with the server breakdown', async () => {
+  it('4242 on a >= $500 order succeeds on stripe_test and reads back as paid', async () => {
     const s = await startCheckout()
     const expected = breakdown([{ listingId: LISTING.id, qty: 1 }], LISTINGS)
+    expect(expected.totalCents).toBeGreaterThanOrEqual(50_000)
     expect(s.breakdown).toEqual(expected)
     expect(s.sellerId).toBe('mike')
 
     const confirmed = await confirm(s.paymentId, '4242424242424242')
     expect(confirmed.status).toBe('succeeded')
+    expect(confirmed.connector).toBe('stripe_test')
 
     const view = await order(s.paymentId)
     expect(view.state).toBe('paid')
+    expect(view.connector).toBe('stripe_test')
+    expect(view.decline).toBeUndefined()
     expect(view.breakdown).toEqual(expected)
     expect(view.sellerId).toBe('mike')
     expect(view.buyerId).toBe('alex')
@@ -172,39 +185,74 @@ describe.skipIf(!KEY)('payment path (live sandbox)', () => {
     expect(res.status).toBe(400)
   })
 
-  // Probed 2026-09-16 on paypal_test: every one of these declines (status failed, DC_08 or DC_04,
-  // unified UE_9000). The reason is only in error_message, so the expected DeclineReason follows
-  // what the connector reports, not Stripe's meaning of the card (9995 is processing_error here,
-  // not insufficient_funds). Demoing insufficient funds needs a Stripe test connector.
-  // Retriable follows design.md §4: soft declines (processing_error) retry, hard ones don't.
+  // Probed 2026-09-16 on stripe_test (orders >= $500). Every decline is unified UE_9000, so the
+  // reason comes from error_message. 9995 does NOT decline on stripe_test: it succeeds and charges.
+  // The soft decline (processing_error, retriable) only reproduces on fauxpay, which routing
+  // reaches only for orders < $500, at random. Retriable follows design.md §4.
   it.each([
-    ['4000000000000002', 'Card declined', 'generic', false],
-    [
-      '4000000000009995',
-      'Internal Server Error from Connector',
-      'processing_error',
-      true,
-    ],
-    ['4000000000009987', 'Lost card', 'lost_or_stolen', false],
-    ['4000000000009979', 'Stolen card', 'lost_or_stolen', false],
-    ['4000000000000119', 'Card not supported', 'generic', false],
+    ['4000000000000002', 'DC_08', 'Card declined', 'generic', false],
+    ['4000000000009987', 'DC_08', 'Lost card', 'lost_or_stolen', false],
+    ['4000000000009979', 'DC_08', 'Stolen card', 'lost_or_stolen', false],
+    ['4000000000000119', 'DC_04', 'Card not supported', 'generic', false],
   ] as const)(
-    '%s declines as failed with buyer-safe copy (%s -> %s)',
-    async (card, rawMessage, reason, retriable) => {
+    '%s declines on stripe_test as failed (%s %s -> %s)',
+    async (card, code, rawMessage, reason, retriable) => {
       const s = await startCheckout()
       const c = await confirm(s.paymentId, card)
       expect(c.status, JSON.stringify(c)).toBe('failed')
+      expect(c.connector).toBe('stripe_test')
+      expect(c.error_code).toBe(code)
       expect(c.error_message).toContain(rawMessage)
 
       const view = await order(s.paymentId)
       expect(view.state).toBe('failed')
-      expect(view.decline?.code).toBe(c.error_code)
+      expect(view.connector).toBe('stripe_test')
+      expect(view.decline?.reason).toBe(reason)
+      expect(view.decline?.code).toBe(code)
       expect(view.decline?.message).toBe(COPY.decline[reason].message)
       expect(view.decline?.message).not.toContain(rawMessage)
       expect(view.decline?.retriable).toBe(retriable)
       console.log(
-        `[QA-2] decline ${card} ${s.paymentId}: failed ${c.error_code} ${c.unified_code} -> ${reason} retriable=${view.decline?.retriable}`,
+        `[QA-4a] decline ${card} ${s.paymentId}: ${c.connector} failed ${c.error_code} -> ${reason} retriable=${retriable}`,
       )
     },
   )
+
+  it('4000000000009995 succeeds on stripe_test (no soft decline there)', async () => {
+    const s = await startCheckout()
+    const c = await confirm(s.paymentId, '4000000000009995')
+    expect([c.status, c.connector]).toEqual(['succeeded', 'stripe_test'])
+    const view = await order(s.paymentId)
+    expect(view.state).toBe('paid')
+    expect(view.decline).toBeUndefined()
+    console.log(`[QA-4a] 9995 ${s.paymentId}: ${c.connector} ${c.status}`)
+  })
+
+  it('3DS card 4000003800000446 with three_ds needs customer action on stripe_test', async () => {
+    const s = await startCheckout()
+    const c = await confirm(s.paymentId, '4000003800000446', 'three_ds')
+    expect(c.status, JSON.stringify(c)).toBe('requires_customer_action')
+    expect(c.connector).toBe('stripe_test')
+    expect(c.next_action?.type).toBe('redirect_to_url')
+    const view = await order(s.paymentId)
+    expect(view.state).toBe('action_required')
+    expect(view.connector).toBe('stripe_test')
+    expect(view.decline).toBeUndefined()
+    console.log(`[QA-4a] 3DS ${s.paymentId}: ${c.connector} ${c.status}`)
+  })
+
+  // Only the connector set is asserted: a volume split can land 3/3 on either side.
+  it('a < $500 card payment lands on stripe_test or fauxpay, never paypal_test', async () => {
+    expect(
+      breakdown([{ listingId: SMALL.id, qty: 1 }], LISTINGS).totalCents,
+    ).toBeLessThan(50_000)
+    for (let i = 0; i < 3; i++) {
+      const s = await startCheckout(newAttemptId(), {}, SMALL.id)
+      const c = await confirm(s.paymentId, '4242424242424242')
+      expect(c.status).toBe('succeeded')
+      const view = await order(s.paymentId)
+      expect(['stripe_test', 'fauxpay']).toContain(view.connector)
+      console.log(`[QA-4a] small 4242 ${s.paymentId}: ${view.connector}`)
+    }
+  }, 60_000)
 })

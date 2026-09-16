@@ -1,54 +1,25 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
-import { navigate, usePath } from '../lib/router.tsx'
+import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
 import { setPersona, usePersona } from '../lib/session.ts'
+import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
-import type { Listing } from '../shared/types.ts'
 import { TopBar } from '../ui/TopBar.tsx'
 
-// The router only re-renders on a pathname change, so a ?q= change announces
-// itself as a popstate (the router listens to that too).
-// ponytail: popstate stand-in; swap for a router useSearch() if one is added.
-function subscribeSearch(listener: () => void) {
-  window.addEventListener('popstate', listener)
-  return () => window.removeEventListener('popstate', listener)
-}
-
-/** The current ?q= search, re-rendering when it changes. */
-export function useSearchQuery(): string {
-  const search = useSyncExternalStore(subscribeSearch, () => location.search)
-  return new URLSearchParams(search).get('q') ?? ''
-}
-
-export function setSearchQuery(q: string) {
-  const to = q ? `/?q=${encodeURIComponent(q)}` : '/'
-  const onHome = location.pathname === '/'
-  if (onHome) history.replaceState(null, '', to)
-  else {
-    refocusSearch = true // the page swaps under the input; put the caret back
-    navigate(to)
-  }
-  window.dispatchEvent(new PopStateEvent('popstate'))
-  if (!q) {
-    const input = document.getElementById('topbar-search') as HTMLInputElement | null
-    if (input && document.activeElement !== input) input.value = ''
-  }
-}
-
+// Typing on another page takes you to the catalogue; the page swaps under the input, so put the caret back.
 let refocusSearch = false
 
-/** "PCGS MS-65", without doubling a service the grade already names ("PSA 9"). */
-export function gradeLabel(l: Listing): string {
-  if (!l.graded) return 'Raw'
-  if (l.service && l.grade?.startsWith(l.service)) return l.grade
-  return [l.service, l.grade].filter(Boolean).join(' ')
+function search(q: string) {
+  const onHome = location.pathname === '/'
+  if (!onHome) refocusSearch = true
+  navigate(q ? `/?q=${encodeURIComponent(q)}` : '/', { replace: onHome })
 }
 
 export function PageLayout({ children, title }: { children: ReactNode; title?: string }) {
   const path = usePath()
   const persona = usePersona()
   const cart = useCart()
-  const q = useSearchQuery()
+  const q = useSearchParams().get('q') ?? ''
   const isAdmin = PERSONAS.find((p) => p.id === persona)?.kind === 'admin'
 
   useEffect(() => {
@@ -65,11 +36,11 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
 
   const links = (
     isAdmin
-      ? [{ label: 'Admin', href: '/admin' }]
+      ? [{ label: COPY.shell.admin, href: '/admin' }]
       : [
-          { label: 'Shop', href: '/' },
-          { label: 'Orders', href: '/orders' },
-          { label: 'Sell', href: '/sell' },
+          { label: COPY.shell.shop, href: '/' },
+          { label: COPY.shell.orders, href: '/orders' },
+          { label: COPY.shell.sell, href: '/sell' },
         ]
   ).map((l) => ({
     ...l,
@@ -82,7 +53,7 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
         personas={PERSONAS}
         activePersonaId={persona}
         onPersonaChange={setPersona}
-        onSearch={setSearchQuery}
+        onSearch={search}
         searchValue={q}
         links={links}
         cartCount={cart.reduce((n, l) => n + l.qty, 0)}
@@ -96,9 +67,7 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
       </main>
       <footer className="border-t border-rule">
         <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-muted">
-          {/* Local copy: requested for copy.ts */}A demo marketplace. Sellers, listings,
-          photos and ratings are synthetic; payments are real Hyperswitch sandbox
-          payments.
+          {COPY.shell.footer}
         </p>
       </footer>
     </div>

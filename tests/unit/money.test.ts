@@ -102,7 +102,7 @@ describe('sellerLedger (seller)', () => {
     expect(l.netCents).toBe(1_899)
   })
 
-  it('balance: pending until shipped, available after, reversed on refund', () => {
+  it('balance: pending until shipped, available after, reversed only on a full refund', () => {
     expect(sellerLedger(b, 'unshipped', 'none').balance).toBe('pending')
     expect(sellerLedger(b, 'shipped', 'none').balance).toBe('available')
     expect(sellerLedger(b, 'received', 'none').balance).toBe('available')
@@ -111,8 +111,13 @@ describe('sellerLedger (seller)', () => {
     expect(sellerLedger(b, 'unshipped', 'succeeded').balance).toBe('reversed')
   })
 
-  it('pending and available keep commission and net; reversed zeroes them, gross unchanged', () => {
-    const projected = { grossCents: 181_200, commissionCents: 9_000, netCents: 172_200 }
+  it('pending and available keep commission and net; a full refund zeroes them, gross unchanged', () => {
+    const projected = {
+      grossCents: 181_200,
+      commissionCents: 9_000,
+      netCents: 172_200,
+      refundedCents: 0,
+    }
     expect(sellerLedger(b, 'unshipped', 'none')).toEqual({
       ...projected,
       balance: 'pending',
@@ -125,8 +130,18 @@ describe('sellerLedger (seller)', () => {
       grossCents: 181_200,
       commissionCents: 0,
       netCents: 0,
+      refundedCents: 195_600,
       balance: 'reversed',
     })
+  })
+
+  it('refunds are full only: any succeeded refund reverses, before or after shipping', () => {
+    expect(sellerLedger(b, 'unshipped', 'succeeded')).toMatchObject({
+      balance: 'reversed',
+      netCents: 0,
+      refundedCents: b.totalCents,
+    })
+    expect(sellerLedger(b, 'shipped', 'succeeded').balance).toBe('reversed')
   })
 
   it('a pending or failed refund does not reverse the balance', () => {

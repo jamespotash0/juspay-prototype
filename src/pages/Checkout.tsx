@@ -4,7 +4,8 @@ import { attemptFor, clearAttempt } from '../checkout/attempt.ts'
 import { ApiRequestError, api } from '../lib/api.ts'
 import { groupBySeller, useCart } from '../lib/cart.ts'
 import { useListings, userListings } from '../lib/listings.ts'
-import { Link, navigate, type Params } from '../lib/router.tsx'
+import { navigate, type Params } from '../lib/navigation.ts'
+import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
@@ -14,28 +15,10 @@ import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
-import { PageLayout, gradeLabel } from './Layout.tsx'
+import { gradeLabel } from '../ui/format.ts'
+import { PageLayout } from './Layout.tsx'
 
-// Local strings not yet in COPY (requested from product in the DES-2 handback).
-const TEXT = {
-  title: 'Checkout',
-  emptyGroup: 'Nothing from this seller in your cart',
-  backToCart: 'Back to cart',
-  ownListing: "You can't buy your own listing",
-  ownListingBody: 'Switch to another collector in the top bar to buy it.',
-  admin: 'Admins don’t check out',
-  adminBody: 'Switch to Alex or Mike in the top bar to buy.',
-  signIn: 'Sign in to check out',
-  signInBody: 'Demo sign-in: every option continues as',
-  providers: ['Continue with Google', 'Continue with Apple', 'Continue with email'],
-  shipTo: 'Ship to',
-  continue: 'Continue to payment',
-  starting: 'Starting…',
-  payment: 'Payment',
-  summary: 'Summary',
-  from: 'From',
-  freeShipping: 'Free shipping',
-}
+const TEXT = COPY.checkoutPage
 
 const SIGNED_IN = 'slabbed.signedIn'
 
@@ -65,6 +48,8 @@ export default function Checkout({ params }: { params: Params }) {
   })
   const [session, setSession] = useState<CheckoutResponse | null>(null)
   const [busy, setBusy] = useState(false)
+  // True while the SDK is confirming: the address can't change under a live payment.
+  const [paying, setPaying] = useState(false)
   const [message, setMessage] = useState('')
 
   const seller = SELLERS.find((s) => s.id === sellerId)
@@ -126,7 +111,7 @@ export default function Checkout({ params }: { params: Params }) {
       // Still in flight at Hyperswitch: never start a second one, go watch this one.
       if (code === 'IN_PROGRESS') return navigate(`/order/${attemptId}`)
       if (code === 'AMOUNT_MISMATCH') clearAttempt(sellerId, attemptId)
-      setMessage(err instanceof Error ? err.message : 'Something went wrong')
+      setMessage(err instanceof Error && err.message ? err.message : TEXT.startFailed)
     } finally {
       setBusy(false)
     }
@@ -148,7 +133,7 @@ export default function Checkout({ params }: { params: Params }) {
         required
         className={input}
         value={shipTo[k]}
-        disabled={!!session || busy}
+        disabled={!!session || busy || paying}
         onChange={(e) => setShipTo({ ...shipTo, [k]: e.target.value })}
       />
     </label>
@@ -181,15 +166,15 @@ export default function Checkout({ params }: { params: Params }) {
           ) : (
             <>
               <form onSubmit={start} className="flex flex-col gap-4">
-                <fieldset className="grid grid-cols-6 gap-3">
+                <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
                   <legend className="mb-3 font-display text-lg font-bold">
                     {TEXT.shipTo}
                   </legend>
-                  {field('name', 'Name', 'col-span-6')}
-                  {field('line1', 'Address', 'col-span-6')}
-                  {field('city', 'City', 'col-span-6 sm:col-span-3')}
-                  {field('state', 'State', 'col-span-2 sm:col-span-1')}
-                  {field('zip', 'ZIP', 'col-span-4 sm:col-span-2')}
+                  {field('name', TEXT.fields.name, 'col-span-6')}
+                  {field('line1', TEXT.fields.line1, 'col-span-6')}
+                  {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
+                  {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
+                  {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
                 </fieldset>
                 {!session && (
                   <Button type="submit" disabled={busy} className="self-start">
@@ -214,6 +199,7 @@ export default function Checkout({ params }: { params: Params }) {
                     paymentId={session.paymentId}
                     onSubmitted={() => navigate(`/order/${session.paymentId}`)}
                     onError={setMessage}
+                    onSubmittingChange={setPaying}
                   />
                 </section>
               )}
@@ -268,25 +254,29 @@ export function BreakdownList({ b }: { b: Breakdown }) {
   return (
     <dl className="flex flex-col gap-1.5 border-t border-rule pt-3 text-sm">
       <div className={row}>
-        <dt>Items</dt>
+        <dt>{TEXT.items}</dt>
         <dd>
           <Money cents={b.itemsCents} />
         </dd>
       </div>
       <div className={row}>
-        <dt>Shipping</dt>
+        <dt>{TEXT.shipping}</dt>
         <dd>
-          {b.shippingCents === 0 ? TEXT.freeShipping : <Money cents={b.shippingCents} />}
+          {b.shippingCents === 0 ? (
+            COPY.common.freeShipping
+          ) : (
+            <Money cents={b.shippingCents} />
+          )}
         </dd>
       </div>
       <div className={row}>
-        <dt>Tax</dt>
+        <dt>{TEXT.tax}</dt>
         <dd>
           <Money cents={b.taxCents} />
         </dd>
       </div>
       <div className={`${row} mt-1 border-t border-rule pt-2 text-base font-bold`}>
-        <dt>Total</dt>
+        <dt>{TEXT.total}</dt>
         <dd>
           <Money cents={b.totalCents} />
         </dd>

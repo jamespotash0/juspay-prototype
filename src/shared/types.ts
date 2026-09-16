@@ -2,6 +2,8 @@
 // Every agent codes against these shapes. Change only with product sign-off,
 // and update plan/tickets.md in the same change.
 
+import type { DeclineReason } from './copy.ts'
+
 /** Integer minor units (US cents). Never a float, never a formatted string. */
 export type Cents = number
 
@@ -77,10 +79,12 @@ export interface Breakdown {
 /** What the SELLER is credited. Commission is never shown to the buyer. */
 export interface SellerLedger {
   grossCents: Cents // items + shipping
-  /** While 'pending': the commission that WILL be taken. When 'reversed': 0 — a refunded sale pays no fee. */
+  /** While 'pending': the commission that WILL be taken. When 'reversed': 0 — a fully refunded sale pays no fee. */
   commissionCents: Cents
-  /** While 'pending': the expected net. When 'reversed': 0. */
+  /** gross − commission. While 'pending': the expected net. When 'reversed': 0. */
   netCents: Cents
+  /** Refunds are full only: 0, or the buyer's whole total once refunded. */
+  refundedCents: Cents
   balance: 'pending' | 'available' | 'reversed'
 }
 
@@ -125,6 +129,8 @@ export const META = {
 export type PaymentSource = 'app' | 'test'
 
 export interface Decline {
+  /** Pages branch on this, never on message text. */
+  reason: DeclineReason
   code: string // logged / shown only as a small support ref
   message: string // already buyer-safe copy
   retriable: boolean
@@ -146,6 +152,10 @@ export interface OrderView {
   /** Hyperswitch payment_method_type: 'credit', 'debit', 'paypal'… */
   paymentMethodType?: string
   decline?: Decline
+  /** Present once the buyer has disputed. */
+  disputeReason?: string
+  /** ISO timestamps from metadata, each present once that step happened. */
+  fulfilledAt?: { shippedAt?: string; receivedAt?: string; disputedAt?: string }
 }
 
 // ── API contracts ───────────────────────────────────────────────────────────
@@ -182,11 +192,10 @@ export interface OrderStateRequest {
   reason?: string // dispute only
 }
 
-/** POST /api/refund → OrderView. Admin only. Omit amount for a full refund. */
+/** POST /api/refund → OrderView. Admin only. Always a FULL refund — there is no amount. */
 export interface RefundRequest {
   paymentId: string
   actorId: PersonaId
-  amountCents?: Cents
   reason?: string
 }
 

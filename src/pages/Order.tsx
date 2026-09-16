@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { clearAttempt } from '../checkout/attempt.ts'
 import { api } from '../lib/api.ts'
 import { clearCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
-import { navigate, type Params } from '../lib/router.tsx'
+import { navigate, type Params } from '../lib/navigation.ts'
+import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderAction, OrderView, PaymentState, PersonaId } from '../shared/types.ts'
@@ -20,36 +21,7 @@ const IN_FLIGHT: PaymentState[] = ['awaiting_payment', 'action_required', 'pendi
 const POLL_MS = 2000
 const POLL_FOR_MS = 30000
 
-// Local strings not yet in COPY (requested from product in the DES-2 handback).
-const TEXT = {
-  title: 'Order',
-  notFound: "We couldn't find this order",
-  notFoundFact: 'Orders are read straight from the payment record, by reference.',
-  toOrders: 'Your orders',
-  paymentFailed: "Payment didn't go through",
-  supportRef: 'Support ref',
-  review: 'This payment is being reviewed',
-  reviewBody: "Don't pay again. We'll update this order when the review finishes.",
-  cancelled: 'This payment was cancelled. Nothing has been charged.',
-  other: "This payment needs a look from us. Don't pay again.",
-  items: 'Items',
-  amounts: 'Amounts',
-  yourSale: 'Your sale',
-  gross: 'Items + shipping',
-  commission: 'Commission',
-  net: 'You receive',
-  progress: 'Progress',
-  steps: {
-    paid: 'Paid',
-    shipped: 'Shipped',
-    received: 'Received',
-    disputed: 'Disputed',
-    refunded: 'Refunded',
-  },
-  refund: 'Refund',
-  disputeReason: 'Reason (optional)',
-  cancel: 'Cancel',
-}
+const TEXT = COPY.order
 
 export default function Order({ params }: { params: Params }) {
   const paymentId = params.paymentId
@@ -181,6 +153,10 @@ export default function Order({ params }: { params: Params }) {
                 <dl className="mt-2 flex max-w-sm flex-col gap-1.5 text-sm">
                   <Row label={TEXT.gross} cents={order.ledger.grossCents} />
                   <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
+                  {order.ledger.refundedCents > 0 &&
+                    order.ledger.balance !== 'reversed' && (
+                      <Row label={TEXT.refunded} cents={-order.ledger.refundedCents} />
+                    )}
                   <Row label={TEXT.net} cents={order.ledger.netCents} bold />
                 </dl>
               ) : (
@@ -251,17 +227,18 @@ function StateNotice({ order }: { order: OrderView | null }) {
   }
 }
 
+// Our own failures already say "nothing has been charged. We…"; bank declines get soft/hard guidance.
+const OURS: DeclineReason[] = ['processing_error', 'network_unreachable']
+
 function Declined({ order }: { order: OrderView }) {
   const d = order.decline
-  const match = d && Object.values(COPY.decline).find((c) => c.message === d.message)
-  const retriable = d?.retriable ?? false
-  // Our own failures ("Nothing has been charged. We…") already say what happened; bank declines get soft/hard guidance.
-  const ours = d?.message.startsWith('Nothing has been charged')
-  const guidance: ReactNode = ours
+  const guidance = !d
     ? null
-    : retriable
-      ? COPY.checkout.softDecline
-      : COPY.checkout.hardDecline
+    : OURS.includes(d.reason)
+      ? null
+      : d.retriable
+        ? COPY.checkout.softDecline
+        : COPY.checkout.hardDecline
   return (
     <Notice
       tone="danger"
@@ -278,11 +255,7 @@ function Declined({ order }: { order: OrderView }) {
       }
       action={{
         // The cart kept its items; checkout starts a fresh attempt because this one is terminal.
-        label:
-          match?.action ??
-          (retriable
-            ? COPY.decline.processing_error.action
-            : COPY.decline.generic.action),
+        label: COPY.decline[d?.reason ?? 'generic'].action,
         onClick: () => navigate(`/checkout/${order.sellerId}`),
       }}
     />
@@ -444,7 +417,7 @@ function Fulfilment({
               {COPY.orderActions.dispute}
             </Button>
             <Button variant="quiet" onClick={() => setDisputing(false)} disabled={busy}>
-              {TEXT.cancel}
+              {COPY.common.cancel}
             </Button>
           </div>
         </form>

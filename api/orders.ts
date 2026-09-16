@@ -25,9 +25,10 @@ export async function GET(request: Request): Promise<Response> {
     const payments: HsPayment[] = []
     let after = ''
     for (let i = 0; i < MAX_PAGES; i++) {
-      const page = await hsFetch<{ data: HsPayment[] }>(
-        `/payments/list?limit=${PAGE}${after ? `&starting_after=${encodeURIComponent(after)}` : ''}`,
-      )
+      const path = `/payments/list?limit=${PAGE}${after ? `&starting_after=${encodeURIComponent(after)}` : ''}`
+      // One retry: the sandbox list call fails transiently, and one bad page used to 502 the whole view.
+      let page = await hsFetch<{ data: HsPayment[] }>(path)
+      if (!page.ok) page = await hsFetch<{ data: HsPayment[] }>(path)
       if (!page.ok) return jsonError(502, 'UPSTREAM', 'Could not load orders')
       payments.push(...page.data.data)
       if (page.data.data.length < PAGE) break

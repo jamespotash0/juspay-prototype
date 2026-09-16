@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
 import { useListings } from '../lib/listings.ts'
-import { Link, navigate } from '../lib/router.tsx'
+import { navigate } from '../lib/navigation.ts'
+import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
@@ -10,7 +11,10 @@ import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
+import { refundLabel } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
+
+const T = COPY.orders
 
 const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' })
 
@@ -42,16 +46,19 @@ export default function Orders() {
   const failed = current?.failed
 
   return (
-    <PageLayout title="Your orders">
+    <PageLayout title={T.title}>
       {failed ? (
         <Notice
           tone="danger"
-          title="We couldn't load your orders."
-          body="Your payments are unaffected. This only failed to read them."
-          action={{ label: 'Try again', onClick: () => setAttempt((n) => n + 1) }}
+          title={T.loadFailed}
+          body={T.loadFailedFact}
+          action={{
+            label: COPY.common.tryAgain,
+            onClick: () => setAttempt((n) => n + 1),
+          }}
         />
       ) : !orders ? (
-        <ul aria-busy="true" aria-label="Loading orders" className="flex flex-col">
+        <ul aria-busy="true" aria-label={T.loading} className="flex flex-col">
           {[0, 1, 2].map((i) => (
             <li key={i} className="h-20 animate-pulse border-b border-rule bg-paper/60" />
           ))}
@@ -69,8 +76,8 @@ export default function Orders() {
             .map((o) => {
               const items = o.listingIds.map((id) => listings.find((l) => l.id === id))
               const first = items[0]
-              const title = first?.title ?? 'Listing no longer available'
-              const more = items.length > 1 ? ` + ${items.length - 1} more` : ''
+              const title = first?.title ?? T.gone
+              const more = items.length > 1 ? T.more(items.length - 1) : ''
               const seller = SELLERS.find((s) => s.id === o.sellerId)
               return (
                 <li key={o.paymentId}>
@@ -99,16 +106,7 @@ export default function Orders() {
                       <div className="flex flex-wrap gap-1.5">
                         <StatusPill status={o.state} />
                         {o.refund.state !== 'none' ? (
-                          <StatusPill
-                            status={o.refund.state}
-                            label={
-                              o.refund.state === 'pending'
-                                ? 'Refund pending'
-                                : o.refund.state === 'failed'
-                                  ? 'Refund failed'
-                                  : undefined
-                            }
-                          />
+                          <StatusPill status={o.refund.state} label={refundLabel(o)} />
                         ) : (
                           <StatusPill status={o.fulfilment} />
                         )}

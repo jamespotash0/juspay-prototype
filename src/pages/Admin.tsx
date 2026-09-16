@@ -2,76 +2,48 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
-import { PERSONAS, SELLERS } from '../shared/seed.ts'
+import { COPY } from '../shared/copy.ts'
 import type { OrderView } from '../shared/types.ts'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
+import { personName, refundLabel, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
-// ponytail: local strings pending product adding them to COPY (see handback).
-export const ADMIN_ONLY = {
-  title: 'Admin only',
-  body: 'Switch to Slabbed Admin in the account menu to review transactions and refunds.',
-}
-const T = {
-  title: 'Transactions',
-  all: 'All',
-  disputes: 'Disputes',
-  loadFailed: "We couldn't load transactions.",
-  loadFailedFact: 'Nothing has changed. Check your connection and try again.',
-  retry: 'Try again',
-  noDisputes: 'No open disputes.',
-  none: 'No transactions yet.',
-}
-
-export const personName = (id: string) =>
-  PERSONAS.find((p) => p.id === id)?.name ??
-  SELLERS.find((s) => s.id === id)?.handle ??
-  (id || '—')
-
-/** Refund pill words where the default label is not specific enough. */
-export const refundLabel = ({ refund, breakdown }: OrderView) =>
-  refund.state === 'succeeded' && refund.refundedCents < breakdown.totalCents
-    ? 'Partly refunded'
-    : refund.state === 'pending'
-      ? 'Refund pending'
-      : refund.state === 'failed'
-        ? 'Refund failed'
-        : undefined
-
-export const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+const T = COPY.admin
 
 export default function Admin() {
   const persona = usePersona()
-  const [orders, setOrders] = useState<OrderView[] | null>(null)
-  const [loadError, setLoadError] = useState(false)
   const [reload, setReload] = useState(0)
+  // Tagged with the request it answers, so a retry shows loading again without resetting state in the effect.
+  const key = `${persona}:${reload}`
+  const [result, setResult] = useState<{
+    key: string
+    orders?: OrderView[]
+    failed?: boolean
+  }>()
   const [filter, setFilter] = useState<'all' | 'disputes'>('all')
 
   useEffect(() => {
     if (persona !== 'admin') return
     let live = true
-    setOrders(null)
-    setLoadError(false)
     api
       .orders({ all: true })
-      .then((r) => live && setOrders(r.orders))
-      .catch(() => live && setLoadError(true))
+      .then((r) => live && setResult({ key, orders: r.orders }))
+      .catch(() => live && setResult({ key, failed: true }))
     return () => {
       live = false
     }
-  }, [persona, reload])
+  }, [persona, key])
+
+  const current = result?.key === key ? result : undefined
+  const orders = current?.orders ?? null
+  const loadError = !!current?.failed
 
   if (persona !== 'admin') {
     return (
       <PageLayout title={T.title}>
-        <Notice tone="info" title={ADMIN_ONLY.title} body={ADMIN_ONLY.body} />
+        <Notice tone="info" title={T.onlyTitle} body={T.onlyBody} />
       </PageLayout>
     )
   }
@@ -82,7 +54,7 @@ export default function Admin() {
   return (
     <PageLayout title={T.title}>
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2" role="group" aria-label="Filter transactions">
+        <div className="flex gap-2" role="group" aria-label={T.filter}>
           {(['all', 'disputes'] as const).map((f) => (
             <button
               key={f}
@@ -106,11 +78,14 @@ export default function Admin() {
             tone="danger"
             title={T.loadFailed}
             body={T.loadFailedFact}
-            action={{ label: T.retry, onClick: () => setReload((n) => n + 1) }}
+            action={{
+              label: COPY.common.tryAgain,
+              onClick: () => setReload((n) => n + 1),
+            }}
           />
         ) : orders === null ? (
           <p role="status" className="text-sm text-ink-muted">
-            Loading transactions…
+            {T.loading}
           </p>
         ) : rows.length === 0 ? (
           <p className="border-y border-rule py-10 text-ink-muted">
@@ -121,20 +96,11 @@ export default function Admin() {
             <table className="w-full text-left text-sm max-md:block md:min-w-[56rem]">
               <thead className="border-b border-rule bg-bone text-xs text-ink-muted max-md:hidden">
                 <tr>
-                  {[
-                    'Payment',
-                    'Date',
-                    'Buyer',
-                    'Seller',
-                    'Amount',
-                    'Payment state',
-                    'Fulfilment',
-                    'Refund',
-                  ].map((h) => (
+                  {T.columns.map((h, i) => (
                     <th
                       key={h}
                       scope="col"
-                      className={`px-3 py-2 font-semibold ${h === 'Amount' ? 'text-right' : ''}`}
+                      className={`px-3 py-2 font-semibold ${i === 4 ? 'text-right' : ''}`}
                     >
                       {h}
                     </th>

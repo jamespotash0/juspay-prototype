@@ -2,6 +2,7 @@ import { loadHyper, type HyperInstance } from '@juspay-tech/hyper-js'
 import { HyperElements, UnifiedCheckout, useHyper } from '@juspay-tech/react-hyper-js'
 import { useState, type FormEvent } from 'react'
 import { COPY } from '../shared/copy.ts'
+import { Button } from '../ui/Button.tsx'
 
 interface Props {
   clientSecret: string
@@ -11,6 +12,8 @@ interface Props {
   onSubmitted(): void
   /** Nothing was submitted (e.g. an incomplete card field). Stay on the page. */
   onError(message: string): void
+  /** true just before confirmPayment; false if it returns without leaving the page (e.g. a validation error). */
+  onSubmittingChange?: (submitting: boolean) => void
 }
 
 // HyperLoader.js may only be added once per page, so one promise per key.
@@ -32,7 +35,7 @@ export default function HyperCheckout(props: Props) {
   )
 }
 
-function PayForm({ paymentId, onSubmitted, onError }: Props) {
+function PayForm({ paymentId, onSubmitted, onError, onSubmittingChange }: Props) {
   const hyper = useHyper()
   const [busy, setBusy] = useState(false)
 
@@ -40,6 +43,7 @@ function PayForm({ paymentId, onSubmitted, onError }: Props) {
     e.preventDefault()
     if (busy) return
     setBusy(true)
+    onSubmittingChange?.(true)
     try {
       // 3DS and other redirects leave the page and come back to return_url, the same order page.
       const result = await hyper.confirmPayment({
@@ -49,6 +53,7 @@ function PayForm({ paymentId, onSubmitted, onError }: Props) {
       if (result?.error?.type === 'validation_error') {
         onError(result.error.message ?? 'Check your card details.')
         setBusy(false)
+        onSubmittingChange?.(false)
         return
       }
       onSubmitted()
@@ -61,9 +66,9 @@ function PayForm({ paymentId, onSubmitted, onError }: Props) {
   return (
     <form onSubmit={submit}>
       <UnifiedCheckout id="unified-checkout" options={{}} />
-      <button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy} className="mt-4 w-full">
         {busy ? COPY.checkout.submitting : 'Pay'}
-      </button>
+      </Button>
     </form>
   )
 }

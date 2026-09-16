@@ -83,6 +83,7 @@ export async function toOrderView(p: HsPayment): Promise<OrderView> {
   if (p.error_code || p.unified_code) {
     const reason = declineReason(p)
     decline = {
+      reason,
       // error_code (DC_08, card_declined…) tells cases apart; unified_code is UE_9000 for all of them on paypal_test.
       code: p.error_code ?? p.unified_code ?? 'unknown',
       // Buyer-safe copy only; the raw error_message never reaches the browser.
@@ -90,6 +91,13 @@ export async function toOrderView(p: HsPayment): Promise<OrderView> {
       retriable: RETRIABLE.includes(reason),
     }
   }
+
+  // Metadata stores '' for an unset step; emit only the steps that happened.
+  const fulfilledAt = Object.fromEntries(
+    (['shippedAt', 'receivedAt', 'disputedAt'] as const)
+      .filter((k) => m[META[k]])
+      .map((k) => [k, m[META[k]]]),
+  ) as NonNullable<OrderView['fulfilledAt']>
 
   return {
     paymentId: p.payment_id,
@@ -105,6 +113,8 @@ export async function toOrderView(p: HsPayment): Promise<OrderView> {
     ...(p.connector ? { connector: p.connector } : {}),
     ...(p.payment_method_type ? { paymentMethodType: p.payment_method_type } : {}),
     ...(decline ? { decline } : {}),
+    ...(m[META.disputeReason] ? { disputeReason: m[META.disputeReason] } : {}),
+    ...(Object.keys(fulfilledAt).length ? { fulfilledAt } : {}),
   }
 }
 

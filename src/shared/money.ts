@@ -30,7 +30,8 @@ export function breakdown(lines: CartLine[], listings: Listing[]): Breakdown {
 
 /**
  * What the seller is credited. Tax is never the seller's; commission is on items only.
- * 'pending' shows the projected commission and net; 'reversed' (refunded) pays no fee and nets 0.
+ * 'pending' shows the projected commission and net. Refunds are full only, so a succeeded
+ * refund reverses the sale: no fee, nets 0, and the buyer gets their whole total back.
  */
 export function sellerLedger(
   b: Breakdown,
@@ -39,12 +40,19 @@ export function sellerLedger(
 ): SellerLedger {
   const grossCents = b.itemsCents + b.shippingCents
   if (refundState === 'succeeded')
-    return { grossCents, commissionCents: 0, netCents: 0, balance: 'reversed' }
+    return {
+      grossCents,
+      commissionCents: 0,
+      netCents: 0,
+      refundedCents: b.totalCents,
+      balance: 'reversed',
+    }
   const commissionCents = Math.round((b.itemsCents * COMMISSION_BPS) / 10000)
   return {
     grossCents,
     commissionCents,
     netCents: grossCents - commissionCents,
+    refundedCents: 0,
     balance: fulfilment === 'unshipped' ? 'pending' : 'available',
   }
 }

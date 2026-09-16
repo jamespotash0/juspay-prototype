@@ -1,20 +1,15 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { addUserListing } from '../lib/listings.ts'
-import { navigate } from '../lib/router.tsx'
+import { navigate } from '../lib/navigation.ts'
 import { usePersona } from '../lib/session.ts'
+import { COPY } from '../shared/copy.ts'
 import type { Category, GradingService } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Notice } from '../ui/Notice.tsx'
+import { dollarsToCents } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
-// ponytail: local strings pending product adding them to COPY (see handback).
-const T = {
-  title: 'Create a listing',
-  adminOnly: 'Listings are created by collector accounts',
-  adminFact: 'Switch to Alex or Mike to list an item.',
-  publish: 'Publish listing',
-  fixErrors: 'Check the highlighted fields.',
-}
+const T = COPY.sellNew
 
 const SERVICES: GradingService[] = ['PCGS', 'NGC', 'PSA', 'BGS', 'CGC']
 
@@ -22,14 +17,6 @@ const SERVICES: GradingService[] = ['PCGS', 'NGC', 'PSA', 'BGS', 'CGC']
 const PLACEHOLDER = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect x="6" y="6" width="288" height="408" rx="10" fill="#ebe7dd" stroke="#dcd7cb" stroke-width="3"/><rect x="40" y="106" width="220" height="290" rx="4" fill="#f6f3ec" stroke="#dcd7cb"/></svg>',
 )}`
-
-/** "12", "12.5", "1,800.00" → integer cents; anything else → null. */
-export function dollarsToCents(input: string): number | null {
-  const s = input.trim().replace(/^\$/, '').replaceAll(',', '')
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null
-  const [whole, frac = ''] = s.split('.')
-  return Number(whole) * 100 + Number(frac.padEnd(2, '0'))
-}
 
 const field =
   'h-10 w-full rounded-slab border border-rule bg-paper px-3 text-sm aria-[invalid=true]:border-state-failed'
@@ -55,23 +42,21 @@ export default function SellNew() {
     const err: Record<string, string> = {}
 
     const title = get('title')
-    if (!title) err.title = 'Add a title.'
+    if (!title) err.title = T.errors.title
     const priceCents = dollarsToCents(get('price'))
-    if (priceCents === null || priceCents === 0)
-      err.price = 'Enter a price in dollars, like 1800 or 24.50.'
+    if (priceCents === null || priceCents === 0) err.price = T.errors.price
     const shippingCents = get('shipping') === '' ? 0 : dollarsToCents(get('shipping'))
-    if (shippingCents === null)
-      err.shipping = 'Enter shipping in dollars, or 0 for free shipping.'
+    if (shippingCents === null) err.shipping = T.errors.shipping
     const description = get('description')
-    if (!description) err.description = 'Add a description.'
+    if (!description) err.description = T.errors.description
 
     const service = get('service') as GradingService
     const grade = get('grade')
     const certNumber = get('certNumber')
     if (graded) {
-      if (!SERVICES.includes(service)) err.service = 'Choose the grading service.'
-      if (!grade) err.grade = 'Add the grade on the slab.'
-      if (!certNumber) err.certNumber = 'Add the cert number on the slab.'
+      if (!SERVICES.includes(service)) err.service = T.errors.service
+      if (!grade) err.grade = T.errors.grade
+      if (!certNumber) err.certNumber = T.errors.cert
     }
 
     const yearRaw = get('year')
@@ -81,7 +66,7 @@ export default function SellNew() {
       year !== undefined &&
       !(Number.isInteger(year) && year >= 1700 && year <= new Date().getFullYear())
     )
-      err.year = 'Enter a four-digit year.'
+      err.year = T.errors.year
 
     setErrors(err)
     if (Object.keys(err).length) return
@@ -115,7 +100,7 @@ export default function SellNew() {
         )}
 
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 text-sm font-semibold">Category</legend>
+          <legend className="mb-1.5 text-sm font-semibold">{T.category}</legend>
           <div className="flex gap-2">
             {(['coin', 'card'] as const).map((c) => (
               <label
@@ -130,13 +115,13 @@ export default function SellNew() {
                   onChange={() => setCategory(c)}
                   className="accent-accent"
                 />
-                {c === 'coin' ? 'Coin' : 'Card'}
+                {c === 'coin' ? COPY.listing.coin : COPY.listing.card}
               </label>
             ))}
           </div>
         </fieldset>
 
-        <Field label="Title" name="title" error={err('title')}>
+        <Field label={T.listingTitle} name="title" error={err('title')}>
           <input
             id="title"
             name="title"
@@ -146,7 +131,7 @@ export default function SellNew() {
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Price" name="price" error={err('price')} hint="US dollars">
+          <Field label={T.price} name="price" error={err('price')} hint={T.priceHint}>
             <input
               id="price"
               name="price"
@@ -156,10 +141,10 @@ export default function SellNew() {
             />
           </Field>
           <Field
-            label="Shipping"
+            label={T.shipping}
             name="shipping"
             error={err('shipping')}
-            hint="0 for free shipping"
+            hint={T.shippingHint}
           >
             <input
               id="shipping"
@@ -174,7 +159,7 @@ export default function SellNew() {
 
         {category === 'coin' && (
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Year" name="year" error={err('year')} hint="Optional">
+            <Field label={T.year} name="year" error={err('year')} hint={T.optional}>
               <input
                 id="year"
                 name="year"
@@ -183,7 +168,7 @@ export default function SellNew() {
                 aria-invalid={!!err('year')}
               />
             </Field>
-            <Field label="Mint mark" name="mintMark" hint="Optional, e.g. CC, S, D">
+            <Field label={T.mintMark} name="mintMark" hint={T.mintMarkHint}>
               <input id="mintMark" name="mintMark" className={field} />
             </Field>
           </div>
@@ -196,12 +181,12 @@ export default function SellNew() {
             onChange={(e) => setGraded(e.target.checked)}
             className="size-4 accent-accent"
           />
-          Graded
+          {T.graded}
         </label>
 
         {graded && (
           <div className="grid gap-5 border-l border-rule pl-4 sm:grid-cols-3">
-            <Field label="Service" name="service" error={err('service')}>
+            <Field label={T.service} name="service" error={err('service')}>
               <select
                 id="service"
                 name="service"
@@ -210,14 +195,14 @@ export default function SellNew() {
                 aria-invalid={!!err('service')}
               >
                 <option value="" disabled>
-                  Choose
+                  {T.choose}
                 </option>
                 {SERVICES.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Grade" name="grade" error={err('grade')}>
+            <Field label={T.grade} name="grade" error={err('grade')}>
               <input
                 id="grade"
                 name="grade"
@@ -226,7 +211,7 @@ export default function SellNew() {
                 aria-invalid={!!err('grade')}
               />
             </Field>
-            <Field label="Cert number" name="certNumber" error={err('certNumber')}>
+            <Field label={T.cert} name="certNumber" error={err('certNumber')}>
               <input
                 id="certNumber"
                 name="certNumber"
@@ -237,15 +222,11 @@ export default function SellNew() {
           </div>
         )}
 
-        <Field
-          label="Image URL"
-          name="imageUrl"
-          hint="Optional. Without one, the listing shows a plain slab outline."
-        >
+        <Field label={T.imageUrl} name="imageUrl" hint={T.imageHint}>
           <input id="imageUrl" name="imageUrl" type="url" className={field} />
         </Field>
 
-        <Field label="Description" name="description" error={err('description')}>
+        <Field label={T.description} name="description" error={err('description')}>
           <textarea
             id="description"
             name="description"
