@@ -82,12 +82,13 @@ test('4. Dispute → admin sees it → full refund → order refunded, sale reve
   // Alex disputes with a reason.
   await switchPersona(page, 'alex')
   await page.goto(`/order/${second}`)
-  await page.getByRole('button', { name: COPY.orderActions.dispute }).click()
-  await page.getByLabel(COPY.order.disputeReason).fill(reason)
+  await page.getByRole('button', { name: COPY.orderActions.haveIssue }).click()
+  await page.getByRole('button', { name: COPY.orderActions.issues.wrongItem }).click()
+  await page.getByLabel(COPY.orderActions.details).fill(reason)
   const disputed = page.waitForResponse(
     (r) => r.url().includes('/api/order-state') && r.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: COPY.orderActions.dispute }).click()
+  await page.getByRole('button', { name: COPY.orderActions.requestRefund }).click()
   expect((await disputed).status()).toBe(200)
 
   // Admin: the disputes filter lists it; its payment page shows the reason; refund in full.

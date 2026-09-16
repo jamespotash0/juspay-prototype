@@ -24,7 +24,7 @@ interface DeclineCopy {
 }
 
 export const COPY = {
-  hold: "The seller isn't paid until they ship. If it doesn't arrive as described, open a dispute and we can refund you.",
+  hold: "The seller isn't paid until they ship. If something's wrong with your order, tell us from the order page and we can refund you.",
 
   empty: {
     noResults: {
@@ -121,9 +121,19 @@ export const COPY = {
   orderActions: {
     ship: 'Mark shipped',
     receive: 'Mark received',
-    dispute: 'Dispute',
     refund: 'Refund',
-    disputeConfirm: 'Open a dispute? The seller stays unpaid while Slabbed reviews it.',
+    haveIssue: 'Have an issue?',
+    whatsWrong: "What's wrong?",
+    issues: {
+      notArrived: "It hasn't arrived",
+      wrongItem: "Something's wrong with my item",
+    },
+    issueHint:
+      'Tell us what happened. The seller stays unpaid while Slabbed reviews your request.',
+    details: 'Details (optional)',
+    requestRefund: 'Request refund',
+    refundRequested:
+      "Refund requested. Slabbed is reviewing it, and the seller stays unpaid until it's resolved.",
   },
 
   // ── Shared across pages ───────────────────────────────────────────────────
@@ -131,6 +141,7 @@ export const COPY = {
   common: {
     tryAgain: 'Try again',
     cancel: 'Cancel',
+    back: 'Back',
     saving: 'Saving…',
     freeShipping: 'Free shipping',
     plusShipping: 'shipping',
@@ -307,11 +318,10 @@ export const COPY = {
       paid: 'Paid',
       shipped: 'Shipped',
       received: 'Received',
-      disputed: 'Disputed',
+      disputed: 'Refund requested',
       refunded: 'Refunded',
     },
     refund: 'Refund',
-    disputeReason: 'Reason (optional)',
   },
 
   orders: {

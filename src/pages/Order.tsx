@@ -24,6 +24,8 @@ const POLL_MS = 2000
 const POLL_FOR_MS = 30000
 
 const TEXT = COPY.order
+const A = COPY.orderActions
+type IssueKind = keyof typeof COPY.orderActions.issues
 
 export default function Order({ params }: { params: Params }) {
   const paymentId = params.paymentId
@@ -103,22 +105,6 @@ export default function Order({ params }: { params: Params }) {
           <Icon name="arrowLeft" className="size-4" />
           {back.label}
         </Link>
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {order && !ambiguous && (
-            <StatusPill
-              status={order.refund.state === 'succeeded' ? 'refunded' : order.state}
-            />
-          )}
-          {order && order.fulfilment !== 'unshipped' && (
-            <StatusPill status={order.fulfilment} />
-          )}
-          <p className="money w-full text-xs text-ink-muted">
-            {COPY.checkout.ambiguous.reference}{' '}
-            <span className="select-all font-medium text-ink">{paymentId}</span>
-            {order && <> · {new Date(order.createdAt).toLocaleString('en-US')}</>}
-          </p>
-        </header>
-
         {ambiguous ? (
           <Notice
             tone="ambiguous"
@@ -136,6 +122,10 @@ export default function Order({ params }: { params: Params }) {
           />
         ) : (
           <StateNotice order={order} />
+        )}
+
+        {order && (order.state === 'paid' || order.state === 'refunded') && (
+          <Fulfilment order={order} persona={persona} onChange={setOrder} />
         )}
 
         {order && (
@@ -176,10 +166,6 @@ export default function Order({ params }: { params: Params }) {
                 <dl className="mt-2 flex max-w-sm flex-col gap-1.5 text-sm">
                   <Row label={TEXT.gross} cents={order.ledger.grossCents} />
                   <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
-                  {order.ledger.refundedCents > 0 &&
-                    order.ledger.balance !== 'reversed' && (
-                      <Row label={TEXT.refunded} cents={-order.ledger.refundedCents} />
-                    )}
                   <Row label={TEXT.net} cents={order.ledger.netCents} bold />
                 </dl>
               ) : (
@@ -188,12 +174,15 @@ export default function Order({ params }: { params: Params }) {
                 </div>
               )}
             </section>
-
-            {(order.state === 'paid' || order.state === 'refunded') && (
-              <Fulfilment order={order} persona={persona} onChange={setOrder} />
-            )}
           </>
         )}
+
+        {/* The payment id: what support needs if something goes wrong. Small print, not a headline. */}
+        <p className="money border-t border-rule pt-4 text-xs text-ink-muted">
+          {COPY.checkout.ambiguous.reference}{' '}
+          <span className="select-all font-medium text-ink">{paymentId}</span>
+          {order && <> · {new Date(order.createdAt).toLocaleString('en-US')}</>}
+        </p>
       </div>
     </PageLayout>
   )
@@ -305,8 +294,9 @@ function Fulfilment({
 }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const [disputing, setDisputing] = useState(false)
-  const [reason, setReason] = useState('')
+  // closed → menu of issues → the chosen issue's refund request form
+  const [issue, setIssue] = useState<'closed' | 'menu' | IssueKind>('closed')
+  const [details, setDetails] = useState('')
 
   const f = order.fulfilment
   const refunded = order.refund.state === 'succeeded' || order.state === 'refunded'
@@ -318,6 +308,10 @@ function Fulfilment({
     (f === 'shipped' || f === 'received') &&
     order.refund.state === 'none'
 
+  // "It hasn't arrived" only makes sense while the parcel is still in transit.
+  const issueOptions: IssueKind[] =
+    f === 'shipped' ? ['notArrived', 'wrongItem'] : ['wrongItem']
+
   async function act(action: OrderAction) {
     setBusy(true)
     setFailed(false)
@@ -327,10 +321,13 @@ function Fulfilment({
           paymentId: order.paymentId,
           action,
           actorId: persona,
-          ...(action === 'dispute' && reason.trim() ? { reason: reason.trim() } : {}),
+          // Admin sees what kind of issue it is, then the buyer's own words.
+          ...(action === 'dispute' && issue !== 'closed' && issue !== 'menu'
+            ? { reason: [A.issues[issue], details.trim()].filter(Boolean).join(': ') }
+            : {}),
         }),
       )
-      setDisputing(false)
+      setIssue('closed')
     } catch {
       setFailed(true)
     } finally {
@@ -405,26 +402,57 @@ function Fulfilment({
         <Notice tone="danger" title={COPY.postPayment.actionDidNotSave} body={null} />
       )}
 
-      {(canReceive || canDispute) && !disputing && (
+      {isBuyer && f === 'disputed' && !refunded && (
+        <Notice tone="info" title={A.refundRequested} body={null} />
+      )}
+
+      {(canReceive || canDispute) && issue === 'closed' && (
         <div className="flex flex-wrap gap-2">
           {canReceive && (
             <Button onClick={() => act('receive')} disabled={busy}>
-              {COPY.orderActions.receive}
+              {A.receive}
             </Button>
           )}
           {canDispute && (
-            <Button
-              variant="secondary"
-              onClick={() => setDisputing(true)}
-              disabled={busy}
-            >
-              {COPY.orderActions.dispute}
+            <Button variant="secondary" onClick={() => setIssue('menu')} disabled={busy}>
+              {A.haveIssue}
             </Button>
           )}
         </div>
       )}
 
-      {disputing && (
+      {issue === 'menu' && (
+        <div className="flex max-w-xl flex-col gap-3 rounded-slab border border-rule bg-paper p-4">
+          <p id="issue-menu" className="text-sm font-semibold">
+            {A.whatsWrong}
+          </p>
+          <ul aria-labelledby="issue-menu" className="flex flex-col gap-2">
+            {issueOptions.map((k) => (
+              <li key={k}>
+                <button
+                  type="button"
+                  onClick={() => setIssue(k)}
+                  className="flex w-full items-center justify-between rounded-slab border border-rule px-3 py-2.5 text-left text-sm font-medium hover:border-accent focus-visible:border-accent"
+                >
+                  {A.issues[k]}
+                  <span aria-hidden="true" className="text-ink-muted">
+                    →
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <Button
+            variant="quiet"
+            className="self-start"
+            onClick={() => setIssue('closed')}
+          >
+            {COPY.common.cancel}
+          </Button>
+        </div>
+      )}
+
+      {issue !== 'closed' && issue !== 'menu' && (
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -432,24 +460,25 @@ function Fulfilment({
           }}
           className="flex max-w-xl flex-col gap-3 rounded-slab border border-rule bg-paper p-4"
         >
-          <p className="text-sm font-semibold">{COPY.orderActions.disputeConfirm}</p>
+          <p className="text-sm font-semibold">{A.issues[issue]}</p>
+          <p className="text-sm text-ink-muted">{A.issueHint}</p>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            {TEXT.disputeReason}
+            {A.details}
             <textarea
-              value={reason}
+              value={details}
               maxLength={200}
               rows={3}
               disabled={busy}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => setDetails(e.target.value)}
               className="rounded-slab border border-rule bg-paper p-2 text-sm focus-visible:border-accent"
             />
           </label>
           <div className="flex gap-2">
-            <Button type="submit" variant="danger" disabled={busy}>
-              {COPY.orderActions.dispute}
+            <Button type="submit" disabled={busy}>
+              {A.requestRefund}
             </Button>
-            <Button variant="quiet" onClick={() => setDisputing(false)} disabled={busy}>
-              {COPY.common.cancel}
+            <Button variant="quiet" onClick={() => setIssue('menu')} disabled={busy}>
+              {COPY.common.back}
             </Button>
           </div>
         </form>
