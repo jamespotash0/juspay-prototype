@@ -211,7 +211,7 @@ function StateNotice({ order }: { order: OrderView | null }) {
     case 'paid':
     case 'refunded':
       if (order.refund.state === 'succeeded' || order.state === 'refunded')
-        return <Notice tone="info" title={COPY.postPayment.refundSucceeded} body={null} />
+        return <Notice tone="info" title={COPY.postPayment.refundSucceededBuyer} body={null} />
       // Once shipped, the timeline below carries the story.
       return order.fulfilment === 'unshipped' ? (
         <Notice tone="info" title={COPY.checkout.succeeded} body={COPY.hold} />

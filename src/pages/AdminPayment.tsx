@@ -101,7 +101,9 @@ export default function AdminPayment({ params }: { params: Params }) {
     (id) => listings.find((l) => l.id === id)?.title ?? id,
   )
   const when = order.fulfilledAt ?? {}
-  const timeline: [string, string | undefined][] = [
+  const refundDone = refund.state === 'succeeded'
+  // `true` = happened, but the contract carries no timestamp for it.
+  const timeline: [string, string | true | undefined][] = [
     [
       T.steps.paid,
       order.state === 'paid' || order.state === 'refunded' ? order.createdAt : undefined,
@@ -111,6 +113,7 @@ export default function AdminPayment({ params }: { params: Params }) {
     ...(when.disputedAt || disputed
       ? [[T.steps.disputed, when.disputedAt] as [string, string | undefined]]
       : []),
+    ...(refundDone ? [[T.steps.refunded, true] as [string, true]] : []),
   ]
 
   function askConfirm() {
@@ -158,8 +161,8 @@ export default function AdminPayment({ params }: { params: Params }) {
 
         {disputed && (
           <Notice
-            tone="warning"
-            title={T.disputed}
+            tone={refundDone ? 'info' : 'warning'}
+            title={refundDone ? T.disputeResolved : T.disputed}
             body={
               <div className="flex flex-col gap-2">
                 <blockquote className="max-w-[65ch] border-l border-state-disputed pl-3 text-base">
@@ -253,7 +256,11 @@ export default function AdminPayment({ params }: { params: Params }) {
                   />
                   <span className={at ? 'font-semibold' : 'text-ink-muted'}>{label}</span>
                   <span className={`money text-right ${at ? '' : 'text-ink-muted'}`}>
-                    {at ? <time dateTime={at}>{dateTime(at)}</time> : T.notYet}
+                    {at === true ? null : at ? (
+                      <time dateTime={at}>{dateTime(at)}</time>
+                    ) : (
+                      T.notYet
+                    )}
                   </span>
                 </li>
               ))}

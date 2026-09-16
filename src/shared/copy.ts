@@ -113,6 +113,9 @@ export const COPY = {
     refundFailedDispute:
       'No money has moved. The dispute is still open, and you can retry the refund.',
     refundSucceeded: "Refunded. The seller's balance has been reversed.",
+    /** Buyer-facing: where the money goes, not the seller's ledger. */
+    refundSucceededBuyer:
+      'Refunded in full to your original payment method. Your bank may take a few days to show it.',
   },
 
   orderActions: {
@@ -379,6 +382,7 @@ export const COPY = {
     loadFailed: "We couldn't load this payment.",
     loadFailedFact: 'Nothing has changed. Check the payment id or try again.',
     disputed: 'The buyer disputed this order',
+    disputeResolved: 'Dispute resolved by refund',
     disputedFact:
       'The seller stays unpaid while Slabbed reviews it. Refund the buyer if the item did not arrive as described.',
     disputeReason: 'Buyer’s reason',
@@ -403,6 +407,7 @@ export const COPY = {
       shipped: 'Shipped',
       received: 'Received',
       disputed: 'Disputed',
+      refunded: 'Refunded',
     },
     notYet: 'Not yet',
     charged: 'Buyer was charged',
