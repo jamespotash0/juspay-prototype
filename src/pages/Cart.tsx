@@ -49,7 +49,6 @@ export default function Cart() {
       title={`${T.title} (${cart.reduce((n, line) => n + line.qty, 0)})`}
       width="narrow"
     >
-
       <div className="flex flex-col gap-4">
         {groups.map(([sellerId, lines]) => {
           const seller = SELLERS.find((s) => s.id === sellerId)

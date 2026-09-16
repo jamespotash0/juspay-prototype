@@ -112,16 +112,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
       409,
       'INVALID_TRANSITION',
     ])
-    const dispute = await act({
-      paymentId: A,
-      action: 'dispute',
-      actorId: 'alex',
-      reason: 'x',
-    })
-    expect([dispute.status, dispute.body.error?.code]).toEqual([
-      409,
-      'INVALID_TRANSITION',
-    ])
+    // A dispute before shipping is allowed (a seller who never ships); the multi-seller test covers it.
     expect((await refundReq({ paymentId: A, actorId: 'mike' })).status).toBe(403)
     expect((await refundReq({ paymentId: A, actorId: 'alex' })).status).toBe(403)
     expect((await read(A)).fulfilment).toBe('unshipped')

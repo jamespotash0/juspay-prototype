@@ -132,7 +132,8 @@ async function checkout(request: Request): Promise<Response> {
       metadata: {
         [META.sellers]: sellerIds.join(','),
         [META.buyerId]: buyer.id,
-        // Verified on the sandbox 2026-09-16: 111 flat keys (12 sellers) are accepted and read back.
+        // ponytail: 3 + 9 keys per seller. Hyperswitch documents 50 keys (5 sellers); the sandbox accepted
+        // 111 (12 sellers) on 2026-09-16. Cap the cart at 5 sellers if a real account enforces the limit.
         ...Object.fromEntries(
           groups.flatMap(({ sellerId, listingIds, b: g }) =>
             Object.entries({

@@ -9,6 +9,7 @@ import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
+import { latestStatus } from '../shared/orderState.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { OrderAction, OrderView, PaymentState, PersonaId } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
@@ -18,6 +19,7 @@ import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
+import { refundLabel } from '../ui/format.ts'
 import { BreakdownList } from './Checkout.tsx'
 import { PageLayout } from './Layout.tsx'
 
@@ -268,6 +270,7 @@ export default function Order({ params }: { params: Params }) {
             <div className="[&>dl]:border-t-0 [&>dl]:pt-0">
               <BreakdownList b={total} />
             </div>
+            {first && <PaidWith order={first} />}
           </Card>
         )}
       </div>
@@ -395,14 +398,15 @@ function Fulfilment({
   const isBuyer = persona === order.buyerId
   const canReceive = isBuyer && order.state === 'paid' && f === 'shipped'
   const canDispute =
-    isBuyer &&
-    order.state === 'paid' &&
-    (f === 'shipped' || f === 'received') &&
-    order.refund.state === 'none'
+    isBuyer && order.state === 'paid' && f !== 'disputed' && order.refund.state === 'none'
 
-  // "It hasn't arrived" only makes sense while the parcel is still in transit.
+  // Offer only the issues that fit where the parcel is.
   const issueOptions: IssueKind[] =
-    f === 'shipped' ? ['notArrived', 'wrongItem'] : ['wrongItem']
+    f === 'unshipped'
+      ? ['notShipped']
+      : f === 'shipped'
+        ? ['notArrived', 'wrongItem']
+        : ['wrongItem']
 
   async function act(action: OrderAction) {
     setBusy(true)
@@ -410,7 +414,7 @@ function Fulfilment({
     try {
       onChange(
         await api.orderState({
-          paymentId: order.paymentId,
+          paymentId: order.orderId,
           action,
           actorId: persona,
           // Admin sees what kind of issue it is, then the buyer's own words.
@@ -427,68 +431,38 @@ function Fulfilment({
     }
   }
 
-  // Paid → Shipped → Received, with Disputed replacing Received and Refunded appended as branches.
-  const steps: { label: string; done: boolean; branch?: boolean }[] = [
-    { label: TEXT.steps.paid, done: true },
-    { label: TEXT.steps.shipped, done: f !== 'unshipped' },
-    f === 'disputed'
-      ? { label: TEXT.steps.disputed, done: true, branch: true }
-      : { label: TEXT.steps.received, done: f === 'received' },
-  ]
-  if (refunded) steps.push({ label: TEXT.steps.refunded, done: true, branch: true })
+  // The latest status only, and when it happened.
+  const status = latestStatus(order)
+  const when =
+    order.fulfilledAt?.disputedAt ??
+    order.fulfilledAt?.receivedAt ??
+    order.fulfilledAt?.shippedAt
 
   return (
-    <Card as="section" aria-labelledby="progress" className="flex flex-col gap-4">
-      <h2 id="progress" className="text-lg font-bold tracking-tight">
-        {TEXT.progress}
-      </h2>
-      <ol className="flex flex-col gap-2.5 rounded-control bg-well p-3 sm:flex-row sm:items-center sm:gap-0 sm:px-4">
-        {steps.map((s, i) => (
-          <li
-            key={s.label}
-            className="flex items-center gap-2 text-sm sm:flex-1 sm:last:flex-none"
-          >
-            <span
-              className={`inline-flex size-6 shrink-0 items-center justify-center rounded-full border ${
-                s.done
-                  ? s.branch
-                    ? 'border-dotted border-ink bg-paper text-ink'
-                    : 'border-primary bg-primary text-primary-ink'
-                  : 'border-dashed border-rule-strong bg-paper text-ink-muted'
-              }`}
-            >
-              <Icon
-                name={
-                  s.done
-                    ? s.branch
-                      ? s.label === TEXT.steps.refunded
-                        ? 'undo'
-                        : 'flag'
-                      : 'check'
-                    : 'hollow'
-                }
-              />
-            </span>
-            <span className={s.done ? 'font-semibold' : 'text-ink-muted'}>{s.label}</span>
-            {i < steps.length - 1 && (
-              <span
-                aria-hidden="true"
-                className="mx-3 hidden h-px flex-1 bg-rule-strong sm:block"
-              />
-            )}
-          </li>
-        ))}
-      </ol>
-
-      {order.refund.state !== 'none' && (
-        <p className="flex items-center gap-2 text-sm">
-          {TEXT.refund}
-          <StatusPill status={order.refund.state} />
+    <Card
+      as="section"
+      aria-labelledby={`status-${order.orderId}`}
+      className="flex flex-col gap-4"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 id={`status-${order.orderId}`} className="text-lg font-bold tracking-tight">
+          {TEXT.status}
+        </h2>
+        <div className="flex items-center gap-3 text-sm">
+          <StatusPill
+            status={status}
+            label={status === order.refund.state ? refundLabel(order) : undefined}
+          />
           {order.refund.refundedCents > 0 && (
             <Money cents={order.refund.refundedCents} className="font-semibold" />
           )}
-        </p>
-      )}
+          {when && !refunded && (
+            <span className="text-ink-muted">
+              {TEXT.updated} {placed.format(new Date(when))}
+            </span>
+          )}
+        </div>
+      </div>
 
       {failed && (
         <Notice tone="danger" title={COPY.postPayment.actionDidNotSave} body={null} />
@@ -574,5 +548,26 @@ function Fulfilment({
         </form>
       )}
     </Card>
+  )
+}
+
+/** How the buyer paid. Buyer and admin only: a seller never sees the buyer's card. */
+function PaidWith({ order }: { order: OrderView }) {
+  const m = order.paymentMethod
+  const label =
+    order.paymentMethodType === 'paypal'
+      ? TEXT.paypal
+      : m?.last4
+        ? TEXT.card(m.network, m.last4)
+        : null
+  if (!label) return null
+  return (
+    <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 border-t border-rule pt-3 text-sm">
+      <span className="text-ink-muted">{TEXT.paidWith}</span>
+      <span className="money font-medium">
+        {label}
+        {m?.expiry && <span className="text-ink-muted"> · {TEXT.expires(m.expiry)}</span>}
+      </span>
+    </p>
   )
 }

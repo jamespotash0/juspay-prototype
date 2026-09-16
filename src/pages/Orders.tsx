@@ -5,6 +5,7 @@ import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
+import { latestStatus } from '../shared/orderState.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { OrderView } from '../shared/types.ts'
 import { Card } from '../ui/Card.tsx'
@@ -100,11 +101,6 @@ export default function Orders() {
         />
       ) : (
         <>
-          {cached && (
-            <p aria-live="polite" className="mb-2 px-1 text-xs text-ink-muted">
-              {T.updating}
-            </p>
-          )}
           <Card padding="none">
             <ul className="divide-y divide-rule">
               {[...orders]
@@ -117,15 +113,13 @@ export default function Orders() {
                   const title = first?.title ?? T.gone
                   const more = items.length > 1 ? T.more(items.length - 1) : ''
                   const seller = SELLERS.find((s) => s.id === o.sellerId)
+                  // Only the latest status: the order page has the detail.
+                  const status = latestStatus(o)
                   const pills = (
-                    <>
-                      <StatusPill status={o.state} />
-                      {o.refund.state !== 'none' ? (
-                        <StatusPill status={o.refund.state} label={refundLabel(o)} />
-                      ) : (
-                        <StatusPill status={o.fulfilment} />
-                      )}
-                    </>
+                    <StatusPill
+                      status={status}
+                      label={status === o.refund.state ? refundLabel(o) : undefined}
+                    />
                   )
                   return (
                     <li key={o.orderId}>

@@ -108,8 +108,14 @@ export default function Catalogue() {
             value={params.get('q') ?? ''}
             onChange={(e) => search(e.target.value)}
             placeholder={COPY.shell.searchPlaceholder}
-            className="h-10 w-full rounded-full border border-rule-strong bg-paper pr-4 pl-10 text-sm placeholder:text-ink-muted hover:border-ink focus-visible:border-ink"
+            className={`h-10 w-full rounded-full border border-rule-strong bg-paper pl-10 text-sm ${q ? 'pr-28' : 'pr-4'} placeholder:text-ink-muted hover:border-ink focus-visible:border-ink`}
           />
+          <span
+            aria-live="polite"
+            className="money pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs text-ink-muted/70"
+          >
+            {q && `${shown.length} ${shown.length === 1 ? 'result' : 'results'}`}
+          </span>
         </form>
         <Filters
           on={on}

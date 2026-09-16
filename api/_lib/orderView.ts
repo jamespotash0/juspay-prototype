@@ -22,6 +22,14 @@ export interface HsPayment {
   created: string
   connector?: string | null
   payment_method_type?: string | null
+  payment_method_data?: {
+    card?: {
+      last4?: string | null
+      card_network?: string | null
+      card_exp_month?: string | null
+      card_exp_year?: string | null
+    } | null
+  } | null
   metadata?: Record<string, string> | null
   error_code?: string | null
   error_message?: string | null
@@ -106,6 +114,17 @@ export async function toOrderViews(
     }
   }
 
+  const card = p.payment_method_data?.card
+  const paymentMethod = card?.last4
+    ? {
+        ...(card.card_network ? { network: card.card_network } : {}),
+        last4: card.last4,
+        ...(card.card_exp_month && card.card_exp_year
+          ? { expiry: `${card.card_exp_month}/${card.card_exp_year.slice(-2)}` }
+          : {}),
+      }
+    : undefined
+
   return sellers.map((sellerId) => {
     const get = (key: string) => m[sellerKey(m, sellerId, key)]
     const itemsCents = int(get(META.itemsCents))
@@ -151,13 +170,14 @@ export async function toOrderViews(
       fulfilment,
       refund: { state: refundState, refundedCents },
       breakdown,
-      ledger: sellerLedger(breakdown, fulfilment, refundState),
+      ledger: sellerLedger(breakdown, fulfilment, refundState, !!get(META.shippedAt)),
       sellerId,
       buyerId: m[META.buyerId] ?? '',
       listingIds: listingIds ? listingIds.split(',') : [],
       createdAt: p.created,
       ...(p.connector ? { connector: p.connector } : {}),
       ...(p.payment_method_type ? { paymentMethodType: p.payment_method_type } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
       ...(decline ? { decline } : {}),
       ...(disputeReason ? { disputeReason } : {}),
       ...(Object.keys(fulfilledAt).length ? { fulfilledAt } : {}),

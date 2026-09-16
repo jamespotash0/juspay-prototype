@@ -28,7 +28,8 @@ const RULES: Record<
   },
   dispute: {
     actor: 'buyerId',
-    from: ['shipped', 'received'],
+    // Before shipping too: a seller who never ships is the first thing a buyer reports.
+    from: ['unshipped', 'shipped', 'received'],
     to: 'disputed',
     stamp: META.disputedAt,
   },

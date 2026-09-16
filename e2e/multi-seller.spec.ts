@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { logPayment, payByCard } from './helpers.ts'
+import type { OrderView } from '../src/shared/types.ts'
+import { logPayment, payByCard, readOrder } from './helpers.ts'
 
 // A real two-seller purchase: one Check out button, one card payment, two seller orders after.
 test('a two-seller cart checks out as one payment and confirms both orders', async ({
@@ -39,5 +40,20 @@ test('a two-seller cart checks out as one payment and confirms both orders', asy
   await expect(page.getByRole('heading', { name: /^Shipped by / })).toHaveCount(2, {
     timeout: 30_000,
   })
+  await expect(page.getByText('Visa ending in 4242')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Status' })).toHaveCount(2)
+
+  // Report an issue on the first seller's order before it ships: only that order changes,
+  // and the seller's money stays pending.
+  await page.getByRole('button', { name: 'Have an issue?' }).first().click()
+  const saved = page.waitForResponse((r) => r.url().includes('/api/order-state'))
+  await page.getByRole('button', { name: "It hasn't shipped" }).click()
+  await page.getByRole('button', { name: 'Request refund' }).click()
+  const disputed = (await (await saved).json()) as OrderView
+  expect(disputed.fulfilment).toBe('disputed')
+  expect(disputed.ledger.balance).toBe('pending')
+  const other = await readOrder(page.request, `${id}.sel_bluesheet`)
+  expect(other.fulfilment).toBe('unshipped')
+  await expect(page.getByRole('button', { name: 'Have an issue?' })).toHaveCount(1)
   await page.screenshot({ path: test.info().outputPath('order.png'), fullPage: true })
 })

@@ -125,6 +125,7 @@ export const COPY = {
     haveIssue: 'Have an issue?',
     whatsWrong: "What's wrong?",
     issues: {
+      notShipped: "It hasn't shipped",
       notArrived: "It hasn't arrived",
       wrongItem: "Something's wrong with my item",
     },
@@ -349,14 +350,13 @@ export const COPY = {
     commission: 'Commission',
     refunded: 'Refunded to buyer',
     net: 'You receive',
-    progress: 'Progress',
-    steps: {
-      paid: 'Paid',
-      shipped: 'Shipped',
-      received: 'Received',
-      disputed: 'Refund requested',
-      refunded: 'Refunded',
-    },
+    status: 'Status',
+    updated: 'Updated',
+    paidWith: 'Paid with',
+    card: (network: string | undefined, last4: string) =>
+      `${network ?? 'Card'} ending in ${last4}`,
+    expires: (expiry: string) => `expires ${expiry}`,
+    paypal: 'PayPal',
     refund: 'Refund',
   },
 

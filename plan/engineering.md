@@ -76,13 +76,20 @@ Two constraints that shape the schema:
 - **The merge is shallow** — a top-level key extend, so nested objects are
   overwritten wholesale. Fulfilment flags stay **flat top-level keys**
   (`fulfilment`, `shippedAt`, `disputedAt`), never a nested object.
-- Limits are 50 keys, 40-char names, 500-char values. We use five.
+- Documented limits are 50 keys, 40-char names, 500-char values. A cart writes
+  3 keys plus 9 per seller, so the documented limit allows 5 sellers; the
+  sandbox accepted 111 keys (12 sellers) on 2026-09-16. Production would cap a
+  cart at 5 sellers or move the per-seller detail to a store keyed by payment id.
 
 ```
 paid ──seller──► shipped ──buyer──► received
-                    │
-                    └──buyer──► disputed ──admin──► refunded
+ │                  │                   │
+ └──────────────────┴──buyer──► disputed ◄┘ ──admin──► refunded
 ```
+
+Per seller's order. A buyer can dispute **before shipping** too (a seller who
+never ships). That dispute keeps the seller's balance `pending`: funds release
+only on a `shippedAt` stamp, never on the dispute itself.
 
 `shipped` is what makes the seller's balance `available`; the balance is
 derived from this flag plus the payment status, never stored separately.

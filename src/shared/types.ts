@@ -165,6 +165,8 @@ export interface OrderView {
   connector?: string
   /** Hyperswitch payment_method_type: 'credit', 'debit', 'paypal'… */
   paymentMethodType?: string
+  /** What the buyer paid with, safe to show: card network, last four and expiry only. */
+  paymentMethod?: { network?: string; last4?: string; expiry?: string }
   decline?: Decline
   /** Present once the buyer has disputed. */
   disputeReason?: string

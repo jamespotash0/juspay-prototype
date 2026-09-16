@@ -1,4 +1,4 @@
-import type { PaymentState } from './types.js'
+import type { Fulfilment, OrderView, PaymentState, RefundState } from './types.js'
 
 /** Hyperswitch v1 IntentStatus → our PaymentState. See plan/engineering.md §4. */
 const MAP: Record<string, PaymentState> = {
@@ -23,4 +23,12 @@ const MAP: Record<string, PaymentState> = {
 
 export function mapStatus(hsStatus: string): PaymentState {
   return Object.hasOwn(MAP, hsStatus) ? MAP[hsStatus] : 'unknown'
+}
+
+/** The one status an order shows: a refund outranks shipping, and shipping only means something once paid. */
+export function latestStatus(
+  o: Pick<OrderView, 'state' | 'fulfilment' | 'refund'>,
+): PaymentState | Fulfilment | RefundState {
+  if (o.refund.state !== 'none') return o.refund.state
+  return o.state === 'paid' ? o.fulfilment : o.state
 }

@@ -128,6 +128,11 @@ describe('sellerLedger (seller)', () => {
     expect(sellerLedger(b, 'unshipped', 'succeeded').balance).toBe('reversed')
   })
 
+  it('a dispute before shipping keeps the balance pending', () => {
+    expect(sellerLedger(b, 'disputed', 'none', false).balance).toBe('pending')
+    expect(sellerLedger(b, 'disputed', 'none', true).balance).toBe('available')
+  })
+
   it('pending and available keep commission and net; a full refund zeroes them, gross unchanged', () => {
     const projected = {
       grossCents: 181_200,
