@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useListings } from '../lib/listings.ts'
 import { navigate, useSearchParams } from '../lib/navigation.ts'
+import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { Listing } from '../shared/types.ts'
@@ -38,7 +39,9 @@ function matches(l: Listing, on: Set<Chip>, q: string): boolean {
 }
 
 export default function Catalogue() {
-  const listings = useListings()
+  const sold = useSoldIds()
+  // Sold one-of-ones leave the catalogue; the listing page still says Sold for anyone with the link.
+  const listings = useListings().filter((l) => !sold.has(l.id))
   const q = (useSearchParams().get('q') ?? '').trim()
   const [on, setOn] = useState<Set<Chip>>(new Set())
 

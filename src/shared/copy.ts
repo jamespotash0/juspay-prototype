@@ -156,6 +156,43 @@ export const COPY = {
     admin: 'Admin',
     footer:
       'A demo marketplace. Sellers, listings, photos and ratings are synthetic; payments are real Hyperswitch sandbox payments.',
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    switchAccount: 'Switch demo account',
+    reset: 'Reset demo',
+    resetBody:
+      "Clears this browser's cart, created listings, sold markers and sign-in. Real sandbox orders are never touched.",
+  },
+
+  signIn: {
+    title: 'Sign in',
+    demo: 'This is a demo sign-in. No real account is created or used.',
+    providers: {
+      google: 'Continue with Google',
+      apple: 'Continue with Apple',
+      email: 'Continue with email',
+    },
+    providerName: { google: 'Google', apple: 'Apple' },
+    stepHeader: (provider: string) => `${provider} (demo)`,
+    demoLabel: 'Demo — no real account is used',
+    choose: 'Choose an account to continue to Slabbed',
+    consentIntro: 'Slabbed will receive:',
+    consentItems: ['Your name', 'Your email address'],
+    cancel: 'Cancel',
+    continue: 'Continue',
+    redirecting: 'Redirecting back to Slabbed…',
+    emailTitle: 'Continue with email',
+    emailLabel: 'Email address',
+    emailHint: 'Use one of the demo emails.',
+    unknownEmail: 'That isn’t a demo account. Use one of:',
+    back: 'Back to sign-in options',
+  },
+
+  sold: {
+    label: 'Sold',
+    listing: 'This one-of-one item has sold.',
+    cartLine: 'No longer available to buy.',
+    groupAllSold: 'Everything from this seller has sold.',
   },
 
   catalogue: {
@@ -226,9 +263,6 @@ export const COPY = {
     ownListingBody: 'Switch to another collector in the top bar to buy it.',
     admin: 'Admins don’t check out',
     adminBody: 'Switch to Alex or Mike in the top bar to buy.',
-    signIn: 'Sign in to check out',
-    signInBody: 'Demo sign-in: every option continues as',
-    providers: ['Continue with Google', 'Continue with Apple', 'Continue with email'],
     shipTo: 'Ship to',
     fields: { name: 'Name', line1: 'Address', city: 'City', state: 'State', zip: 'ZIP' },
     continue: 'Continue to payment',

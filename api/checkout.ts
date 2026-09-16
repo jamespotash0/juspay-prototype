@@ -101,6 +101,10 @@ async function checkout(request: Request): Promise<Response> {
       capture_method: 'automatic',
       confirm: false,
       customer: { id: buyer.id, email: buyer.email },
+      // Lets the SDK offer "save card" and list this buyer's saved cards. A card is only vaulted when the
+      // buyer ticks the box (the SDK then sends customer_acceptance on confirm). Repeat collectors
+      // buying on-session is the case; no off-session / merchant-initiated charges here.
+      setup_future_usage: 'on_session',
       return_url: `${new URL(request.url).origin}/order/${attemptId}`,
       shipping: {
         address: {

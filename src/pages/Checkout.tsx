@@ -7,6 +7,7 @@ import { useListings, userListings } from '../lib/listings.ts'
 import { navigate, type Params } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
+import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
 import { PERSONAS, SELLERS } from '../shared/seed.ts'
@@ -20,16 +21,6 @@ import { PageLayout } from './Layout.tsx'
 
 const TEXT = COPY.checkoutPage
 
-const SIGNED_IN = 'slabbed.signedIn'
-
-function signedIn(persona: string) {
-  try {
-    return sessionStorage.getItem(SIGNED_IN) === persona
-  } catch {
-    return false
-  }
-}
-
 const input =
   'h-10 w-full rounded-slab border border-rule bg-paper px-3 text-sm focus-visible:border-accent disabled:bg-bone disabled:text-ink-muted'
 
@@ -37,8 +28,11 @@ export default function Checkout({ params }: { params: Params }) {
   const sellerId = params.sellerId
   const persona = usePersona()
   const listings = useListings()
-  const lines = groupBySeller(useCart(), listings).get(sellerId) ?? []
-  const [gatePassed, setGatePassed] = useState(() => signedIn(persona))
+  const sold = useSoldIds()
+  // A sold one-of-one can't be bought again, even if it's still sitting in the cart.
+  const lines = (groupBySeller(useCart(), listings).get(sellerId) ?? []).filter(
+    (l) => !sold.has(l.listingId),
+  )
   const [shipTo, setShipTo] = useState<ShipTo>({
     name: PERSONAS.find((p) => p.id === persona)?.name ?? '',
     line1: '1 Main St',
@@ -53,7 +47,6 @@ export default function Checkout({ params }: { params: Params }) {
   const [message, setMessage] = useState('')
 
   const seller = SELLERS.find((s) => s.id === sellerId)
-  const personaName = PERSONAS.find((p) => p.id === persona)?.name ?? persona
 
   if (lines.length === 0)
     return (
@@ -117,15 +110,6 @@ export default function Checkout({ params }: { params: Params }) {
     }
   }
 
-  function passGate() {
-    try {
-      sessionStorage.setItem(SIGNED_IN, persona)
-    } catch {
-      // gate shows again next visit
-    }
-    setGatePassed(true)
-  }
-
   const field = (k: keyof ShipTo, label: string, className = '') => (
     <label className={`flex flex-col gap-1 text-sm font-medium ${className}`}>
       {label}
@@ -146,65 +130,44 @@ export default function Checkout({ params }: { params: Params }) {
     <PageLayout title={TEXT.title}>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          {!gatePassed ? (
-            <section aria-labelledby="gate" className="flex flex-col gap-3">
-              <h2 id="gate" className="font-display text-lg font-bold">
-                {TEXT.signIn}
+          <form onSubmit={start} className="flex flex-col gap-4">
+            <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
+              <legend className="mb-3 font-display text-lg font-bold">
+                {TEXT.shipTo}
+              </legend>
+              {field('name', TEXT.fields.name, 'col-span-6')}
+              {field('line1', TEXT.fields.line1, 'col-span-6')}
+              {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
+              {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
+              {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
+            </fieldset>
+            {!session && (
+              <Button type="submit" disabled={busy} className="self-start">
+                {busy ? TEXT.starting : TEXT.continue}
+              </Button>
+            )}
+          </form>
+
+          {message && <Notice tone="danger" title={message} body={null} />}
+
+          {session && (
+            <section
+              aria-labelledby="pay"
+              className="flex flex-col gap-3 border-t border-rule pt-5"
+            >
+              <h2 id="pay" className="font-display text-lg font-bold">
+                {TEXT.payment}
               </h2>
-              <p className="text-sm text-ink-muted">
-                {TEXT.signInBody}{' '}
-                <span className="font-semibold text-ink">{personaName}</span>.
-              </p>
-              <div className="flex max-w-sm flex-col gap-2">
-                {TEXT.providers.map((p) => (
-                  <Button key={p} variant="secondary" onClick={passGate}>
-                    {p}
-                  </Button>
-                ))}
-              </div>
+              <HyperCheckout
+                clientSecret={session.clientSecret}
+                publishableKey={session.publishableKey}
+                paymentId={session.paymentId}
+                totalCents={session.breakdown.totalCents}
+                onSubmitted={() => navigate(`/order/${session.paymentId}`)}
+                onError={setMessage}
+                onSubmittingChange={setPaying}
+              />
             </section>
-          ) : (
-            <>
-              <form onSubmit={start} className="flex flex-col gap-4">
-                <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
-                  <legend className="mb-3 font-display text-lg font-bold">
-                    {TEXT.shipTo}
-                  </legend>
-                  {field('name', TEXT.fields.name, 'col-span-6')}
-                  {field('line1', TEXT.fields.line1, 'col-span-6')}
-                  {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
-                  {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
-                  {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
-                </fieldset>
-                {!session && (
-                  <Button type="submit" disabled={busy} className="self-start">
-                    {busy ? TEXT.starting : TEXT.continue}
-                  </Button>
-                )}
-              </form>
-
-              {message && <Notice tone="danger" title={message} body={null} />}
-
-              {session && (
-                <section
-                  aria-labelledby="pay"
-                  className="flex flex-col gap-3 border-t border-rule pt-5"
-                >
-                  <h2 id="pay" className="font-display text-lg font-bold">
-                    {TEXT.payment}
-                  </h2>
-                  <HyperCheckout
-                    clientSecret={session.clientSecret}
-                    publishableKey={session.publishableKey}
-                    paymentId={session.paymentId}
-                    totalCents={session.breakdown.totalCents}
-                    onSubmitted={() => navigate(`/order/${session.paymentId}`)}
-                    onError={setMessage}
-                    onSubmittingChange={setPaying}
-                  />
-                </section>
-              )}
-            </>
           )}
         </div>
 

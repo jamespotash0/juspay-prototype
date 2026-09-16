@@ -1,9 +1,12 @@
 import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
 import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
-import { setPersona, usePersona } from '../lib/session.ts'
+import { resetDemo } from '../lib/reset.ts'
+import { signIn, signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
+import type { PersonaId } from '../shared/types.ts'
+import { Button } from '../ui/Button.tsx'
 import { TopBar } from '../ui/TopBar.tsx'
 
 // Typing on another page takes you to the catalogue; the page swaps under the input, so put the caret back.
@@ -15,12 +18,30 @@ function search(q: string) {
   navigate(q ? `/?q=${encodeURIComponent(q)}` : '/', { replace: onHome })
 }
 
+const ADMIN_ONLY = /^\/admin(\/|$)/
+const COLLECTOR_ONLY = /^\/(orders|sell|checkout)(\/|$)/
+
 export function PageLayout({ children, title }: { children: ReactNode; title?: string }) {
   const path = usePath()
-  const persona = usePersona()
+  const session = useSession()
   const cart = useCart()
-  const q = useSearchParams().get('q') ?? ''
-  const isAdmin = PERSONAS.find((p) => p.id === persona)?.kind === 'admin'
+  const params = useSearchParams()
+  const q = params.get('q') ?? ''
+  const isAdmin = PERSONAS.find((p) => p.id === session?.persona)?.kind === 'admin'
+
+  function switchAccount(persona: PersonaId) {
+    if (!session) return
+    const toAdmin = persona === 'admin'
+    // Stay put unless the new account can't use this page.
+    if (toAdmin ? COLLECTOR_ONLY.test(path) : ADMIN_ONLY.test(path)) navigate('/')
+    signIn(persona, session.provider)
+  }
+
+  function leave() {
+    // Home first, so a guarded page doesn't bounce to /signin as the session clears.
+    navigate('/')
+    signOut()
+  }
 
   useEffect(() => {
     document.title = title ? `${title} · Slabbed` : 'Slabbed'
@@ -51,8 +72,13 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
     <div className="flex min-h-dvh flex-col">
       <TopBar
         personas={PERSONAS}
-        activePersonaId={persona}
-        onPersonaChange={setPersona}
+        activePersonaId={session?.persona ?? null}
+        onPersonaChange={switchAccount}
+        onSignOut={leave}
+        onSignIn={() => {
+          const here = path + (params.size ? `?${params}` : '')
+          navigate(`/signin?next=${encodeURIComponent(here)}`)
+        }}
         onSearch={search}
         searchValue={q}
         links={links}
@@ -66,9 +92,15 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
         {children}
       </main>
       <footer className="border-t border-rule">
-        <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-muted">
-          {COPY.shell.footer}
-        </p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <p>{COPY.shell.footer}</p>
+          <div className="flex items-center gap-3 sm:max-w-md">
+            <Button variant="secondary" className="h-8 shrink-0 px-3" onClick={resetDemo}>
+              {COPY.shell.reset}
+            </Button>
+            <p>{COPY.shell.resetBody}</p>
+          </div>
+        </div>
       </footer>
     </div>
   )

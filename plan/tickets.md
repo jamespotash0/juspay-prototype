@@ -389,6 +389,85 @@ on their own files; QA-4 re-runs.
 
 ---
 
+## W3 result ✅ — merged and live
+
+Merged to `main` (PR #2, #3). **Live at https://juspay-prototype.vercel.app.**
+11/11 browser tests pass locally; on production the SDK loads and a real card
+payment completed end to end (`cka_e80c859bc60a6b7fc1474d`, `stripe_test`).
+
+Found by verification and fixed: card Pay rebuilt the SDK iframe (unstable
+`options` object); every order list was empty (`starting_after` returns page
+one on this sandbox — now `ending_before`); PayPal needed an absolute return
+URL; production functions crashed with `ERR_MODULE_NOT_FOUND` because Vercel
+keeps `.ts` import specifiers (all server imports now end in `.js`, guarded by
+`tests/unit/server-imports.test.ts`); production keys were empty in Vercel.
+
+---
+
+## W4 — Sign-in, seller insights, saved cards
+
+Product decisions (2026-09-16): build a mock sign-in with an OAuth-style flow,
+seller charts and a payouts summary, saved payment methods, sold-item marking
+and a reset-demo control. **Out:** photo upload.
+
+**Shared names, fixed up front** so parallel agents don't break each other:
+
+- `src/lib/session.ts` — `type AuthProvider = 'google' | 'apple' | 'email'`;
+  `useSession(): { persona: PersonaId; provider: AuthProvider } | null`;
+  `signIn(persona, provider)`; `signOut()`. `usePersona()` keeps working for
+  pages behind the sign-in guard.
+- **Routes:** `/signin?next=` (provider choice), `/signin/:provider` (mock
+  consent / email step). Signed out, these redirect to `/signin?next=<path>`:
+  `/checkout/*`, `/order/*`, `/orders`, `/sell`, `/sell/new`, `/admin`,
+  `/admin/payment/*`. Catalogue, listing and cart stay public.
+- `src/lib/sold.ts` — `markSold(listingIds)`, `useSoldIds(): Set<string>`,
+  `isSold(id)`. The order page calls `markSold` when an order reads `paid`.
+- `src/lib/reset.ts` — `resetDemo()`: clears every `slabbed.*` key in
+  `localStorage` and `sessionStorage`, returns home. Never touches the sandbox.
+- Accessible names QA will target: buttons **Continue with Google / Continue
+  with Apple / Continue with email**, **Sign in**, **Sign out**, **Reset demo**;
+  a select labelled **Switch demo account**.
+
+### ENG-6 · Session, guards, sold store, reset, saved cards
+The names above, the route guards in `src/App.tsx`, and the checkout's
+inline sign-in gate retired in favour of the guard. **Saved cards:** verify with
+context7 how the Unified Checkout saves and shows cards, set what the server
+must send on payment create (`setup_future_usage: on_session` with the buyer's
+customer), turn on the SDK's save checkbox and saved-methods list, and prove
+both saving and paying with a saved card on the live sandbox.
+
+### DES-7a · Sign-in, account menu, sold states, reset
+`/signin` and the mock OAuth screens. **Mimic the flow, not the brands:** a
+provider step, an account chooser of the three demo accounts, a consent list
+(name, email), a redirect back. Clearly labelled as a demo; **no password or
+code fields; no Google or Apple logos, colours or page layouts** — this is a
+public URL, and a look-alike sign-in page reads as phishing. The email path
+asks for a demo email and nothing else. Top bar: **Sign in** when signed out;
+account menu with name, **Switch demo account**, **Sign out** when signed in.
+Sold listings leave the catalogue, show **Sold** on the listing page with no
+buy controls, and can't be checked out from the cart. **Reset demo** in the
+footer or account menu. Owns `copy.ts` for W4.
+
+### DES-7b · Seller insights
+On `/sell`: a sales-over-time chart and a payouts summary — gross sold,
+commission, net earned, available now, pending (unshipped), reversed by
+refund — "what my payouts would have been". Plain SVG, no chart library,
+tabular figures, a sensible empty and one-sale state. Strings in a new
+`src/shared/copy.insights.ts` (DES-7a owns `copy.ts`).
+
+### QA-5 · Tests for W4, and no regressions
+Update the e2e helpers for real sign-in (persona switching now goes through
+sign-in / **Switch demo account**). New specs: OAuth-style sign-in and
+sign-out, a guarded route redirecting and returning, saving a card then paying
+with it, a sold listing leaving the catalogue, reset demo. Then the full suite.
+
+### PROD-4 · Acceptance and README
+Check W4 against these tickets, then update README: the live URL, sign-in,
+saved cards, seller insights, sold marking and reset, test counts — every claim
+verified against the code.
+
+---
+
 ## Known constraints every ticket inherits
 
 - **No real Stripe.** Three simulated processors (`stripe_test`, `fauxpay`,

@@ -4,6 +4,7 @@ import { api } from '../lib/api.ts'
 import { clearCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
 import { navigate, type Params } from '../lib/navigation.ts'
+import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
@@ -36,7 +37,10 @@ export default function Order({ params }: { params: Params }) {
     try {
       const view = await api.payment(paymentId)
       setOrder(view)
-      if (view.state === 'paid') clearCart(view.listingIds)
+      if (view.state === 'paid') {
+        clearCart(view.listingIds)
+        markSold(view.listingIds)
+      }
       if (['paid', 'failed', 'cancelled', 'refunded'].includes(view.state))
         clearAttempt(view.sellerId, paymentId)
       return view.state
@@ -211,7 +215,9 @@ function StateNotice({ order }: { order: OrderView | null }) {
     case 'paid':
     case 'refunded':
       if (order.refund.state === 'succeeded' || order.state === 'refunded')
-        return <Notice tone="info" title={COPY.postPayment.refundSucceededBuyer} body={null} />
+        return (
+          <Notice tone="info" title={COPY.postPayment.refundSucceededBuyer} body={null} />
+        )
       // Once shipped, the timeline below carries the story.
       return order.fulfilment === 'unshipped' ? (
         <Notice tone="info" title={COPY.checkout.succeeded} body={COPY.hold} />

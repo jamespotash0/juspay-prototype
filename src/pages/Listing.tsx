@@ -2,21 +2,25 @@ import { addToCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
 import { navigate, type Params } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
-import { usePersona } from '../lib/session.ts'
+import { useSession } from '../lib/session.ts'
+import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
-
-const T = COPY.listing
 import { PERSONAS, SELLERS } from '../shared/seed.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
+import { StatusPill } from '../ui/StatusPill.tsx'
 import { gradeLabel, plural } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
+
+const T = COPY.listing
 
 export default function Listing({ params }: { params: Params }) {
   const listing = useListings().find((l) => l.id === params.id)
   const seller = SELLERS.find((s) => s.id === listing?.sellerId)
-  const persona = usePersona()
+  // Public page: signed out, nobody is the seller and Buy now goes through sign-in.
+  const persona = useSession()?.persona
+  const sold = useSoldIds().has(params.id)
   const inCart = useCart().some((l) => l.listingId === params.id)
 
   if (!listing || !seller)
@@ -91,7 +95,12 @@ export default function Listing({ params }: { params: Params }) {
           </header>
 
           <section className="flex flex-col gap-3 border-y border-rule py-5">
-            {isOwn ? (
+            {sold ? (
+              <p className="flex flex-wrap items-center gap-2 font-semibold">
+                <StatusPill status="sold" />
+                {COPY.sold.listing}
+              </p>
+            ) : isOwn ? (
               <p className="font-semibold">
                 {T.own}{' '}
                 <Link to="/sell" className="font-medium text-accent hover:underline">
