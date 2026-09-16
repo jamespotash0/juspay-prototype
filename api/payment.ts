@@ -1,4 +1,4 @@
-import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.ts'
+import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.js'
 
 /** GET /api/payment?id=… → OrderView. The authoritative status read. */
 export async function GET(request: Request): Promise<Response> {

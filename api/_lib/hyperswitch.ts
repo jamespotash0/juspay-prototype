@@ -1,4 +1,4 @@
-import type { ApiError } from '../../src/shared/types.ts'
+import type { ApiError } from '../../src/shared/types.js'
 
 export const HS_BASE_URL = 'https://sandbox.hyperswitch.io'
 
