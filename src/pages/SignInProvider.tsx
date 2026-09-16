@@ -87,6 +87,9 @@ export default function SignInProvider({ params }: { params: Params }) {
                       <Initial name={p.name} />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="text-sm font-semibold">{p.name}</span>
+                        <span className="text-xs font-medium text-accent">
+                          {COPY.shell.personaRole[p.id].long}
+                        </span>
                         <span className="truncate text-sm text-ink-muted">{p.email}</span>
                       </span>
                     </button>

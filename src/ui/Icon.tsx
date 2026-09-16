@@ -14,6 +14,9 @@ const PATHS = {
   info: 'M8 7.5v4M8 5v.2M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0',
   dash: 'M4 8h8',
   hollow: 'M11 8A3 3 0 1 1 5 8a3 3 0 0 1 6 0',
+  cart: 'M1.5 2.5h2l1.6 7.5h7.4l1.5-5.5H4.3M6.5 13.5v.1M11.5 13.5v.1',
+  chevronDown: 'M4 6l4 4 4-4',
+  search: 'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM10.5 10.5L14 14',
   arrowLeft: 'M13 8H3M7 4L3 8l4 4',
 } as const
 

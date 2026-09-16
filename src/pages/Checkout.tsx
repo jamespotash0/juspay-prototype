@@ -10,7 +10,7 @@ import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
-import { PERSONAS, SELLERS } from '../shared/seed.ts'
+import { PERSONAS } from '../shared/seed.ts'
 import type { Breakdown, CheckoutResponse, ShipTo } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
@@ -45,8 +45,6 @@ export default function Checkout({ params }: { params: Params }) {
   // True while the SDK is confirming: the address can't change under a live payment.
   const [paying, setPaying] = useState(false)
   const [message, setMessage] = useState('')
-
-  const seller = SELLERS.find((s) => s.id === sellerId)
 
   if (lines.length === 0)
     return (
@@ -173,12 +171,6 @@ export default function Checkout({ params }: { params: Params }) {
 
         <aside className="flex flex-col gap-4 self-start rounded-slab border border-rule bg-paper p-5 lg:sticky lg:top-20">
           <h2 className="font-display text-lg font-bold">{TEXT.summary}</h2>
-          {seller && (
-            <p className="text-sm text-ink-muted">
-              {TEXT.from} <span className="font-semibold text-ink">{seller.handle}</span>{' '}
-              · {seller.shipsFrom}
-            </p>
-          )}
           <ul className="flex flex-col gap-3 border-t border-rule pt-3">
             {lines.map((l) => {
               const listing = listings.find((x) => x.id === l.listingId)

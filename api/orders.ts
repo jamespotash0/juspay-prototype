@@ -31,7 +31,9 @@ export async function GET(request: Request): Promise<Response> {
     const byId = new Map<string, HsPayment>()
     let before = ''
     for (let i = 0; i < MAX_PAGES; i++) {
-      const path = `/payments/list?limit=${PAGE}&created.gte=${encodeURIComponent(since)}${before ? `&ending_before=${encodeURIComponent(before)}` : ''}`
+      // A buyer's list narrows on the Hyperswitch customer (checkout sets customer.id = buyer), so fewer pages.
+      const customer = buyer ? `&customer_id=${encodeURIComponent(buyer)}` : ''
+      const path = `/payments/list?limit=${PAGE}&created.gte=${encodeURIComponent(since)}${customer}${before ? `&ending_before=${encodeURIComponent(before)}` : ''}`
       // One retry: the sandbox list call fails transiently, and one bad page used to 502 the whole view.
       let page = await hsFetch<{ data: HsPayment[] }>(path)
       if (!page.ok) page = await hsFetch<{ data: HsPayment[] }>(path)

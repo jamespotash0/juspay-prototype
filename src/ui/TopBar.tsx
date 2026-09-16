@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react'
 import { COPY } from '../shared/copy'
+import { Icon } from './Icon'
 import type { Persona, PersonaId } from '../shared/types'
 
 export interface NavLink {
@@ -15,8 +16,6 @@ interface TopBarProps {
   onPersonaChange: (id: PersonaId) => void
   onSignOut: () => void
   onSignIn: () => void
-  onSearch: (query: string) => void
-  searchValue: string
   links: NavLink[]
   cartCount: number
   cartHref?: string
@@ -27,16 +26,14 @@ interface TopBarProps {
 
 const S = COPY.shell
 
-// Desktop: one row — wordmark, search, links, account, cart.
-// Below sm: row 1 wordmark · links · cart; row 2 search · account. Nothing is hidden.
+// Desktop: one row — wordmark, links, account, cart. Search lives on the catalogue, beside its filters.
+// Below sm: row 1 wordmark · links · cart; row 2 account. Nothing is hidden.
 export function TopBar({
   personas,
   activePersonaId,
   onPersonaChange,
   onSignOut,
   onSignIn,
-  onSearch,
-  searchValue,
   links,
   cartCount,
   cartHref = '/cart',
@@ -60,25 +57,7 @@ export function TopBar({
           {S.wordmark}
         </a>
 
-        <form
-          role="search"
-          onSubmit={(e) => e.preventDefault()}
-          className="order-4 min-w-0 grow basis-1/2 sm:order-none sm:mx-auto sm:max-w-md sm:basis-auto"
-        >
-          <label className="sr-only" htmlFor="topbar-search">
-            {S.searchLabel}
-          </label>
-          <input
-            id="topbar-search"
-            type="search"
-            value={searchValue}
-            onChange={(e) => onSearch(e.target.value)}
-            placeholder={S.searchPlaceholder}
-            className="h-9 w-full rounded-slab border border-rule bg-bone px-3 text-sm placeholder:text-ink-muted focus-visible:border-accent"
-          />
-        </form>
-
-        <nav className="order-2 ml-auto flex items-center gap-4 text-sm sm:order-none sm:ml-0">
+        <nav className="order-2 ml-auto flex items-center gap-4 text-sm sm:order-none">
           {links.map((l) => (
             <a
               key={l.href}
@@ -102,12 +81,11 @@ export function TopBar({
               id="topbar-persona"
               value={activePersonaId}
               onChange={(e) => onPersonaChange(e.target.value as PersonaId)}
-              className="h-9 max-w-36 rounded-slab border border-rule bg-paper px-2 text-sm font-medium text-accent hover:border-accent sm:max-w-none"
+              className="h-9 rounded-slab border border-rule bg-paper px-2 text-sm font-medium text-accent hover:border-accent"
             >
               {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {/* "Slabbed Admin" already names the role; no suffix, so it fits at 390px. */}
-                  {p.name}
+                <option key={p.id} value={p.id} title={S.personaRole[p.id].long}>
+                  {p.name} · {S.personaRole[p.id].short}
                 </option>
               ))}
             </select>
@@ -134,6 +112,7 @@ export function TopBar({
           onClick={go(cartHref)}
           className="order-3 inline-flex items-center gap-1.5 text-sm font-medium text-ink hover:text-accent sm:order-none"
         >
+          <Icon name="cart" className="size-4" />
           {S.cart}
           <span
             aria-label={`${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}

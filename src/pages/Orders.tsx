@@ -18,6 +18,18 @@ const T = COPY.orders
 
 const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' })
 
+// The sandbox list read takes seconds, so a repeat visit shows the last list at once and refreshes it.
+// ponytail: per-browser convenience only; the fresh read replaces it and statuses can be briefly stale.
+const cacheKey = (persona: string) => `slabbed.orders.${persona}`
+function readCache(persona: string): OrderView[] | undefined {
+  try {
+    const raw = localStorage.getItem(cacheKey(persona))
+    return raw ? (JSON.parse(raw) as OrderView[]) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export default function Orders() {
   const persona = usePersona()
   const listings = useListings()
@@ -34,7 +46,14 @@ export default function Orders() {
     let live = true
     api
       .orders({ buyer: persona })
-      .then((r) => live && setResult({ key, orders: r.orders }))
+      .then((r) => {
+        try {
+          localStorage.setItem(cacheKey(persona), JSON.stringify(r.orders))
+        } catch {
+          // storage unavailable: next visit loads from scratch
+        }
+        if (live) setResult({ key, orders: r.orders })
+      })
       .catch(() => live && setResult({ key, failed: true }))
     return () => {
       live = false
@@ -42,7 +61,8 @@ export default function Orders() {
   }, [persona, key])
 
   const current = result?.key === key ? result : undefined
-  const orders = current?.orders
+  const cached = current ? undefined : readCache(persona)
+  const orders = current?.orders ?? cached
   const failed = current?.failed
 
   return (
@@ -70,57 +90,64 @@ export default function Orders() {
           action={{ label: COPY.empty.orders.action, onClick: () => navigate('/') }}
         />
       ) : (
-        <ul className="flex flex-col border-t border-rule">
-          {[...orders]
-            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-            .map((o) => {
-              const items = o.listingIds.map((id) => listings.find((l) => l.id === id))
-              const first = items[0]
-              const title = first?.title ?? T.gone
-              const more = items.length > 1 ? T.more(items.length - 1) : ''
-              const seller = SELLERS.find((s) => s.id === o.sellerId)
-              return (
-                <li key={o.paymentId}>
-                  <Link
-                    to={`/order/${o.paymentId}`}
-                    className="group flex items-center gap-3 border-b border-rule py-3 hover:bg-paper sm:gap-4 sm:px-2"
-                  >
-                    {first ? (
-                      <img
-                        src={first.imageUrl}
-                        alt=""
-                        className="size-14 shrink-0 rounded-slab border border-rule bg-bone object-contain p-1"
-                      />
-                    ) : (
-                      <span className="size-14 shrink-0 rounded-slab border border-dashed border-rule" />
-                    )}
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <p className="truncate font-medium group-hover:underline">
-                        {title}
-                        {more}
-                      </p>
-                      <p className="money text-xs text-ink-muted">
-                        {seller?.handle ?? o.sellerId} ·{' '}
-                        {date.format(new Date(o.createdAt))}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        <StatusPill status={o.state} />
-                        {o.refund.state !== 'none' ? (
-                          <StatusPill status={o.refund.state} label={refundLabel(o)} />
-                        ) : (
-                          <StatusPill status={o.fulfilment} />
-                        )}
+        <>
+          {cached && (
+            <p aria-live="polite" className="mb-2 text-xs text-ink-muted">
+              {T.updating}
+            </p>
+          )}
+          <ul className="flex flex-col border-t border-rule">
+            {[...orders]
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .map((o) => {
+                const items = o.listingIds.map((id) => listings.find((l) => l.id === id))
+                const first = items[0]
+                const title = first?.title ?? T.gone
+                const more = items.length > 1 ? T.more(items.length - 1) : ''
+                const seller = SELLERS.find((s) => s.id === o.sellerId)
+                return (
+                  <li key={o.paymentId}>
+                    <Link
+                      to={`/order/${o.paymentId}`}
+                      className="group flex items-center gap-3 border-b border-rule py-3 hover:bg-paper sm:gap-4 sm:px-2"
+                    >
+                      {first ? (
+                        <img
+                          src={first.imageUrl}
+                          alt=""
+                          className="size-14 shrink-0 rounded-slab border border-rule bg-bone object-contain p-1"
+                        />
+                      ) : (
+                        <span className="size-14 shrink-0 rounded-slab border border-dashed border-rule" />
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <p className="truncate font-medium group-hover:underline">
+                          {title}
+                          {more}
+                        </p>
+                        <p className="money text-xs text-ink-muted">
+                          {seller?.handle ?? o.sellerId} ·{' '}
+                          {date.format(new Date(o.createdAt))}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <StatusPill status={o.state} />
+                          {o.refund.state !== 'none' ? (
+                            <StatusPill status={o.refund.state} label={refundLabel(o)} />
+                          ) : (
+                            <StatusPill status={o.fulfilment} />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <Money
-                      cents={o.breakdown.totalCents}
-                      className="self-start text-right font-semibold"
-                    />
-                  </Link>
-                </li>
-              )
-            })}
-        </ul>
+                      <Money
+                        cents={o.breakdown.totalCents}
+                        className="self-start text-right font-semibold"
+                      />
+                    </Link>
+                  </li>
+                )
+              })}
+          </ul>
+        </>
       )}
     </PageLayout>
   )

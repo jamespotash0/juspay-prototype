@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useListings } from '../lib/listings.ts'
 import { navigate, useSearchParams } from '../lib/navigation.ts'
 import { useSoldIds } from '../lib/sold.ts'
@@ -6,12 +6,12 @@ import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { Listing } from '../shared/types.ts'
 import { EmptyState } from '../ui/EmptyState.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { ListingTile } from '../ui/ListingTile.tsx'
 import { PageLayout } from './Layout.tsx'
 
 type Chip = 'coin' | 'card' | 'graded' | 'raw' | 'free'
 
-const CHIPS = Object.entries(COPY.catalogue.chips) as [Chip, string][]
 const PAGE_SIZE = 24
 
 // Chips in the same pair (Coins/Cards, Graded/Raw) widen; different pairs narrow.
@@ -69,6 +69,13 @@ export default function Catalogue() {
     if (page !== 1) navigate(pageHref(1), { replace: true })
   }
 
+  function search(text: string) {
+    const next = new URLSearchParams()
+    if (text) next.set('q', text)
+    const qs = next.toString()
+    navigate(qs ? `/?${qs}` : '/', { replace: true })
+  }
+
   function clear() {
     setOn(new Set())
     navigate('/', { replace: true })
@@ -77,17 +84,28 @@ export default function Catalogue() {
   return (
     <PageLayout>
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        {CHIPS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={on.has(id)}
-            onClick={() => toggle(id)}
-            className="h-8 rounded-full border border-rule bg-paper px-3 text-sm font-medium hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-accent-ink"
-          >
-            {label}
-          </button>
-        ))}
+        <form
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+          className="relative min-w-0 grow basis-60 sm:max-w-md"
+        >
+          <label className="sr-only" htmlFor="catalogue-search">
+            {COPY.shell.searchLabel}
+          </label>
+          <Icon
+            name="search"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            id="catalogue-search"
+            type="search"
+            value={params.get('q') ?? ''}
+            onChange={(e) => search(e.target.value)}
+            placeholder={COPY.shell.searchPlaceholder}
+            className="h-10 w-full rounded-slab border border-rule bg-paper pr-3 pl-9 text-sm placeholder:text-ink-muted focus-visible:border-accent"
+          />
+        </form>
+        <Filters on={on} toggle={toggle} reset={() => setOn(new Set())} />
         <p className="money ml-auto text-sm text-ink-muted" aria-live="polite">
           {shown.length} {COPY.catalogue.of} {listings.length}
           {q && (
@@ -134,6 +152,85 @@ export default function Catalogue() {
         </>
       )}
     </PageLayout>
+  )
+}
+
+/** A multi-select dropdown: native <details>, closed by Escape or a click outside. */
+function Filters({
+  on,
+  toggle,
+  reset,
+}: {
+  on: Set<Chip>
+  toggle: (chip: Chip) => void
+  reset: () => void
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = ref.current
+      if (!el?.open) return
+      if (
+        e instanceof KeyboardEvent ? e.key === 'Escape' : !el.contains(e.target as Node)
+      )
+        el.open = false
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [])
+
+  const T = COPY.catalogue
+  return (
+    <details ref={ref} className="group relative">
+      <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-slab border border-rule bg-paper px-3 text-sm font-medium hover:border-accent group-open:border-accent [&::-webkit-details-marker]:hidden">
+        {T.filters}
+        {on.size > 0 && (
+          <span className="money inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-ink">
+            {on.size}
+          </span>
+        )}
+        <Icon
+          name="chevronDown"
+          className="size-4 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="absolute left-0 z-20 mt-1 w-56 rounded-slab border border-rule bg-paper p-3 shadow-lg">
+        {T.filterGroups.map((g) => (
+          <fieldset key={g.label} className="mb-3 last:mb-2">
+            <legend className="mb-1 text-xs font-semibold tracking-wide text-ink-muted uppercase">
+              {g.label}
+            </legend>
+            {(g.chips as readonly Chip[]).map((id) => (
+              <label
+                key={id}
+                className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-bone"
+              >
+                <input
+                  type="checkbox"
+                  checked={on.has(id)}
+                  onChange={() => toggle(id)}
+                  className="size-4 accent-accent"
+                />
+                {T.chips[id]}
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        {on.size > 0 && (
+          <button
+            type="button"
+            onClick={reset}
+            className="border-t border-rule pt-2 text-sm font-medium text-accent hover:underline"
+          >
+            {T.clearFilters}
+          </button>
+        )}
+      </div>
+    </details>
   )
 }
 

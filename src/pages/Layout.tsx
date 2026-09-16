@@ -9,15 +9,6 @@ import type { PersonaId } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { TopBar } from '../ui/TopBar.tsx'
 
-// Typing on another page takes you to the catalogue; the page swaps under the input, so put the caret back.
-let refocusSearch = false
-
-function search(q: string) {
-  const onHome = location.pathname === '/'
-  if (!onHome) refocusSearch = true
-  navigate(q ? `/?q=${encodeURIComponent(q)}` : '/', { replace: onHome })
-}
-
 const ADMIN_ONLY = /^\/admin(\/|$)/
 const COLLECTOR_ONLY = /^\/(orders|sell|checkout)(\/|$)/
 
@@ -26,7 +17,6 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
   const session = useSession()
   const cart = useCart()
   const params = useSearchParams()
-  const q = params.get('q') ?? ''
   const isAdmin = PERSONAS.find((p) => p.id === session?.persona)?.kind === 'admin'
 
   function switchAccount(persona: PersonaId) {
@@ -46,14 +36,6 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
   useEffect(() => {
     document.title = title ? `${title} · Slabbed` : 'Slabbed'
   }, [title])
-
-  useEffect(() => {
-    if (!refocusSearch) return
-    refocusSearch = false
-    const input = document.getElementById('topbar-search') as HTMLInputElement | null
-    input?.focus()
-    input?.setSelectionRange(input.value.length, input.value.length)
-  }, [])
 
   const links = (
     isAdmin
@@ -79,8 +61,6 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
           const here = path + (params.size ? `?${params}` : '')
           navigate(`/signin?next=${encodeURIComponent(here)}`)
         }}
-        onSearch={search}
-        searchValue={q}
         links={links}
         cartCount={cart.reduce((n, l) => n + l.qty, 0)}
         onNavigate={navigate}

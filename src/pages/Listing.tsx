@@ -8,6 +8,7 @@ import { COPY } from '../shared/copy.ts'
 import { PERSONAS, SELLERS } from '../shared/seed.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
@@ -111,21 +112,14 @@ export default function Listing({ params }: { params: Params }) {
                 <Button onClick={buyNow} className="min-w-40">
                   {T.buyNow}
                 </Button>
-                {/* One-of-ones: a second click never adds a second copy. */}
+                {/* One-of-ones: once added, the button becomes the way to the cart, never a second copy. */}
                 <Button
                   variant="secondary"
-                  onClick={() => inCart || addToCart(listing.id)}
+                  onClick={() => (inCart ? navigate('/cart') : addToCart(listing.id))}
                 >
-                  {T.addToCart}
+                  <Icon name="cart" className="size-4" />
+                  {inCart ? T.viewInCart : T.addToCart}
                 </Button>
-                {inCart && (
-                  <p className="self-center text-sm text-ink-muted">
-                    {T.inCart}{' '}
-                    <Link to="/cart" className="font-medium text-accent hover:underline">
-                      {T.viewCart}
-                    </Link>
-                  </p>
-                )}
               </div>
             )}
             <p className="max-w-[60ch] text-sm">{COPY.hold}</p>
