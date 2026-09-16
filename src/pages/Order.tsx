@@ -96,15 +96,19 @@ export default function Order({ params }: { params: Params }) {
         : { to: '/orders', label: TEXT.backToOrders }
 
   return (
-    <PageLayout title={TEXT.title}>
-      <div className="flex max-w-3xl flex-col gap-6">
+    <PageLayout
+      title={TEXT.title}
+      back={
         <Link
           to={back.to}
-          className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-accent hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
         >
           <Icon name="arrowLeft" className="size-4" />
           {back.label}
         </Link>
+      }
+    >
+      <div className="flex max-w-3xl flex-col gap-6">
         {ambiguous ? (
           <Notice
             tone="ambiguous"

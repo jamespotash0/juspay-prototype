@@ -12,7 +12,16 @@ import { TopBar } from '../ui/TopBar.tsx'
 const ADMIN_ONLY = /^\/admin(\/|$)/
 const COLLECTOR_ONLY = /^\/(orders|sell|checkout)(\/|$)/
 
-export function PageLayout({ children, title }: { children: ReactNode; title?: string }) {
+export function PageLayout({
+  children,
+  title,
+  back,
+}: {
+  children: ReactNode
+  title?: string
+  /** A back link, drawn above the heading so it reads before the title. */
+  back?: ReactNode
+}) {
   const path = usePath()
   const session = useSession()
   const cart = useCart()
@@ -66,6 +75,7 @@ export function PageLayout({ children, title }: { children: ReactNode; title?: s
         onNavigate={navigate}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-16">
+        {back && <div className="mb-3">{back}</div>}
         {title && (
           <h1 className="mb-5 font-display text-2xl font-bold tracking-tight">{title}</h1>
         )}
