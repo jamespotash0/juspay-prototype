@@ -306,7 +306,7 @@ drop to zero.
 - **3DS challenges, partial refunds, soft declines on demand, and an
   abandoned PayPal payment** (the message exists; the flow isn't tested).
 - **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
-  release, authenticity checks, seller KYC, saved cards.**
+  release, authenticity checks, seller KYC, saved bank accounts and PayPal.**
 
 **Known gaps in what is built**
 - `update_metadata` returns a connector error (`IR_20`, seen on both

@@ -115,6 +115,7 @@ This is the grade:
 - ✅ Refund — one seller's order in full (a partial refund of a multi-seller payment), reached through a buyer dispute
 - ✅ Marketplace fee calculation — visible on the seller page
 - ✅ Seller balance — `pending → available`, moved by the seller shipping
+- ✅ Saved cards — a card saved at checkout is listed on the account page from Hyperswitch's customer payment methods, and can be removed (added 2026-09-16 at the user's request; repeat collectors buy on-session, so this is the card-on-file they expect)
 
 ### Out of scope
 
@@ -122,7 +123,7 @@ Accessibility conformance · **webhooks** (a stateless receiver on a rotating
 preview URL cannot demonstrate what webhooks are for) · **concurrency** — no
 locks, reservations or sold-out races · **hold timers** — money moves on
 actions · per-state sales tax · seller onboarding and KYC · shipping and
-tracking integration · messaging · reviews · auctions · offers · saved cards ·
+tracking integration · messaging · reviews · auctions · offers · saving bank accounts or PayPal (cards are saved, see below) ·
 Apple and Google Pay · **ACH bank debit** and **Affirm** (both approaches in
 §4) · a real Stripe or PayPal account behind the connectors · Stripe Connect split
 payments · real payouts · card-network dispute
