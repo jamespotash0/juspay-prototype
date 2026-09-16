@@ -198,7 +198,6 @@ export default function Checkout({ params }: { params: Params }) {
             })}
           </ul>
           <BreakdownList b={shown} />
-          <p className="border-t border-rule pt-3 text-sm text-ink-muted">{COPY.hold}</p>
         </aside>
       </div>
     </PageLayout>

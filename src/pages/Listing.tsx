@@ -122,7 +122,6 @@ export default function Listing({ params }: { params: Params }) {
                 </Button>
               </div>
             )}
-            <p className="max-w-[60ch] text-sm">{COPY.hold}</p>
           </section>
 
           <section>
