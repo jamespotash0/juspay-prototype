@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
 import { useListings } from '../lib/listings.ts'
-import { navigate } from '../lib/navigation.ts'
+import { navigate, useSearchParams } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
+import { useSoldIds } from '../lib/sold.ts'
+import { toggleWatch, useWatchedIds } from '../lib/watchlist.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { OrderView } from '../shared/types.ts'
 import { Card } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
+import { ListingTile } from '../ui/ListingTile.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
@@ -34,6 +37,7 @@ function readCache(persona: string): OrderView[] | undefined {
 export default function Orders() {
   const persona = usePersona()
   const listings = useListings()
+  const watchlist = useSearchParams().get('view') === 'watchlist'
   const [attempt, setAttempt] = useState(0)
   // Tagged with the request it answers, so a persona switch or retry shows loading again.
   const key = `${persona}:${attempt}`
@@ -70,8 +74,11 @@ export default function Orders() {
     <PageLayout
       title={COPY.pageHeaders.orders.title}
       eyebrow={COPY.pageHeaders.orders.eyebrow}
+      actions={<ViewToggle watchlist={watchlist} />}
     >
-      {failed ? (
+      {watchlist ? (
+        <Watchlist />
+      ) : failed ? (
         <Notice
           tone="danger"
           title={T.loadFailed}
@@ -171,5 +178,67 @@ export default function Orders() {
         </>
       )}
     </PageLayout>
+  )
+}
+
+/** Orders | Watchlist, kept in the URL so a reload stays on the same view. */
+function ViewToggle({ watchlist }: { watchlist: boolean }) {
+  const tabs = [
+    { label: T.ordersTab, href: '/orders', current: !watchlist },
+    { label: T.watchlistTab, href: '/orders?view=watchlist', current: watchlist },
+  ]
+  return (
+    <nav
+      aria-label={T.viewLabel}
+      className="flex rounded-full border border-rule-strong bg-paper p-1 text-sm"
+    >
+      {tabs.map((t) => (
+        <Link
+          key={t.href}
+          to={t.href}
+          aria-current={t.current ? 'page' : undefined}
+          className={`rounded-full px-4 py-1.5 font-medium ${t.current ? 'bg-primary text-primary-ink' : 'text-ink-muted hover:text-ink'}`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+function Watchlist() {
+  const watched = useWatchedIds()
+  const sold = useSoldIds()
+  const items = useListings().filter((l) => watched.has(l.id))
+  if (items.length === 0)
+    return (
+      <EmptyState
+        title={COPY.empty.watchlist.title}
+        fact={COPY.empty.watchlist.fact}
+        action={{ label: COPY.empty.watchlist.action, onClick: () => navigate('/') }}
+      />
+    )
+  return (
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+      {items.map((l) => {
+        const seller = SELLERS.find((s) => s.id === l.sellerId)
+        if (!seller) return null
+        return (
+          <li key={l.id} className="grid">
+            <ListingTile
+              listing={l}
+              seller={seller}
+              href={`/listing/${l.id}`}
+              onNavigate={navigate}
+              watched
+              onToggleWatch={() => toggleWatch(l.id)}
+            />
+            {sold.has(l.id) && (
+              <p className="mt-1 px-1 text-xs text-ink-muted">{COPY.sold.label}</p>
+            )}
+          </li>
+        )
+      })}
+    </ul>
   )
 }

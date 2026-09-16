@@ -47,6 +47,11 @@ export const COPY = {
       fact: "The seller isn't paid until they ship.",
       action: 'Browse',
     },
+    watchlist: {
+      title: 'Nothing on your watch list',
+      fact: 'Tap the heart on any listing in the shop to keep an eye on it here.',
+      action: 'Browse the shop',
+    },
     sales: {
       title: 'No sales yet',
       fact: 'When a buyer checks out, the sale shows up here with their shipping details. Ship it, mark it shipped, and your earnings are released.',
@@ -368,6 +373,9 @@ export const COPY = {
     updating: 'Checking for updates…',
     gone: 'Listing no longer available',
     more: (n: number) => ` + ${n} more`,
+    ordersTab: 'Orders',
+    watchlistTab: 'Watchlist',
+    viewLabel: 'Orders or watchlist',
   },
 
   sell: {
