@@ -44,6 +44,13 @@ export async function payByCard(page: Page, card: string): Promise<string> {
     [fields.locator('[data-testid="expiryInput"]'), '1230'],
     [fields.locator('[data-testid="cvvInput"]'), '123'],
   ] as const
+  // A buyer with a saved card sees that card first; typing a card needs the new-method form.
+  const newMethod = sdk(page).getByText('New payment methods')
+  // The two live in different iframes, so .or() can't combine them: poll for either.
+  await expect(async () => {
+    expect((await inputs[0][0].isVisible()) || (await newMethod.isVisible())).toBe(true)
+  }).toPass({ timeout: 30_000 })
+  if (await newMethod.isVisible()) await newMethod.click()
   await expect(inputs[0][0]).toBeVisible({ timeout: 30_000 })
   // The SDK can re-render its fields just after they appear and drop what was typed; retype until all three hold.
   await expect(async () => {

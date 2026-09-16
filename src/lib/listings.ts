@@ -60,7 +60,8 @@ export function addUserListing(listing: Omit<Listing, 'id' | 'createdAt'>): List
 
 /** Takes a listing down: it leaves the shop, search and this browser's cart. Past orders keep their own data. */
 export function removeListing(id: string) {
-  if (store.get().some((l) => l.id === id)) store.set(store.get().filter((l) => l.id !== id))
+  if (store.get().some((l) => l.id === id))
+    store.set(store.get().filter((l) => l.id !== id))
   else if (!removed.get().includes(id)) removed.set([...removed.get(), id])
   removeFromCart(id)
 }

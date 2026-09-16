@@ -68,7 +68,7 @@ flowchart LR
     CO["POST /api/checkout<br/>prices the order, creates the payment"]
     PAY["GET /api/payment<br/>authoritative status read"]
     OS["POST /api/order-state<br/>shipped / received / disputed"]
-    REF["POST /api/refund<br/>admin, full refund only"]
+    REF["POST /api/refund<br/>admin, refunds one seller's order"]
     ORD["GET /api/orders"]
   end
 
@@ -239,8 +239,10 @@ stateDiagram-v2
 The buyer is charged **item + shipping + sales tax** (a flat 8% on items) as
 one payment. The seller is credited **item + shipping − commission** (5% of
 items) later. The buyer never sees the commission and the seller never sees the
-tax. Refunds are **full only**: the whole payment goes back, and the sale's
-commission and net drop to zero.
+tax. A cart can span several sellers and is still **one payment**; each
+seller's share is its own order. A refund returns **one seller's order in
+full** (a partial refund of the payment), and that sale's commission and net
+drop to zero.
 
 ---
 
@@ -253,7 +255,7 @@ commission and net drop to zero.
 | **Capture immediately; the hold is a ledger, not an authorisation** | Card authorisations expire in about 7 days, and an individual seller ships when they reach the post office. The reversal tool is a refund, not a void |
 | **Seller pays the commission, at release** | Nothing is added to a buyer's total after they've decided on a $1,800 item. A sale refunded before release never pays a fee |
 | **Never auto-retry an ambiguous payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
-| **One payment per seller in a multi-seller cart** | A single split payment can't represent one seller's half failing, and that is the normal failure |
+| **One payment for a multi-seller cart, split per seller on our side** | Collectors buy from several sellers at once and expect to pay once, as on eBay and Etsy. One payment can't end half paid. Each seller's share ships, pays out and refunds on its own, so one seller's dispute never refunds another's sale |
 | **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so order lists page through the last 90 days of payments (at most 2,000) and filter in memory. Measured: 1.3–2.0 s warm, 4.6–6.5 s on a cold first call. A KV index of order ids is the upgrade |
 | **3DS out of scope for this build** | The dashboard default is untouched, but no challenge flow is built or tested. We're US-only, so it isn't a mandate. It would buy liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
 
@@ -261,7 +263,7 @@ commission and net drop to zero.
 
 | Feature | Verdict |
 | --- | --- |
-| Unified Checkout, Payments, Refunds (full only), Metadata update | **Built on** |
+| Unified Checkout, Payments, Refunds (one seller's order in full), Metadata update | **Built on** |
 | Rule-based routing (amount + volume split) | **Configured**, verified |
 | PayPal wallet | **Configured**, plus a return URL passed to the SDK |
 | 3DS | **Out of scope**: dashboard default untouched, no challenge flow built or tested |

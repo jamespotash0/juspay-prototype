@@ -7,9 +7,10 @@ import {
 import { hsFetch, isMetadataPropagationError } from './_lib/hyperswitch.js'
 import {
   jsonError,
-  PAYMENT_ID,
-  readOrder,
-  toOrderView,
+  ORDER_ID,
+  findOrder,
+  sellerKey,
+  toOrderViews,
   type HsPayment,
 } from './_lib/orderView.js'
 
@@ -33,7 +34,7 @@ const RULES: Record<
   },
 }
 
-/** POST /api/order-state — records ship / receive / dispute in the payment's own metadata. */
+/** POST /api/order-state — records ship / receive / dispute for one seller's order, in the payment's metadata. */
 export async function POST(request: Request): Promise<Response> {
   try {
     return await orderState(request)
@@ -47,14 +48,15 @@ async function orderState(request: Request): Promise<Response> {
     .json()
     .catch(() => null)) as Partial<OrderStateRequest> | null
   const { paymentId, action, actorId, reason } = body ?? {}
-  if (typeof paymentId !== 'string' || !PAYMENT_ID.test(paymentId))
-    return jsonError(400, 'BAD_REQUEST', 'Invalid payment id')
+  if (typeof paymentId !== 'string' || !ORDER_ID.test(paymentId))
+    return jsonError(400, 'BAD_REQUEST', 'Invalid order id')
   if (typeof action !== 'string' || !Object.hasOwn(RULES, action))
     return jsonError(400, 'BAD_REQUEST', 'Unknown action')
   const rule = RULES[action]
 
-  const current = await readOrder(paymentId)
-  if (current instanceof Response) return current
+  const found = await findOrder(paymentId)
+  if (found instanceof Response) return found
+  const current = found.order
 
   if (!actorId || current[rule.actor] !== actorId)
     return jsonError(403, 'FORBIDDEN', 'You are not allowed to do that on this order')
@@ -69,17 +71,20 @@ async function orderState(request: Request): Promise<Response> {
       `This order can't be marked ${rule.to} now`,
     )
 
-  // Only the changed keys: the merge is shallow, and untouched keys survive.
+  // Only this seller's changed keys: the merge is shallow, so other sellers' keys survive.
+  // A legacy payment has no `sellers` key and keeps its bare keys.
+  const hsId = current.paymentId
+  const key = (k: string) => sellerKey(found.payment.metadata ?? {}, current.sellerId, k)
   const metadata: Record<string, string> = {
-    [META.fulfilment]: rule.to,
-    [rule.stamp]: new Date().toISOString(),
+    [key(META.fulfilment)]: rule.to,
+    [key(rule.stamp)]: new Date().toISOString(),
   }
   if (action === 'dispute')
-    metadata[META.disputeReason] = (typeof reason === 'string' ? reason : '')
+    metadata[key(META.disputeReason)] = (typeof reason === 'string' ? reason : '')
       .trim()
       .slice(0, 300)
 
-  const write = await hsFetch(`/payments/${paymentId}/update_metadata`, {
+  const write = await hsFetch(`/payments/${hsId}/update_metadata`, {
     method: 'POST',
     body: JSON.stringify({ metadata }),
   })
@@ -93,12 +98,13 @@ async function orderState(request: Request): Promise<Response> {
     return jsonError(502, 'UPSTREAM', "We couldn't update the order. Nothing changed.")
   }
 
-  const fresh = await hsFetch<HsPayment>(`/payments/${paymentId}`)
-  if (!fresh.ok || fresh.data.metadata?.[META.fulfilment] !== rule.to)
+  const fresh = await hsFetch<HsPayment>(`/payments/${hsId}`)
+  if (!fresh.ok || fresh.data.metadata?.[key(META.fulfilment)] !== rule.to)
     return jsonError(
       502,
       'NOT_SAVED',
       "We couldn't confirm the update was saved. Try again.",
     )
-  return Response.json(await toOrderView(fresh.data))
+  const views = await toOrderViews(fresh.data)
+  return Response.json(views.find((v) => v.sellerId === current.sellerId))
 }

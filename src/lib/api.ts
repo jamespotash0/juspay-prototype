@@ -54,7 +54,7 @@ const post = <T>(path: string, body: unknown) =>
 // buyer, seller or admin just looked at, and refresh from the server behind it.
 // ponytail: in-memory only, gone on reload; the order page always re-reads, so it's never the truth.
 const orderCache = new Map<string, OrderView>()
-const remember = (o: OrderView) => (orderCache.set(o.paymentId, o), o)
+const remember = (o: OrderView) => (orderCache.set(o.orderId, o), o)
 export const cachedOrder = (id: string) => orderCache.get(id)
 
 export const api = {
@@ -71,4 +71,9 @@ export const api = {
           'all' in filter ? { all: '1' } : (filter as Record<string, string>),
         ),
     ).then((r) => (r.orders.forEach(remember), r)),
+  /** Every seller's order in one purchase, in cart order. */
+  purchase: (paymentId: string) =>
+    call<OrdersResponse>(`/api/orders?payment=${encodeURIComponent(paymentId)}`).then(
+      (r) => (r.orders.forEach(remember), r.orders),
+    ),
 }

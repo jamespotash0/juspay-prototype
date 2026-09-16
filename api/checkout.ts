@@ -3,6 +3,7 @@ import { mapStatus } from '../src/shared/orderState.js'
 import { LISTINGS, PERSONAS } from '../src/shared/seed.js'
 import {
   META,
+  type CartLine,
   type CheckoutRequest,
   type CheckoutResponse,
   type Listing,
@@ -17,7 +18,8 @@ const TERMINAL: PaymentState[] = ['paid', 'failed', 'cancelled', 'refunded']
 const cents = (v: unknown) => Number.isInteger(v) && (v as number) >= 0
 
 /**
- * POST /api/checkout — one intent for one seller group.
+ * POST /api/checkout — one intent for the whole cart, however many sellers it spans.
+ * Each seller's share is recorded in metadata, so it ships, pays out and refunds on its own.
  * The amount is computed here from our own catalogue; nothing money-shaped is read from the body.
  */
 export async function POST(request: Request): Promise<Response> {
@@ -61,7 +63,7 @@ async function checkout(request: Request): Promise<Response> {
     ),
   ]
 
-  const lines = []
+  const lines: { listing: Listing; line: CartLine }[] = []
   for (const item of items) {
     const listing = catalogue.find((l) => l.id === item?.listingId)
     if (!listing)
@@ -71,12 +73,23 @@ async function checkout(request: Request): Promise<Response> {
     lines.push({ listing, line: { listingId: listing.id, qty: item.qty } })
   }
 
-  const sellerId = lines[0].listing.sellerId
-  if (lines.some((l) => l.listing.sellerId !== sellerId))
-    return jsonError(400, 'MULTIPLE_SELLERS', 'One checkout per seller')
-  if (sellerId === buyer.id)
+  if (lines.some((l) => l.listing.sellerId === buyer.id))
     return jsonError(409, 'OWN_LISTING', "You can't buy your own listing")
 
+  // Per seller, in cart order. The charge is the sum of these, so each seller's share can be
+  // refunded exactly (breakdown() rounds tax per seller for the same reason).
+  const sellerIds = [...new Set(lines.map((l) => l.listing.sellerId))]
+  const groups = sellerIds.map((sellerId) => {
+    const own = lines.filter((l) => l.listing.sellerId === sellerId)
+    return {
+      sellerId,
+      listingIds: own.map((l) => l.listing.id),
+      b: breakdown(
+        own.map((l) => l.line),
+        catalogue,
+      ),
+    }
+  })
   const b = breakdown(
     lines.map((l) => l.line),
     catalogue,
@@ -88,7 +101,7 @@ async function checkout(request: Request): Promise<Response> {
       paymentId: attemptId,
       clientSecret,
       publishableKey: process.env.JUSPAY_API_PUBLISHABLE_KEY ?? '',
-      sellerId,
+      sellerIds,
       breakdown: b,
     } satisfies CheckoutResponse)
 
@@ -117,17 +130,24 @@ async function checkout(request: Request): Promise<Response> {
         },
       },
       metadata: {
-        [META.sellerId]: sellerId,
+        [META.sellers]: sellerIds.join(','),
         [META.buyerId]: buyer.id,
-        [META.listingIds]: lines.map((l) => l.listing.id).join(','),
-        [META.itemsCents]: String(b.itemsCents),
-        [META.shippingCents]: String(b.shippingCents),
-        [META.taxCents]: String(b.taxCents),
-        [META.fulfilment]: 'unshipped',
-        [META.shippedAt]: '',
-        [META.receivedAt]: '',
-        [META.disputedAt]: '',
-        [META.disputeReason]: '',
+        // Verified on the sandbox 2026-09-16: 111 flat keys (12 sellers) are accepted and read back.
+        ...Object.fromEntries(
+          groups.flatMap(({ sellerId, listingIds, b: g }) =>
+            Object.entries({
+              [META.listingIds]: listingIds.join(','),
+              [META.itemsCents]: String(g.itemsCents),
+              [META.shippingCents]: String(g.shippingCents),
+              [META.taxCents]: String(g.taxCents),
+              [META.fulfilment]: 'unshipped',
+              [META.shippedAt]: '',
+              [META.receivedAt]: '',
+              [META.disputedAt]: '',
+              [META.disputeReason]: '',
+            }).map(([k, v]) => [`${sellerId}.${k}`, v]),
+          ),
+        ),
         [META.source]: (request.headers.get('x-slabbed-source') === 'test'
           ? 'test'
           : 'app') satisfies PaymentSource,

@@ -42,7 +42,7 @@ export default function Listing({ params }: { params: Params }) {
 
   function buyNow() {
     if (!inCart) addToCart(listing!.id)
-    navigate(`/checkout/${listing!.sellerId}`)
+    navigate('/checkout')
   }
 
   const specs: [string, string | number | undefined][] = [
@@ -77,7 +77,7 @@ export default function Listing({ params }: { params: Params }) {
       }
     >
       <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-2 lg:gap-6">
-        <div className="mx-auto aspect-square w-full max-w-md min-h-0 rounded-card border border-rule bg-paper p-4 shadow-card sm:p-6 md:sticky md:top-20 md:max-w-none md:self-start">
+        <div className="mx-auto aspect-square w-full max-w-xs min-h-0 rounded-card border border-rule bg-paper p-4 shadow-card sm:max-w-sm sm:p-5 md:sticky md:mx-0 md:justify-self-end md:top-20 md:self-start">
           <Slab listing={listing} />
         </div>
 

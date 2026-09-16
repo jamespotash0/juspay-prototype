@@ -1,6 +1,13 @@
 import { META, type OrdersResponse, type PaymentState } from '../src/shared/types.js'
 import { hsFetch } from './_lib/hyperswitch.js'
-import { jsonError, toOrderView, type HsPayment } from './_lib/orderView.js'
+import {
+  jsonError,
+  PAYMENT_ID,
+  readPayment,
+  sellersOf,
+  toOrderViews,
+  type HsPayment,
+} from './_lib/orderView.js'
 
 /** A checkout that never became an order: hidden from buyer and seller lists (W1 decision 3). */
 const NOT_AN_ORDER: PaymentState[] = [
@@ -14,15 +21,27 @@ const MAX_PAGES = 20
 /** A reviewer opens the demo weeks after the last test run; 90 days keeps its orders, and nothing new is created meanwhile. */
 const WINDOW_DAYS = 90
 
-/** GET /api/orders?buyer=<PersonaId> | ?seller=<sellerId> | ?all=1 → OrdersResponse, newest first. */
+/**
+ * GET /api/orders?buyer=<PersonaId> | ?seller=<sellerId> | ?all=1 → OrdersResponse, newest first.
+ * ?payment=<paymentId> → every seller's order in one purchase, in cart order (the buyer's confirmation).
+ */
 export async function GET(request: Request): Promise<Response> {
   try {
     const q = new URL(request.url).searchParams
     const buyer = q.get('buyer')
     const seller = q.get('seller')
     const all = q.get('all') === '1'
+    const paymentId = q.get('payment')
+    if (paymentId) {
+      if (!PAYMENT_ID.test(paymentId))
+        return jsonError(400, 'BAD_REQUEST', 'Invalid payment id')
+      const read = await readPayment(paymentId)
+      return read instanceof Response
+        ? read
+        : Response.json({ orders: read.orders } satisfies OrdersResponse)
+    }
     if (!buyer && !seller && !all)
-      return jsonError(400, 'BAD_REQUEST', 'Pass buyer, seller or all=1')
+      return jsonError(400, 'BAD_REQUEST', 'Pass buyer, seller, all=1 or payment')
 
     // Paging, as probed on the sandbox 2026-09-16: `ending_before=<last id>` walks to OLDER payments and
     // repeats that id as its first row; `starting_after` returns page one again, so paging on it read the
@@ -50,15 +69,18 @@ export async function GET(request: Request): Promise<Response> {
     // then fetch just those payments.
     const mine = payments.filter((p) => {
       const m = p.metadata ?? {}
-      if (!m[META.sellerId] || m[META.source] !== 'app') return false
+      const sellers = sellersOf(m)
+      if (!sellers.length || m[META.source] !== 'app') return false
       if (buyer) return m[META.buyerId] === buyer
-      if (seller) return m[META.sellerId] === seller
+      if (seller) return sellers.includes(seller)
       return true
     })
 
-    // Wrapped: .map would pass the index as toOrderView's second (refunds) argument.
-    const views = await Promise.all(mine.map((p) => toOrderView(p)))
+    // Wrapped: .map would pass the index as toOrderViews' second (refunds) argument.
+    const views = (await Promise.all(mine.map((p) => toOrderViews(p)))).flat()
     const orders = views
+      // A seller sees only their own order from a shared payment, never the other sellers'.
+      .filter((o) => !seller || o.sellerId === seller)
       .filter((o) => all || !NOT_AN_ORDER.includes(o.state))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     return Response.json({ orders } satisfies OrdersResponse)

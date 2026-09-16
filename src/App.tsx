@@ -37,7 +37,8 @@ const routes: Route[] = [
   { path: '/cart', component: Cart },
   { path: '/signin', component: SignIn },
   { path: '/signin/:provider', component: SignInProvider },
-  { path: '/checkout/:sellerId', component: signedIn(Checkout) },
+  { path: '/checkout', component: signedIn(Checkout) },
+  // A bare payment id shows every seller's order in that purchase; <paymentId>.<sellerId> shows one.
   { path: '/order/:paymentId', component: signedIn(Order) },
   { path: '/orders', component: signedIn(Orders) },
   { path: '/sell', component: signedIn(Sell) },

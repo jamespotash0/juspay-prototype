@@ -131,7 +131,7 @@ export default function AdminPayment({ params }: { params: Params }) {
     setBusy(true)
     try {
       const next = await api.refund({
-        paymentId: order!.paymentId,
+        paymentId: order!.orderId,
         actorId: persona,
       })
       setRefunded({ key, order: next })

@@ -60,6 +60,23 @@ describe('breakdown (buyer)', () => {
     expect(bigShip.taxCents).toBe(800)
   })
 
+  it('rounds tax per seller, so a multi-seller total is the sum of each seller order', () => {
+    // $0.06 each: 8% is 0.48 cents, rounding to 0 per seller, where the combined $0.12 would round to 1.
+    const a = { ...listing('lst_x', 6, 0), sellerId: 'mike' }
+    const b = { ...listing('lst_y', 6, 0), sellerId: 'sel_other' }
+    const both = [a, b]
+    const one = (id: string) => breakdown([{ listingId: id, qty: 1 }], both)
+    const whole = breakdown(
+      [
+        { listingId: 'lst_x', qty: 1 },
+        { listingId: 'lst_y', qty: 1 },
+      ],
+      both,
+    )
+    expect(whole.taxCents).toBe(0)
+    expect(whole.totalCents).toBe(one('lst_x').totalCents + one('lst_y').totalCents)
+  })
+
   it('throws on an unknown listing', () => {
     expect(() => breakdown([{ listingId: 'nope', qty: 1 }], [morgan])).toThrow()
   })

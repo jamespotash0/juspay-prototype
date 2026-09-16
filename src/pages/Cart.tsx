@@ -1,4 +1,4 @@
-import { groupBySeller, removeFromCart, useCart } from '../lib/cart.ts'
+import { checkoutLines, groupBySeller, removeFromCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
@@ -14,6 +14,7 @@ import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
 import { gradeLabel } from '../ui/format.ts'
+import { BreakdownList } from './Checkout.tsx'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.cart
@@ -28,7 +29,9 @@ export default function Cart() {
   const persona = useSession()?.persona
   const sold = useSoldIds()
   const isAdmin = PERSONAS.find((p) => p.id === persona)?.kind === 'admin'
-  const groups = [...groupBySeller(useCart(), listings)]
+  const cart = useCart()
+  const groups = [...groupBySeller(cart, listings)]
+  const buyable = checkoutLines(cart, listings, sold, persona)
 
   if (groups.length === 0)
     return (
@@ -42,10 +45,10 @@ export default function Cart() {
     )
 
   return (
-    <PageLayout title={T.title} width="narrow">
-      <p className="-mt-2 mb-5 max-w-[65ch] text-sm text-ink-muted sm:-mt-3">
-        {groups.length > 1 ? T.manySellers(groups.length) : T.oneSeller}
-      </p>
+    <PageLayout
+      title={`${T.title} (${cart.reduce((n, line) => n + line.qty, 0)})`}
+      width="narrow"
+    >
 
       <div className="flex flex-col gap-4">
         {groups.map(([sellerId, lines]) => {
@@ -108,13 +111,15 @@ export default function Cart() {
                           {l.certNumber && ` · #${l.certNumber}`}
                           {line.qty > 1 && ` · ${T.qty} ${line.qty}`}
                         </p>
-                        <button
-                          type="button"
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => removeFromCart(l.id)}
-                          className="mt-1 self-start text-xs font-medium text-accent hover:underline"
+                          aria-label={`${T.remove} ${l.title}`}
+                          className="mt-2 self-start"
                         >
                           {T.remove}
-                        </button>
+                        </Button>
                       </div>
                       <div
                         className={`shrink-0 text-right text-sm ${isSold ? 'text-ink-muted line-through' : ''}`}
@@ -139,39 +144,49 @@ export default function Cart() {
                 })}
               </ul>
 
-              <div className="flex flex-col gap-3 rounded-b-card border-t border-rule bg-well px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
-                {open.length > 0 && (
-                  <dl className="money grid grid-cols-[auto_auto] gap-x-6 gap-y-0.5 text-sm sm:min-w-56">
-                    <dt className="text-ink-muted">{T.items}</dt>
-                    <dd className="text-right">
-                      <Money cents={b.itemsCents} />
-                    </dd>
-                    <dt className="text-ink-muted">{T.shipping}</dt>
-                    <dd className="text-right">
-                      <Shipping cents={b.shippingCents} />
-                    </dd>
-                    <dt className="font-semibold">{T.subtotal}</dt>
-                    <dd className="text-right font-semibold">
-                      <Money cents={b.itemsCents + b.shippingCents} />
-                    </dd>
-                    <dd className="col-span-2 text-xs text-ink-muted">{T.taxLater}</dd>
-                  </dl>
-                )}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-b-card border-t border-rule bg-well px-4 py-3 text-sm sm:px-5">
                 {open.length === 0 ? (
-                  <p className="text-sm text-ink-muted">{COPY.sold.groupAllSold}</p>
+                  <p className="text-ink-muted">{COPY.sold.groupAllSold}</p>
                 ) : sellerId === persona ? (
-                  <p className="text-sm font-semibold">{T.own}</p>
-                ) : isAdmin ? (
-                  <p className="text-sm text-ink-muted">{T.admin}</p>
+                  <p className="font-semibold">{T.own}</p>
                 ) : (
-                  <Button onClick={() => navigate(`/checkout/${sellerId}`)}>
-                    {T.checkOutWith(handle)}
-                  </Button>
+                  <>
+                    <p className="text-ink-muted">
+                      {T.items} <Money cents={b.itemsCents} /> · {T.shipping}{' '}
+                      <Shipping cents={b.shippingCents} />
+                    </p>
+                    <p className="money font-semibold">
+                      {T.subtotal} <Money cents={b.itemsCents + b.shippingCents} />
+                    </p>
+                  </>
                 )}
               </div>
             </Card>
           )
         })}
+
+        <Card as="section" aria-labelledby="cart-summary" className="flex flex-col gap-4">
+          <h2 id="cart-summary" className="text-base font-bold tracking-tight">
+            {T.summary}
+          </h2>
+          {buyable.length === 0 ? (
+            <p className="text-sm text-ink-muted">{T.nothingToBuy}</p>
+          ) : (
+            // The same calculation the server charges: tax rounded per seller, one payment in total.
+            <BreakdownList b={breakdown(buyable, listings)} />
+          )}
+          {isAdmin ? (
+            <p className="text-sm text-ink-muted">{T.admin}</p>
+          ) : (
+            <Button
+              disabled={buyable.length === 0}
+              onClick={() => navigate('/checkout')}
+              className="w-full sm:w-auto sm:self-end"
+            >
+              {T.checkOut}
+            </Button>
+          )}
+        </Card>
       </div>
     </PageLayout>
   )

@@ -47,11 +47,6 @@ export const COPY = {
       fact: "The seller isn't paid until they ship.",
       action: 'Browse',
     },
-    watchlist: {
-      title: 'Nothing on your watch list',
-      fact: 'Tap the heart on any listing in the shop to keep an eye on it here.',
-      action: 'Browse the shop',
-    },
     sales: {
       title: 'No sales yet',
       fact: 'When a buyer checks out, the sale shows up here with their shipping details. Ship it, mark it shipped, and your earnings are released.',
@@ -227,7 +222,6 @@ export const COPY = {
     orders: { eyebrow: 'Your collection', title: 'Orders' },
     sell: { eyebrow: 'Seller', title: 'Your sales and listings' },
     admin: { eyebrow: 'Marketplace operations', title: 'Payments and disputes' },
-    order: { eyebrow: 'Order' },
     adminPayment: { eyebrow: 'Payment review' },
   },
 
@@ -239,6 +233,7 @@ export const COPY = {
   },
 
   catalogue: {
+    watchlist: 'Watchlist',
     chips: {
       coin: 'Coins',
       card: 'Cards',
@@ -252,7 +247,6 @@ export const COPY = {
       { label: 'Category', chips: ['coin', 'card'] },
       { label: 'Grading', chips: ['graded', 'raw'] },
       { label: 'Shipping', chips: ['free'] },
-      { label: 'Watch list', chips: ['watching'] },
     ],
     clearFilters: 'Clear',
     results: 'listings',
@@ -297,26 +291,24 @@ export const COPY = {
 
   cart: {
     title: 'Cart',
-    manySellers: (n: number) =>
-      `Items from ${n} sellers. Each seller is checked out and paid separately.`,
-    oneSeller: 'Each seller is checked out and paid separately.',
     remove: 'Remove',
     qty: 'Qty',
     items: 'Items',
     shipping: 'Shipping',
     subtotal: 'Subtotal',
-    taxLater: 'Sales tax is added at checkout.',
-    own: "This is your listing — you can't buy it.",
+    tax: 'Sales tax',
+    total: 'Total',
+    summary: 'Order summary',
+    own: "Your listing — it isn't included at checkout.",
     admin: "Admins can't buy. Switch to a collector to check out.",
-    checkOutWith: (handle: string) => `Check out with ${handle}`,
+    checkOut: 'Check out',
+    nothingToBuy: 'Nothing in your cart can be bought right now.',
   },
 
   checkoutPage: {
     title: 'Checkout',
-    emptyGroup: 'Nothing from this seller in your cart',
+    emptyGroup: 'Nothing in your cart to check out',
     backToCart: 'Back to cart',
-    ownListing: "You can't buy your own listing",
-    ownListingBody: 'Switch to another collector in the top bar to buy it.',
     admin: 'Admins don’t check out',
     adminBody: 'Switch to Alex or Mike in the top bar to buy.',
     shipTo: 'Ship to',
@@ -334,6 +326,9 @@ export const COPY = {
 
   order: {
     title: 'Order',
+    number: 'Order number',
+    placed: 'Placed',
+    fromSeller: (handle: string) => `Shipped by ${handle}`,
     loading: 'Loading order…',
     backToOrders: 'Back to orders',
     backToSales: 'Back to sales',
@@ -373,9 +368,6 @@ export const COPY = {
     updating: 'Checking for updates…',
     gone: 'Listing no longer available',
     more: (n: number) => ` + ${n} more`,
-    ordersTab: 'Orders',
-    watchlistTab: 'Watchlist',
-    viewLabel: 'Orders or watchlist',
   },
 
   sell: {

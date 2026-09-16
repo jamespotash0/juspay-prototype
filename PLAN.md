@@ -41,6 +41,7 @@ Each section is approved, changed, or moved out of scope before any code.
 | 10 | Design — Direction & system | ✅ approved — top bar + grid, every screen a page; system tokens approved |
 | 11 | Design — Screens | ✅ approved — ten screens; confirmation = order detail; disputes = a transactions filter |
 | 12 | Design — States, edge cases, empty states | ✅ approved — stale hold copy fixed; added "action didn't save" and "refund failed" |
+| 13 | Product — Multi-seller cart | ✅ requested by the user 2026-09-16 — **one payment for the whole cart**, split per seller in metadata; refunds are one seller's order in full (partial against the payment). Replaces one payment per seller. Server side built and sandbox-verified; pages follow the restyle commit. |
 
 ---
 
@@ -73,7 +74,7 @@ PayPal payment `succeeded` after the redirect · a failed payment showing its
 decline reason ·
 the routing rule visible in the control center, with a small and a large card
 payment on different connectors · the ambiguous-outcome state
-handled · a buyer dispute reaching admin and producing a real **full** refund against
-that payment · the commission and seller balance visible and moved by the
+handled · a buyer dispute reaching admin and producing a real refund of that seller's
+order in full · the commission and seller balance visible and moved by the
 seller marking an item shipped · the statuses in engineering §4 mapped ·
 README written · deployed on Vercel.

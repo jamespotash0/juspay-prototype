@@ -89,7 +89,7 @@ export default function Catalogue() {
 
   return (
     <PageLayout>
-      <div className="mb-6 flex items-center gap-3 sm:mb-8">
+      <div className="mb-5 flex items-center gap-2 sm:mb-6">
         <form
           role="search"
           onSubmit={(e) => e.preventDefault()}
@@ -100,7 +100,7 @@ export default function Catalogue() {
           </label>
           <Icon
             name="search"
-            className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-ink-muted"
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-muted"
           />
           <input
             id="catalogue-search"
@@ -108,15 +108,30 @@ export default function Catalogue() {
             value={params.get('q') ?? ''}
             onChange={(e) => search(e.target.value)}
             placeholder={COPY.shell.searchPlaceholder}
-            className="h-12 w-full rounded-full border border-rule-strong bg-paper pr-5 pl-12 text-base placeholder:text-ink-muted hover:border-ink focus-visible:border-ink"
+            className="h-10 w-full rounded-full border border-rule-strong bg-paper pr-4 pl-10 text-sm placeholder:text-ink-muted hover:border-ink focus-visible:border-ink"
           />
         </form>
         <Filters
           on={on}
           toggle={toggle}
-          reset={() => setOn(new Set())}
+          reset={() => setOn(new Set(on.has('watching') ? ['watching'] : []))}
           count={`${shown.length} ${COPY.catalogue.of} ${listings.length}`}
         />
+        {/* The watch list sits beside search, not buried in the filters: it's where a buyer comes back to. */}
+        <button
+          type="button"
+          aria-pressed={on.has('watching')}
+          aria-label={`${COPY.catalogue.watchlist}, ${watched.size}`}
+          onClick={() => toggle('watching')}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-rule-strong bg-paper px-3.5 text-sm font-medium hover:border-ink aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-ink sm:px-5"
+        >
+          <Icon
+            name="heart"
+            className={`size-4 ${on.has('watching') ? 'fill-current' : ''}`}
+          />
+          <span className="hidden sm:inline">{COPY.catalogue.watchlist}</span>
+          <span className="money text-xs opacity-70">{watched.size}</span>
+        </button>
       </div>
       {shown.length === 0 ? (
         <div className="flex flex-col gap-8">
@@ -188,13 +203,15 @@ function Filters({
   }, [])
 
   const T = COPY.catalogue
+  // The watch list has its own button, so it doesn't count as a filter here.
+  const active = [...on].filter((c) => c !== 'watching').length
   return (
     <details ref={ref} className="group relative">
-      <summary className="inline-flex h-12 cursor-pointer list-none items-center gap-2 rounded-full border border-rule-strong bg-paper px-5 text-base font-medium hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-full border border-rule-strong bg-paper px-4 text-sm font-medium hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
         {T.filters}
-        {on.size > 0 && (
+        {active > 0 && (
           <span className="money inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-ink">
-            {on.size}
+            {active}
           </span>
         )}
         <Icon

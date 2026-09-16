@@ -5,6 +5,7 @@ import type { OrderView } from '../src/shared/types.ts'
 // ~30 s polling window runs out. That window is the app's own, hence the long timeout.
 const ID = 'cka_00000000000000000000e2'
 const PENDING: OrderView = {
+  orderId: `${ID}.mike`,
   paymentId: ID,
   state: 'pending',
   fulfilment: 'unshipped',

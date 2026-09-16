@@ -68,12 +68,12 @@ export default function Sell() {
   const toNew = { label: COPY.empty.sales.action, onClick: () => navigate('/sell/new') }
 
   function update(next: OrderView) {
-    const prev = orders?.find((o) => o.paymentId === next.paymentId)
+    const prev = orders?.find((o) => o.orderId === next.orderId)
     if (prev?.ledger.balance === 'pending' && next.ledger.balance === 'available')
-      setReleased(next.paymentId)
+      setReleased(next.orderId)
     setResult({
       key,
-      orders: orders!.map((x) => (x.paymentId === next.paymentId ? next : x)),
+      orders: orders!.map((x) => (x.orderId === next.orderId ? next : x)),
     })
   }
 
@@ -189,10 +189,10 @@ export default function Sell() {
               <ul className="divide-y divide-rule">
                 {orders.map((o) => (
                   <Sale
-                    key={o.paymentId}
+                    key={o.orderId}
                     order={o}
                     sellerId={persona}
-                    released={released === o.paymentId}
+                    released={released === o.orderId}
                     onChange={update}
                   />
                 ))}
@@ -237,7 +237,7 @@ function Sale({
     try {
       onChange(
         await api.orderState({
-          paymentId: order.paymentId,
+          paymentId: order.orderId,
           action: 'ship',
           actorId: sellerId,
         }),

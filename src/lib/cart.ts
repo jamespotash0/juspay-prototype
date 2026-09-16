@@ -61,6 +61,19 @@ export function clearCart(listingIds?: string[]) {
   )
 }
 
+/** What checkout charges for: lines that still exist, aren't sold, and aren't the buyer's own listings. */
+export function checkoutLines(
+  lines: CartLine[],
+  listings: Listing[],
+  sold: Set<string>,
+  buyerId: string | undefined,
+): CartLine[] {
+  return lines.filter((line) => {
+    const listing = listings.find((l) => l.id === line.listingId)
+    return listing && !sold.has(listing.id) && listing.sellerId !== buyerId
+  })
+}
+
 /** Groups lines by the seller of each listing, in cart order. Lines for unknown listings are dropped. */
 export function groupBySeller(
   lines: CartLine[],

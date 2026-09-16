@@ -114,12 +114,12 @@ export default function Admin() {
               <tbody className="divide-y divide-rule max-md:block">
                 {rows.map((o) => (
                   <tr
-                    key={o.paymentId}
+                    key={o.orderId}
                     className="hover:bg-well max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5 max-md:px-4 max-md:py-3 md:[&>td]:px-4 md:[&>td]:py-3.5 md:[&>td:first-child]:pl-5 md:[&>td:last-child]:pr-5 max-md:[&>td]:p-0"
                   >
                     <td className="max-md:w-full">
                       <Link
-                        to={`/admin/payment/${o.paymentId}`}
+                        to={`/admin/payment/${o.orderId}`}
                         className="money font-medium text-accent hover:underline"
                       >
                         {o.paymentId}

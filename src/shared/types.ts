@@ -85,7 +85,7 @@ export interface SellerLedger {
   commissionCents: Cents
   /** gross − commission. While 'pending': the expected net. When 'reversed': 0. */
   netCents: Cents
-  /** Refunds are full only: 0, or the buyer's whole total once refunded. */
+  /** Refunds are full per seller: 0, or this seller's share of the buyer's total once refunded. */
   refundedCents: Cents
   balance: 'pending' | 'available' | 'reversed'
 }
@@ -111,8 +111,15 @@ export type Fulfilment = 'unshipped' | 'shipped' | 'received' | 'disputed'
 
 export type RefundState = 'none' | 'pending' | 'succeeded' | 'failed'
 
-/** Flat metadata keys written onto every payment. The merge is shallow — never nest. */
+/**
+ * Flat metadata keys written onto every payment. The merge is shallow — never nest.
+ * One payment covers the whole cart: `sellers` lists the seller ids, and every per-seller key is
+ * written as `<sellerId>.<key>` (e.g. `sel_bluesheet.fulfilment`). Payments made before the
+ * multi-seller cart have no `sellers` key and a single unprefixed set, with `sellerId`.
+ */
 export const META = {
+  sellers: 'sellers', // comma-joined seller ids
+  /** Legacy single-seller payments only. */
   sellerId: 'sellerId',
   buyerId: 'buyerId',
   listingIds: 'listingIds', // comma-joined
@@ -138,8 +145,13 @@ export interface Decline {
   retriable: boolean
 }
 
-/** The one read shape every screen renders from. Built server-side only. */
+/**
+ * The one read shape every screen renders from. Built server-side only.
+ * An order is one seller's share of a payment: a three-seller cart is one payment and three orders.
+ */
 export interface OrderView {
+  /** `<paymentId>.<sellerId>`. Addresses this seller's order in URLs and API calls. */
+  orderId: string
   paymentId: string
   state: PaymentState
   fulfilment: Fulfilment
@@ -166,7 +178,7 @@ export interface ApiError {
   error: { code: string; message: string }
 }
 
-/** POST /api/checkout — creates one intent for one seller group. No amount inbound. */
+/** POST /api/checkout — one intent for the whole cart, any number of sellers. No amount inbound. */
 export interface CheckoutRequest {
   attemptId: string // becomes Hyperswitch payment_id, ≤30 chars
   buyerId: PersonaId
@@ -179,29 +191,32 @@ export interface CheckoutResponse {
   paymentId: string
   clientSecret: string
   publishableKey: string
-  sellerId: string
+  sellerIds: string[]
+  /** The whole cart: the sum of each seller's breakdown. */
   breakdown: Breakdown
 }
 
-/** GET /api/payment?id=… → OrderView */
+/** GET /api/payment?id=<orderId> → OrderView. A bare paymentId works only for a single-seller payment. */
 
 /** POST /api/order-state → OrderView */
 export type OrderAction = 'ship' | 'receive' | 'dispute'
 export interface OrderStateRequest {
+  /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string
   action: OrderAction
   actorId: PersonaId
   reason?: string // dispute only
 }
 
-/** POST /api/refund → OrderView. Admin only. Always a FULL refund — there is no amount. */
+/** POST /api/refund → OrderView. Admin only. Always refunds one seller's order in full — there is no amount. */
 export interface RefundRequest {
+  /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string
   actorId: PersonaId
   reason?: string
 }
 
-/** GET /api/orders?buyer=<id> | ?seller=<id> | ?all=1 */
+/** GET /api/orders?buyer=<id> | ?seller=<id> | ?all=1 | ?payment=<paymentId> (every order in one purchase) */
 export interface OrdersResponse {
   orders: OrderView[]
 }

@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react'
 import HyperCheckout from '../checkout/HyperCheckout.tsx'
 import { attemptFor, clearAttempt } from '../checkout/attempt.ts'
 import { ApiRequestError, api } from '../lib/api.ts'
-import { groupBySeller, useCart } from '../lib/cart.ts'
+import { checkoutLines, useCart } from '../lib/cart.ts'
 import { useListings, userListings } from '../lib/listings.ts'
-import { navigate, type Params } from '../lib/navigation.ts'
+import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
@@ -25,15 +25,13 @@ const TEXT = COPY.checkoutPage
 const input =
   'h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm font-normal hover:border-ink focus-visible:border-ink disabled:border-rule disabled:bg-well disabled:text-ink-muted'
 
-export default function Checkout({ params }: { params: Params }) {
-  const sellerId = params.sellerId
+export default function Checkout() {
   const persona = usePersona()
   const listings = useListings()
   const sold = useSoldIds()
-  // A sold one-of-one can't be bought again, even if it's still sitting in the cart.
-  const lines = (groupBySeller(useCart(), listings).get(sellerId) ?? []).filter(
-    (l) => !sold.has(l.listingId),
-  )
+  // The whole cart in one payment. A sold one-of-one can't be bought again, and your own listings
+  // stay in the cart but out of the charge.
+  const lines = checkoutLines(useCart(), listings, sold, persona)
   const [shipTo, setShipTo] = useState<ShipTo>({
     name: PERSONAS.find((p) => p.id === persona)?.name ?? '',
     line1: '1 Main St',
@@ -58,15 +56,11 @@ export default function Checkout({ params }: { params: Params }) {
       </PageLayout>
     )
 
-  if (persona === 'admin' || persona === sellerId)
+  if (persona === 'admin')
     return (
       <PageLayout title={TEXT.title} width="narrow">
         <div>
-          <Notice
-            tone="info"
-            title={persona === 'admin' ? TEXT.admin : TEXT.ownListing}
-            body={persona === 'admin' ? TEXT.adminBody : TEXT.ownListingBody}
-          />
+          <Notice tone="info" title={TEXT.admin} body={TEXT.adminBody} />
           <Link
             to="/cart"
             className="mt-4 inline-block text-sm text-accent hover:underline"
@@ -82,7 +76,7 @@ export default function Checkout({ params }: { params: Params }) {
     setBusy(true)
     setMessage('')
     // Stored before the fetch: a timeout, refresh or double-submit resumes this same payment.
-    const attemptId = attemptFor(sellerId, lines)
+    const attemptId = attemptFor(lines)
     try {
       setSession(
         await api.checkout({
@@ -97,12 +91,12 @@ export default function Checkout({ params }: { params: Params }) {
       const code = err instanceof ApiRequestError ? err.code : ''
       if (code === 'CONFLICT_SPENT') {
         // That attempt already finished; its order page says how.
-        clearAttempt(sellerId, attemptId)
+        clearAttempt(attemptId)
         return navigate(`/order/${attemptId}`)
       }
       // Still in flight at Hyperswitch: never start a second one, go watch this one.
       if (code === 'IN_PROGRESS') return navigate(`/order/${attemptId}`)
-      if (code === 'AMOUNT_MISMATCH') clearAttempt(sellerId, attemptId)
+      if (code === 'AMOUNT_MISMATCH') clearAttempt(attemptId)
       setMessage(err instanceof Error && err.message ? err.message : TEXT.startFailed)
     } finally {
       setBusy(false)

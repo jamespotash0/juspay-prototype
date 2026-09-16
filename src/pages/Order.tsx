@@ -9,6 +9,7 @@ import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
+import { SELLERS } from '../shared/seed.ts'
 import type { OrderAction, OrderView, PaymentState, PersonaId } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
@@ -29,33 +30,45 @@ const A = COPY.orderActions
 type IssueKind = keyof typeof COPY.orderActions.issues
 
 export default function Order({ params }: { params: Params }) {
-  const paymentId = params.paymentId
+  // A bare payment id (the return from checkout) shows every seller's order in that purchase;
+  // `<paymentId>.<sellerId>` (from an order list) shows just that seller's order.
+  const id = params.paymentId
+  const [paymentId, onlySeller] = id.split('.')
   const persona = usePersona()
   const listings = useListings()
   // Render at once from a list the viewer just saw; the read below refreshes it straight away.
-  const [order, setOrder] = useState<OrderView | null>(
-    () => cachedOrder(paymentId) ?? null,
-  )
+  const [orders, setOrders] = useState<OrderView[] | null>(() => {
+    const cached = cachedOrder(id)
+    return cached ? [cached] : null
+  })
   const [ambiguous, setAmbiguous] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [round, setRound] = useState(0)
 
   const read = useCallback(async () => {
     try {
-      const view = await api.payment(paymentId)
-      setOrder(view)
-      if (view.state === 'paid') {
-        clearCart(view.listingIds)
-        markSold(view.listingIds)
+      const all = await api.purchase(paymentId)
+      const views = onlySeller ? all.filter((v) => v.sellerId === onlySeller) : all
+      if (views.length === 0) {
+        setNotFound(true)
+        return null
       }
-      if (['paid', 'failed', 'cancelled', 'refunded'].includes(view.state))
-        clearAttempt(view.sellerId, paymentId)
-      return view.state
+      setOrders(views)
+      // Payment state is shared by every order in the purchase.
+      const { state } = views[0]
+      if (state === 'paid') {
+        const bought = all.flatMap((v) => v.listingIds)
+        clearCart(bought)
+        markSold(bought)
+      }
+      if (['paid', 'failed', 'cancelled', 'refunded'].includes(state))
+        clearAttempt(paymentId)
+      return state
     } catch (err) {
       if ((err as { status?: number }).status === 404) setNotFound(true)
       return null
     }
-  }, [paymentId])
+  }, [paymentId, onlySeller])
 
   // Poll while in flight, for up to ~30s; after that, say we don't know. "Check again" restarts a round.
   useEffect(() => {
@@ -77,11 +90,7 @@ export default function Order({ params }: { params: Params }) {
 
   if (notFound)
     return (
-      <PageLayout
-        title={TEXT.title}
-        width="narrow"
-        eyebrow={COPY.pageHeaders.order.eyebrow}
-      >
+      <PageLayout title={TEXT.title} width="narrow">
         <EmptyState
           title={TEXT.notFound}
           fact={TEXT.notFoundFact}
@@ -90,7 +99,35 @@ export default function Order({ params }: { params: Params }) {
       </PageLayout>
     )
 
-  const isSeller = !!order && persona === order.sellerId && persona !== order.buyerId
+  const first = orders?.[0]
+  const isBuyer = !!first && persona === first.buyerId
+  // A seller opening the whole purchase sees only their own order, never another seller's.
+  const shown = orders?.filter(
+    (o) => isBuyer || persona === 'admin' || o.sellerId === persona,
+  )
+  const isSeller = !!first && !isBuyer && persona !== 'admin'
+  // The notice speaks for the purchase: refunded only once every order is, shipped once every order is.
+  const summary: OrderView | null =
+    first && shown?.length
+      ? {
+          ...first,
+          fulfilment: shown.every((o) => o.fulfilment !== 'unshipped')
+            ? first.fulfilment
+            : 'unshipped',
+          refund: shown.every((o) => o.refund.state === 'succeeded')
+            ? first.refund
+            : { state: 'none', refundedCents: 0 },
+        }
+      : null
+  const total = shown?.reduce(
+    (sum, o) => ({
+      itemsCents: sum.itemsCents + o.breakdown.itemsCents,
+      shippingCents: sum.shippingCents + o.breakdown.shippingCents,
+      taxCents: sum.taxCents + o.breakdown.taxCents,
+      totalCents: sum.totalCents + o.breakdown.totalCents,
+    }),
+    { itemsCents: 0, shippingCents: 0, taxCents: 0, totalCents: 0 },
+  )
   // Back to the list this viewer reaches orders from — not browser history, which after a
   // checkout would land on a checkout page for a payment that's already done.
   const back =
@@ -104,7 +141,6 @@ export default function Order({ params }: { params: Params }) {
     <PageLayout
       title={TEXT.title}
       width="narrow"
-      eyebrow={COPY.pageHeaders.order.eyebrow}
       back={
         <Link
           to={back.to}
@@ -116,6 +152,26 @@ export default function Order({ params }: { params: Params }) {
       }
     >
       <div className="flex flex-col gap-4 sm:gap-5">
+        {/* The order number and date: what the buyer and support quote, so it leads the page. */}
+        <dl className="-mt-2 flex flex-wrap gap-x-8 gap-y-2 sm:-mt-3">
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-xs font-medium tracking-wide text-ink-muted uppercase">
+              {TEXT.number}
+            </dt>
+            <dd className="money text-base font-semibold select-all">{paymentId}</dd>
+          </div>
+          {first && (
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs font-medium tracking-wide text-ink-muted uppercase">
+                {TEXT.placed}
+              </dt>
+              <dd className="text-base font-semibold">
+                {placed.format(new Date(first.createdAt))}
+              </dd>
+            </div>
+          )}
+        </dl>
+
         {ambiguous ? (
           <Notice
             tone="ambiguous"
@@ -132,71 +188,97 @@ export default function Order({ params }: { params: Params }) {
             }}
           />
         ) : (
-          <StateNotice order={order} />
+          <StateNotice order={summary} />
         )}
 
-        {order && (order.state === 'paid' || order.state === 'refunded') && (
-          <Fulfilment order={order} persona={persona} onChange={setOrder} />
-        )}
-
-        {order && (
-          <>
-            <Card as="section" aria-labelledby="items">
-              <SectionHeading id="items">{TEXT.items}</SectionHeading>
-              <ul className="flex flex-col divide-y divide-rule">
-                {order.listingIds.map((id) => {
-                  const l = listings.find((x) => x.id === id)
-                  return (
-                    <li
-                      key={id}
-                      className="flex items-center gap-3 py-3 text-sm first:pt-0 last:pb-0 sm:gap-4"
-                    >
-                      {l && (
-                        <img
-                          src={l.imageUrl}
-                          alt=""
-                          className="size-14 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
-                        />
-                      )}
-                      <span className="min-w-0 flex-1 font-medium">{l?.title ?? id}</span>
-                      {l && <Money cents={l.priceCents} className="font-semibold" />}
-                    </li>
-                  )
-                })}
-              </ul>
-            </Card>
-
-            <Card as="section" aria-labelledby="amounts">
-              <SectionHeading id="amounts">
-                {isSeller ? TEXT.yourSale : TEXT.amounts}
-              </SectionHeading>
-              {isSeller ? (
-                // The seller never sees tax or the buyer's total.
-                <dl className="money flex flex-col divide-y divide-rule text-sm">
-                  <Row label={TEXT.gross} cents={order.ledger.grossCents} />
-                  <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
-                  <Row label={TEXT.net} cents={order.ledger.netCents} bold />
-                </dl>
-              ) : (
-                // BreakdownList is shared with checkout; drop its own top rule inside the card.
-                <div className="[&>dl]:border-t-0 [&>dl]:pt-0">
-                  <BreakdownList b={order.breakdown} />
-                </div>
+        {shown?.map((order) => {
+          const seller = SELLERS.find((x) => x.id === order.sellerId)
+          return (
+            <section
+              key={order.orderId}
+              aria-label={seller?.handle ?? order.sellerId}
+              className="flex flex-col gap-3"
+            >
+              {/* With several sellers, each order is headed by who ships it. */}
+              {shown.length > 1 && (
+                <h2 className="px-1 text-sm font-semibold text-ink-muted">
+                  {TEXT.fromSeller(seller?.handle ?? order.sellerId)}
+                </h2>
               )}
-            </Card>
-          </>
-        )}
+              {(order.state === 'paid' || order.state === 'refunded') && (
+                <Fulfilment
+                  order={order}
+                  persona={persona}
+                  onChange={(next) =>
+                    setOrders((all) =>
+                      all ? all.map((o) => (o.orderId === next.orderId ? next : o)) : all,
+                    )
+                  }
+                />
+              )}
+              <Card as="section" aria-labelledby={`items-${order.orderId}`}>
+                <SectionHeading id={`items-${order.orderId}`}>
+                  {TEXT.items}
+                </SectionHeading>
+                <ul className="flex flex-col divide-y divide-rule">
+                  {order.listingIds.map((listingId) => {
+                    const l = listings.find((x) => x.id === listingId)
+                    return (
+                      <li
+                        key={listingId}
+                        className="flex items-center gap-3 py-3 text-sm first:pt-0 last:pb-0 sm:gap-4"
+                      >
+                        {l && (
+                          <img
+                            src={l.imageUrl}
+                            alt=""
+                            className="size-14 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+                          />
+                        )}
+                        <span className="min-w-0 flex-1 font-medium">
+                          {l?.title ?? listingId}
+                        </span>
+                        {l && <Money cents={l.priceCents} className="font-semibold" />}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Card>
+              {isSeller && (
+                <Card as="section" aria-labelledby={`sale-${order.orderId}`}>
+                  <SectionHeading id={`sale-${order.orderId}`}>
+                    {TEXT.yourSale}
+                  </SectionHeading>
+                  {/* The seller never sees tax or the buyer's total. */}
+                  <dl className="money flex flex-col divide-y divide-rule text-sm">
+                    <Row label={TEXT.gross} cents={order.ledger.grossCents} />
+                    <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
+                    <Row label={TEXT.net} cents={order.ledger.netCents} bold />
+                  </dl>
+                </Card>
+              )}
+            </section>
+          )
+        })}
 
-        {/* The payment id: what support needs if something goes wrong. Small print, not a headline. */}
-        <p className="money px-1 text-xs text-ink-muted">
-          {COPY.checkout.ambiguous.reference}{' '}
-          <span className="select-all font-medium text-ink">{paymentId}</span>
-          {order && <> · {new Date(order.createdAt).toLocaleString('en-US')}</>}
-        </p>
+        {!isSeller && total && (
+          <Card as="section" aria-labelledby="amounts">
+            <SectionHeading id="amounts">{TEXT.amounts}</SectionHeading>
+            {/* BreakdownList is shared with checkout; drop its own top rule inside the card. */}
+            <div className="[&>dl]:border-t-0 [&>dl]:pt-0">
+              <BreakdownList b={total} />
+            </div>
+          </Card>
+        )}
       </div>
     </PageLayout>
   )
 }
+
+const placed = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 function Row({ label, cents, bold }: { label: string; cents: number; bold?: boolean }) {
   return (
@@ -287,7 +369,7 @@ function Declined({ order }: { order: OrderView }) {
       action={{
         // The cart kept its items; checkout starts a fresh attempt because this one is terminal.
         label: COPY.decline[d?.reason ?? 'generic'].action,
-        onClick: () => navigate(`/checkout/${order.sellerId}`),
+        onClick: () => navigate('/checkout'),
       }}
     />
   )

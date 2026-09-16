@@ -96,7 +96,7 @@ describe.skipIf(!KEY)('payment path (live sandbox)', () => {
     const expected = breakdown([{ listingId: LISTING.id, qty: 1 }], LISTINGS)
     expect(expected.totalCents).toBeGreaterThanOrEqual(50_000)
     expect(s.breakdown).toEqual(expected)
-    expect(s.sellerId).toBe('mike')
+    expect(s.sellerIds).toEqual(['mike'])
 
     const confirmed = await confirm(s.paymentId, '4242424242424242')
     expect(confirmed.status).toBe('succeeded')
@@ -164,22 +164,6 @@ describe.skipIf(!KEY)('payment path (live sandbox)', () => {
       attemptId: newAttemptId(),
       buyerId: 'alex',
       items: [{ listingId: 'lst_nope', qty: 1 }],
-      shipTo: SHIP_TO,
-    })
-    expect(res.status).toBe(400)
-  })
-
-  it('rejects items from two sellers with 400', async () => {
-    const other = LISTINGS.find(
-      (l) => l.sellerId !== LISTING.sellerId && l.sellerId !== 'alex',
-    )!
-    const res = await post({
-      attemptId: newAttemptId(),
-      buyerId: 'alex',
-      items: [
-        { listingId: LISTING.id, qty: 1 },
-        { listingId: other.id, qty: 1 },
-      ],
       shipTo: SHIP_TO,
     })
     expect(res.status).toBe(400)

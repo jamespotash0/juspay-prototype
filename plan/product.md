@@ -92,8 +92,15 @@ dual-role premise is an assertion rather than something you can do, and
 
 **The cart earns its place too**, despite being the largest block of
 non-payment complexity: it is the only place the per-seller split is
-*demonstrable* rather than described, and N-intents-not-one-split-intent is the
-most interesting money decision in the build.
+*demonstrable* rather than described. **One payment for the whole cart, split
+per seller on our side** (changed 2026-09-16 from one payment per seller). US
+collectors buy from several sellers in one sitting, and eBay and Etsy both take a
+mixed cart in one payment; paying seller by seller means entering the card, or
+doing the PayPal redirect, once per seller. One payment also removes the worst
+state of the old model, a cart half paid because one seller's charge declined.
+Each seller's share is recorded on the payment, ships and pays out on its own,
+and is refunded on its own as a partial refund, so one seller's fake slab never
+refunds another seller's sale.
 
 ### What Hyperswitch must visibly do
 
@@ -105,7 +112,7 @@ This is the grade:
 - ✅ PayPal — a redirect to PayPal and back, confirmed server-side like any other payment
 - ✅ Routing — a $40 card and a $2,000 coin land on different connectors, visible per payment in the dashboard; the buyer sees only "Card" or "PayPal", never the processor
 - ✅ Payment status — authoritative server-side read, never the redirect
-- ✅ Refund — full, reached through a buyer dispute
+- ✅ Refund — one seller's order in full (a partial refund of a multi-seller payment), reached through a buyer dispute
 - ✅ Marketplace fee calculation — visible on the seller page
 - ✅ Seller balance — `pending → available`, moved by the seller shipping
 
@@ -121,7 +128,7 @@ Apple and Google Pay · **ACH bank debit** and **Affirm** (both approaches in
 payments · real payouts · card-network dispute
 handling (our "dispute" is an in-marketplace claim, not a chargeback) ·
 authenticity guarantee · promoted listings · seller subscriptions · real auth ·
-sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds** — refunds are full only · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
+sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds of one order** — a refund is always one seller's whole order · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
 
 ---
 
