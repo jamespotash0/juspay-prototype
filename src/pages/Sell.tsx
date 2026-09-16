@@ -6,16 +6,18 @@ import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
-import type { OrderView, PersonaId, SellerLedger } from '../shared/types.ts'
+import { latestStatus } from '../shared/orderState.ts'
+import type { Listing, OrderView, PersonaId, SellerLedger } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
 import { ConfirmDialog } from '../ui/ConfirmDialog.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
-import { personName, shortDate } from '../ui/format.ts'
+import { personName, refundLabel, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 import SellInsights from './SellInsights.tsx'
 
@@ -26,11 +28,33 @@ const H = COPY.pageHeaders.sell
 const shown = (l: SellerLedger) =>
   l.balance === 'reversed' ? { ...l, commissionCents: 0, netCents: 0 } : l
 
+/** Each sale sits in one bucket, from its latest status only. Anything unusual shows under All. */
+type SaleFilter = 'all' | 'toShip' | 'shipped' | 'received' | 'issue' | 'refunded'
+function bucket(o: OrderView): SaleFilter {
+  const s = latestStatus(o)
+  if (o.refund.state !== 'none') return 'refunded'
+  if (s === 'unshipped') return 'toShip'
+  if (s === 'shipped') return 'shipped'
+  if (s === 'received') return 'received'
+  if (s === 'disputed') return 'issue'
+  return 'all'
+}
+const SALE_FILTERS: SaleFilter[] = [
+  'all',
+  'toShip',
+  'shipped',
+  'received',
+  'issue',
+  'refunded',
+]
+
+type ListingFilter = 'all' | 'coin' | 'card'
+const LISTING_FILTERS: ListingFilter[] = ['all', 'coin', 'card']
+
 export default function Sell() {
   const persona = usePersona()
-  const listings = useListings().filter((l) => l.sellerId === persona)
-  const sold = useSoldIds()
-  const [removing, setRemoving] = useState<{ id: string; title: string } | null>(null)
+  const soldHere = useSoldIds()
+  const mine = useListings().filter((l) => l.sellerId === persona)
   const [reload, setReload] = useState(0)
   // Tagged with the request it answers, so a persona switch or retry shows loading again.
   const key = `${persona}:${reload}`
@@ -39,7 +63,7 @@ export default function Sell() {
     orders?: OrderView[]
     failed?: boolean
   }>()
-  /** The sale whose money just moved pending → available, so it (and the totals) animate once. */
+  /** The sale whose money just moved pending → available, so its net highlights once. */
   const [released, setReleased] = useState<string | null>(null)
 
   useEffect(() => {
@@ -65,7 +89,10 @@ export default function Sell() {
   const current = result?.key === key ? result : undefined
   const orders = current?.orders ?? null
   const loadError = !!current?.failed
-  const toNew = { label: COPY.empty.sales.action, onClick: () => navigate('/sell/new') }
+
+  // A listing is current until someone buys it: a sale from the server, or a purchase in this browser.
+  const soldIds = new Set([...soldHere, ...(orders ?? []).flatMap((o) => o.listingIds)])
+  const active = mine.filter((l) => !soldIds.has(l.id))
 
   function update(next: OrderView) {
     const prev = orders?.find((o) => o.orderId === next.orderId)
@@ -87,7 +114,7 @@ export default function Sell() {
         </Button>
       }
     >
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-10">
         {orders && !loadError && (
           <SellInsights
             sales={orders.map((o) => ({
@@ -96,74 +123,9 @@ export default function Sell() {
             }))}
           />
         )}
-        <section>
-          <SectionHeading>{T.listings}</SectionHeading>
-          {listings.length === 0 ? (
-            <EmptyState
-              title={COPY.empty.listings.title}
-              fact={COPY.empty.listings.fact}
-              action={{
-                label: COPY.empty.listings.action,
-                onClick: () => navigate('/sell/new'),
-              }}
-            />
-          ) : (
-            <Card padding="none">
-              <ul className="divide-y divide-rule">
-                {listings.map((l) => (
-                  <li
-                    key={l.id}
-                    className="flex items-center gap-3 px-4 py-2 first:rounded-t-card last:rounded-b-card hover:bg-well sm:px-5"
-                  >
-                    <div
-                      aria-hidden="true"
-                      className="size-10 shrink-0 rounded-control border border-rule bg-paper p-0.5"
-                    >
-                      <Slab listing={l} />
-                    </div>
-                    <Link
-                      to={`/listing/${l.id}`}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
-                    >
-                      {l.title}
-                    </Link>
-                    <Money cents={l.priceCents} className="text-sm font-semibold" />
-                    {sold.has(l.id) ? (
-                      <span className="w-[4.5rem] text-center text-xs font-medium text-ink-muted">
-                        {T.soldTag}
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="quiet"
-                        className="w-[4.5rem]"
-                        onClick={() => setRemoving({ id: l.id, title: l.title })}
-                      >
-                        {T.remove}
-                      </Button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-          <ConfirmDialog
-            open={!!removing}
-            danger
-            title={T.removeTitle}
-            body={<p>{T.removeBody(removing?.title ?? '')}</p>}
-            confirmLabel={T.removeConfirm}
-            cancelLabel={T.keepListing}
-            onConfirm={() => {
-              if (removing) removeListing(removing.id)
-              setRemoving(null)
-            }}
-            onCancel={() => setRemoving(null)}
-          />
-        </section>
 
-        <section>
-          <SectionHeading>{T.sales}</SectionHeading>
+        <section aria-labelledby="sell-sold">
+          <SectionHeading id="sell-sold">{T.sales}</SectionHeading>
           {loadError ? (
             <Notice
               tone="danger"
@@ -175,37 +137,141 @@ export default function Sell() {
               }}
             />
           ) : orders === null ? (
-            <p className="text-sm text-ink-muted" role="status">
-              {T.loading}
-            </p>
+            <Card padding="none">
+              <ul
+                aria-busy="true"
+                aria-label={T.loading}
+                className="divide-y divide-rule"
+              >
+                {[0, 1, 2].map((i) => (
+                  <li key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
+                    <span className="size-12 shrink-0 animate-pulse rounded-control bg-well" />
+                    <span className="h-3 w-1/3 animate-pulse rounded-full bg-well" />
+                  </li>
+                ))}
+              </ul>
+            </Card>
           ) : orders.length === 0 ? (
             <EmptyState
               title={COPY.empty.sales.title}
               fact={COPY.empty.sales.fact}
-              action={toNew}
+              action={{
+                label: COPY.empty.sales.action,
+                onClick: () => navigate('/sell/new'),
+              }}
             />
           ) : (
-            <Card padding="none">
-              <ul className="divide-y divide-rule">
-                {orders.map((o) => (
-                  <Sale
-                    key={o.orderId}
-                    order={o}
-                    sellerId={persona}
-                    released={released === o.orderId}
-                    onChange={update}
-                  />
-                ))}
-              </ul>
-            </Card>
+            <Sold
+              orders={orders}
+              sellerId={persona}
+              released={released}
+              onChange={update}
+            />
           )}
         </section>
 
-        {orders && !loadError && (
-          <Balance orders={orders} released={released} onList={toNew.onClick} />
-        )}
+        <section aria-labelledby="sell-listings">
+          <SectionHeading id="sell-listings">{T.listings}</SectionHeading>
+          {active.length === 0 ? (
+            <EmptyState
+              title={COPY.empty.listings.title}
+              fact={COPY.empty.listings.fact}
+              action={{
+                label: COPY.empty.listings.action,
+                onClick: () => navigate('/sell/new'),
+              }}
+            />
+          ) : (
+            <Active listings={active} />
+          )}
+        </section>
       </div>
     </PageLayout>
+  )
+}
+
+/** A row of pill toggles with counts. One is always on. */
+function FilterPills<F extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  count,
+  name,
+}: {
+  label: string
+  options: F[]
+  value: F
+  onChange: (f: F) => void
+  count: (f: F) => number
+  name: (f: F) => string
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
+      {options.map((f) => (
+        <button
+          key={f}
+          type="button"
+          aria-pressed={value === f}
+          onClick={() => onChange(f)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-rule-strong bg-paper px-3 text-sm font-medium text-ink-muted hover:border-ink hover:text-ink aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-ink"
+        >
+          {name(f)}
+          <span className="money text-xs opacity-70">{count(f)}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Sold({
+  orders,
+  sellerId,
+  released,
+  onChange,
+}: {
+  orders: OrderView[]
+  sellerId: PersonaId
+  released: string | null
+  onChange: (o: OrderView) => void
+}) {
+  const [filter, setFilter] = useState<SaleFilter>('all')
+  const count = (f: SaleFilter) =>
+    f === 'all' ? orders.length : orders.filter((o) => bucket(o) === f).length
+  const rows = [...orders]
+    .filter((o) => filter === 'all' || bucket(o) === filter)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  return (
+    <div className="flex flex-col gap-3">
+      <FilterPills
+        label={T.filterSales}
+        options={SALE_FILTERS}
+        value={filter}
+        onChange={setFilter}
+        count={count}
+        name={(f) => T.saleFilters[f]}
+      />
+      {rows.length === 0 ? (
+        <Card padding="md" className="text-sm text-ink-muted">
+          {T.noneInFilter}
+        </Card>
+      ) : (
+        <Card padding="none">
+          <ul className="divide-y divide-rule">
+            {rows.map((o) => (
+              <Sale
+                key={o.orderId}
+                order={o}
+                sellerId={sellerId}
+                released={released === o.orderId}
+                onChange={onChange}
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
+    </div>
   )
 }
 
@@ -223,13 +289,18 @@ function Sale({
   const all = useListings()
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const titles = order.listingIds.map((id) => all.find((l) => l.id === id)?.title ?? id)
-  const refunded = order.refund.state === 'succeeded'
+  const items = order.listingIds.map((id) => all.find((l) => l.id === id))
+  const first = items[0]
+  const title =
+    (first?.title ?? COPY.orders.gone) +
+    (items.length > 1 ? COPY.orders.more(items.length - 1) : '')
+  const status = latestStatus(order)
+  const ledger = shown(order.ledger)
   const canShip =
     order.sellerId === sellerId &&
     order.state === 'paid' &&
     order.fulfilment === 'unshipped' &&
-    !refunded
+    order.refund.state === 'none'
 
   async function ship() {
     setBusy(true)
@@ -250,218 +321,160 @@ function Sale({
   }
 
   return (
-    <li className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1fr)_18rem] md:gap-6">
-      <div className="flex min-w-0 flex-col items-start gap-1.5">
-        <p className="text-sm font-semibold">{titles.join(', ')}</p>
-        <p className="text-xs text-ink-muted">
-          {T.boughtBy} {personName(order.buyerId)} · {shortDate(order.createdAt)}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {refunded ? (
-            <StatusPill status="refunded" />
-          ) : (
-            <StatusPill status={order.state} />
-          )}
-          <StatusPill status={order.fulfilment} />
-        </div>
-        {canShip && (
-          <div className="mt-1.5 flex flex-col items-start gap-2">
-            <Button size="sm" onClick={ship} disabled={busy}>
-              {busy ? COPY.common.saving : COPY.orderActions.ship}
-            </Button>
-          </div>
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-5">
+      <Link
+        to={`/order/${order.orderId}`}
+        className="group flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto"
+      >
+        {first ? (
+          <img
+            src={first.imageUrl}
+            alt=""
+            className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+          />
+        ) : (
+          <span className="size-12 shrink-0 rounded-control border border-dashed border-rule-strong" />
         )}
-        {failed && (
-          <p role="alert" className="text-sm font-medium text-state-failed">
-            {COPY.postPayment.actionDidNotSave}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="truncate text-sm font-semibold group-hover:underline">{title}</p>
+          <p className="truncate text-xs text-ink-muted">
+            {T.boughtBy} {personName(order.buyerId)} · {shortDate(order.createdAt)}
           </p>
+        </div>
+      </Link>
+
+      <div className="flex shrink-0 items-center gap-3 max-sm:pl-15">
+        <StatusPill
+          status={status}
+          label={status === order.refund.state ? refundLabel(order) : undefined}
+        />
+        {canShip && (
+          <Button size="sm" onClick={ship} disabled={busy}>
+            {busy ? COPY.common.saving : COPY.orderActions.ship}
+          </Button>
         )}
       </div>
-      <Ledger ledger={shown(order.ledger)} released={released} />
+
+      <div className="flex shrink-0 flex-col items-end max-sm:ml-auto sm:w-28">
+        <Money
+          cents={ledger.netCents}
+          className={`text-sm font-semibold ${ledger.balance === 'reversed' ? 'text-ink-muted' : ''} ${released ? 'release-amount rounded-control px-1' : ''}`}
+        />
+        <span className="text-xs text-ink-muted">
+          {ledger.balance === 'pending'
+            ? T.pending
+            : ledger.balance === 'available'
+              ? T.available
+              : T.reversed}
+        </span>
+      </div>
+
+      {failed && (
+        <p role="alert" className="basis-full text-sm font-medium text-state-failed">
+          {COPY.postPayment.actionDidNotSave}
+        </p>
+      )}
     </li>
   )
 }
 
-function Ledger({ ledger, released }: { ledger: SellerLedger; released: boolean }) {
-  const expected = ledger.balance === 'pending' ? T.expected : ''
-  const reversed = ledger.balance === 'reversed'
-  return (
-    <div className="flex flex-col gap-2.5 rounded-control bg-well p-3">
-      <dl className="money grid grid-cols-[1fr_auto] gap-y-1 text-sm">
-        <dt className="text-ink-muted">{T.gross}</dt>
-        <dd className="pl-4 text-right">
-          <Money cents={ledger.grossCents} className={reversed ? 'line-through' : ''} />
-        </dd>
-        <dt className="text-ink-muted">
-          {T.commission}
-          {expected}
-        </dt>
-        <dd className="pl-4 text-right">
-          <Money cents={ledger.commissionCents ? -ledger.commissionCents : 0} />
-        </dd>
-        <dt className="border-t border-rule pt-1 font-semibold">
-          {T.net}
-          {expected}
-        </dt>
-        <dd className="border-t border-rule pt-1 pl-4 text-right font-semibold">
-          <Money
-            cents={ledger.netCents}
-            className={released ? 'release-amount rounded-control px-1' : ''}
-          />
-        </dd>
-      </dl>
-      <BalanceTrack balance={ledger.balance} released={released} />
-    </div>
-  )
-}
-
-/** Pending → Available as steps, so the balance reads as a progression, not a number. */
-function BalanceTrack({
-  balance,
-  released,
-}: {
-  balance: SellerLedger['balance']
-  released: boolean
-}) {
-  if (balance === 'reversed') {
-    return (
-      <p className="flex items-center gap-2 text-xs text-ink-muted">
-        <span className="line-through">
-          {T.pending} → {T.available}
-        </span>
-        <StatusPill status="refunded" label={T.reversed} />
-      </p>
-    )
-  }
-  const pending = balance === 'pending'
-  return (
-    <ol className="flex items-center gap-2 text-xs" aria-label={T.balanceLabel}>
-      <li>
-        {pending ? (
-          <span aria-current="step">
-            <StatusPill status="pending" label={T.pending} />
-          </span>
-        ) : (
-          <span
-            className={`text-ink-muted line-through ${released ? 'release-struck' : ''}`}
-          >
-            {T.pending}
-          </span>
-        )}
-      </li>
-      <li aria-hidden="true" className="text-ink-muted">
-        →
-      </li>
-      <li>
-        {pending ? (
-          <span className="text-ink-muted">{T.available}</span>
-        ) : (
-          <span
-            aria-current="step"
-            className={`inline-block ${released ? 'release-pill' : ''}`}
-          >
-            <StatusPill status="paid" label={T.available} />
-          </span>
-        )}
-      </li>
-      {released && (
-        <li role="status" className="release-note font-semibold text-state-paid">
-          {T.released}
-        </li>
-      )}
-    </ol>
-  )
-}
-
-function Balance({
-  orders,
-  released,
-  onList,
-}: {
-  orders: OrderView[]
-  released: string | null
-  onList: () => void
-}) {
-  const ledgers = orders.map((o) => shown(o.ledger))
-  const live = ledgers.filter((l) => l.balance !== 'reversed')
-  const sum = (ls: SellerLedger[], k: 'grossCents' | 'commissionCents' | 'netCents') =>
-    ls.reduce((n, l) => n + l[k], 0)
-  const pending = live.filter((l) => l.balance === 'pending')
-  const available = live.filter((l) => l.balance === 'available')
-  const reversed = ledgers.length - live.length
+function Active({ listings }: { listings: Listing[] }) {
+  const [filter, setFilter] = useState<ListingFilter>('all')
+  const [q, setQ] = useState('')
+  const [removing, setRemoving] = useState<Listing | null>(null)
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+  const byCategory = (f: ListingFilter) =>
+    listings.filter((l) => f === 'all' || l.category === f)
+  const rows = byCategory(filter)
+    .filter((l) => {
+      const hay = [l.title, l.grade, l.certNumber, l.year].join(' ').toLowerCase()
+      return words.every((w) => hay.includes(w))
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   return (
-    <section>
-      <SectionHeading>{T.balance}</SectionHeading>
-      {live.length === 0 ? (
-        <EmptyState
-          title={COPY.empty.balance.title}
-          fact={COPY.empty.balance.fact}
-          action={{ label: COPY.empty.balance.action, onClick: onList }}
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterPills
+          label={T.filterListings}
+          options={LISTING_FILTERS}
+          value={filter}
+          onChange={setFilter}
+          count={(f) => byCategory(f).length}
+          name={(f) => T.listingFilters[f]}
         />
-      ) : (
-        <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
-          <BalanceBox
-            // A new key replays the animation for each release.
-            key={`pending-${released}`}
-            title={T.pendingBox}
-            status="pending"
-            cents={sum(pending, 'netCents')}
-            note={T.notShipped(pending.length)}
-            motion={released ? 'release-out' : ''}
+        <label className="relative ml-auto w-full min-w-0 sm:w-64">
+          <span className="sr-only">{T.searchListings}</span>
+          <Icon
+            name="search"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
           />
-          <BalanceBox
-            key={`available-${released}`}
-            title={T.available}
-            status="paid"
-            cents={sum(available, 'netCents')}
-            note={T.shipped(available.length)}
-            motion={released ? 'release-in' : ''}
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={T.searchListings}
+            className="h-8 w-full rounded-full border border-rule-strong bg-paper pr-3 pl-9 text-sm placeholder:text-ink-muted hover:border-ink focus-visible:border-ink"
           />
-          <Card padding="sm" className="flex flex-col gap-2 text-sm">
-            <p className="font-semibold">{T.allSales}</p>
-            <dl className="money grid grid-cols-[1fr_auto] gap-y-1">
-              <dt className="text-ink-muted">{T.grossShort}</dt>
-              <dd className="pl-4 text-right">
-                <Money cents={sum(live, 'grossCents')} />
-              </dd>
-              <dt className="text-ink-muted">{T.commission}</dt>
-              <dd className="pl-4 text-right">
-                <Money cents={-sum(live, 'commissionCents')} />
-              </dd>
-              <dt className="border-t border-rule pt-1 font-semibold">{T.net}</dt>
-              <dd className="border-t border-rule pt-1 pl-4 text-right font-semibold">
-                <Money cents={sum(live, 'netCents')} />
-              </dd>
-            </dl>
-            {reversed > 0 && (
-              <p className="text-xs text-ink-muted">{T.reversedNote(reversed)}</p>
-            )}
-          </Card>
-        </div>
-      )}
-    </section>
-  )
-}
+        </label>
+      </div>
 
-function BalanceBox({
-  title,
-  status,
-  cents,
-  note,
-  motion,
-}: {
-  title: string
-  status: 'pending' | 'paid'
-  cents: number
-  note: string
-  motion: string
-}) {
-  return (
-    <Card padding="sm" className="flex flex-col items-start gap-1.5">
-      <StatusPill status={status} label={title} />
-      <Money cents={cents} className={`text-2xl font-bold tracking-tight ${motion}`} />
-      <p className="text-xs text-ink-muted">{note}</p>
-    </Card>
+      {rows.length === 0 ? (
+        <Card padding="md" className="text-sm text-ink-muted">
+          {T.noneInFilter}
+        </Card>
+      ) : (
+        <Card padding="none">
+          <ul className="divide-y divide-rule">
+            {rows.map((l) => (
+              <li key={l.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+                <div
+                  aria-hidden="true"
+                  className="size-12 shrink-0 rounded-control border border-rule bg-paper p-0.5"
+                >
+                  <Slab listing={l} />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Link
+                    to={`/listing/${l.id}`}
+                    className="truncate text-sm font-semibold hover:underline"
+                  >
+                    {l.title}
+                  </Link>
+                  <p className="truncate text-xs text-ink-muted">
+                    {T.listedOn} {shortDate(l.createdAt)} ·{' '}
+                    {l.shippingCents === 0 ? (
+                      COPY.common.freeShipping
+                    ) : (
+                      <>
+                        + <Money cents={l.shippingCents} /> {COPY.common.plusShipping}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <Money cents={l.priceCents} className="text-sm font-semibold" />
+                <Button size="sm" variant="quiet" onClick={() => setRemoving(l)}>
+                  {T.remove}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={!!removing}
+        danger
+        title={T.removeTitle}
+        body={<p>{T.removeBody(removing?.title ?? '')}</p>}
+        confirmLabel={T.removeConfirm}
+        cancelLabel={T.keepListing}
+        onConfirm={() => {
+          if (removing) removeListing(removing.id)
+          setRemoving(null)
+        }}
+        onCancel={() => setRemoving(null)}
+      />
+    </div>
   )
 }

@@ -98,7 +98,7 @@ export async function saleRow(page: Page, paymentId: string) {
   const { orders } = (await (await loaded).json()) as { orders: OrderView[] }
   const index = orders.findIndex((o) => o.paymentId === paymentId)
   expect(index, `sale ${paymentId} on /sell`).toBeGreaterThanOrEqual(0)
-  const row = page.locator('section:has(> h2:text-is("Your sales")) > ul > li').nth(index)
+  const row = page.locator('section[aria-labelledby="sell-sold"] ul > li').nth(index)
   // The page can fire this request more than once (persona change, dev-mode double effects), and a
   // cold /api/orders takes ~5 s — so the list may still read "Loading sales…" after the first reply.
   await expect(row).toBeVisible({ timeout: 30_000 })
