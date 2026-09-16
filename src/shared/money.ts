@@ -7,7 +7,7 @@ import {
   type Listing,
   type RefundState,
   type SellerLedger,
-} from './types.ts'
+} from './types.js'
 
 /** What the buyer pays, in integer cents. Throws on an unknown listing id. */
 export function breakdown(lines: CartLine[], listings: Listing[]): Breakdown {

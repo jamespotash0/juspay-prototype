@@ -1,4 +1,4 @@
-import type { PaymentState } from './types.ts'
+import type { PaymentState } from './types.js'
 
 /** Hyperswitch v1 IntentStatus → our PaymentState. See plan/engineering.md §4. */
 const MAP: Record<string, PaymentState> = {

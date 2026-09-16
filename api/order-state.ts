@@ -3,15 +3,15 @@ import {
   type Fulfilment,
   type OrderAction,
   type OrderStateRequest,
-} from '../src/shared/types.ts'
-import { hsFetch, isMetadataPropagationError } from './_lib/hyperswitch.ts'
+} from '../src/shared/types.js'
+import { hsFetch, isMetadataPropagationError } from './_lib/hyperswitch.js'
 import {
   jsonError,
   PAYMENT_ID,
   readOrder,
   toOrderView,
   type HsPayment,
-} from './_lib/orderView.ts'
+} from './_lib/orderView.js'
 
 /** Who may do what, from which fulfilment state (engineering.md §3). */
 const RULES: Record<

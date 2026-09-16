@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
-import type { RefundRequest } from '../src/shared/types.ts'
-import { hsFetch } from './_lib/hyperswitch.ts'
-import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.ts'
+import type { RefundRequest } from '../src/shared/types.js'
+import { hsFetch } from './_lib/hyperswitch.js'
+import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.js'
 
 /** POST /api/refund — admin only, always a full refund. Returns the re-read OrderView. */
 export async function POST(request: Request): Promise<Response> {

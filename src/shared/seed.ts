@@ -2,7 +2,7 @@
 // ratings, sales counts and cert numbers are synthetic. Coin photos are
 // public-domain images from Wikimedia Commons; card images are generated
 // placeholders, never real card art.
-import type { Listing, Persona, Seller } from './types'
+import type { Listing, Persona, Seller } from './types.js'
 
 export const PERSONAS: Persona[] = [
   { id: 'alex', name: 'Alex Rivera', email: 'alex@example.com', kind: 'collector' },

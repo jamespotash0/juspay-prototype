@@ -1,6 +1,6 @@
-import { breakdown } from '../src/shared/money.ts'
-import { mapStatus } from '../src/shared/orderState.ts'
-import { LISTINGS, PERSONAS } from '../src/shared/seed.ts'
+import { breakdown } from '../src/shared/money.js'
+import { mapStatus } from '../src/shared/orderState.js'
+import { LISTINGS, PERSONAS } from '../src/shared/seed.js'
 import {
   META,
   type CheckoutRequest,
@@ -8,9 +8,9 @@ import {
   type Listing,
   type PaymentSource,
   type PaymentState,
-} from '../src/shared/types.ts'
-import { hsFetch } from './_lib/hyperswitch.ts'
-import { jsonError, type HsPayment } from './_lib/orderView.ts'
+} from '../src/shared/types.js'
+import { hsFetch } from './_lib/hyperswitch.js'
+import { jsonError, type HsPayment } from './_lib/orderView.js'
 
 const ATTEMPT_ID = /^cka_[0-9a-f]{22}$/
 const TERMINAL: PaymentState[] = ['paid', 'failed', 'cancelled', 'refunded']

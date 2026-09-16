@@ -2,7 +2,7 @@
 // Every agent codes against these shapes. Change only with product sign-off,
 // and update plan/tickets.md in the same change.
 
-import type { DeclineReason } from './copy.ts'
+import type { DeclineReason } from './copy.js'
 
 /** Integer minor units (US cents). Never a float, never a formatted string. */
 export type Cents = number

@@ -1,6 +1,6 @@
-import { META, type OrdersResponse, type PaymentState } from '../src/shared/types.ts'
-import { hsFetch } from './_lib/hyperswitch.ts'
-import { jsonError, toOrderView, type HsPayment } from './_lib/orderView.ts'
+import { META, type OrdersResponse, type PaymentState } from '../src/shared/types.js'
+import { hsFetch } from './_lib/hyperswitch.js'
+import { jsonError, toOrderView, type HsPayment } from './_lib/orderView.js'
 
 /** A checkout that never became an order: hidden from buyer and seller lists (W1 decision 3). */
 const NOT_AN_ORDER: PaymentState[] = [

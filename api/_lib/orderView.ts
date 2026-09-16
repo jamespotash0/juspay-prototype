@@ -1,6 +1,6 @@
-import { COPY, type DeclineReason } from '../../src/shared/copy.ts'
-import { sellerLedger } from '../../src/shared/money.ts'
-import { mapStatus } from '../../src/shared/orderState.ts'
+import { COPY, type DeclineReason } from '../../src/shared/copy.js'
+import { sellerLedger } from '../../src/shared/money.js'
+import { mapStatus } from '../../src/shared/orderState.js'
 import {
   META,
   type Breakdown,
@@ -9,8 +9,8 @@ import {
   type OrderView,
   type PaymentState,
   type RefundState,
-} from '../../src/shared/types.ts'
-import { hsFetch } from './hyperswitch.ts'
+} from '../../src/shared/types.js'
+import { hsFetch } from './hyperswitch.js'
 
 /** The fields of a Hyperswitch v1 payment we read. */
 export interface HsPayment {
