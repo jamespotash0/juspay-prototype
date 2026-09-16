@@ -9,13 +9,19 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:unit": "vitest run tests/unit",
+    "test:sandbox": "vitest run tests/sandbox",
+    "e2e": "playwright test"
   },
   "dependencies": {
+    "@juspay-tech/hyper-js": "^2.1.0",
+    "@juspay-tech/react-hyper-js": "^2.9.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -25,6 +31,7 @@
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "vitest": "^4.1.11"
   }
 }
