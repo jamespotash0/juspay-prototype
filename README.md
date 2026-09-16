@@ -5,9 +5,15 @@ from browsing to a **real, completed payment in the Hyperswitch sandbox**, and
 then on through shipping, disputes and refunds.
 
 > **Status:** payment path and marketplace screens built; sandbox configured
-> and verified on 2026-09-16. [PLAN.md](PLAN.md) holds the full reasoning, and
-> this file is the summary. Everything under "Not built" is written up with an
-> approach instead.
+> and verified on 2026-09-16. **Proven in a real browser against the live
+> sandbox:** 11 Playwright tests pass: card payment, hard decline, PayPal,
+> ship → receive, dispute → full refund, the ambiguous "don't pay again" state,
+> and the reviewer security checks.
+> [PLAN.md](PLAN.md) holds the full reasoning, and this file is the summary.
+> Everything under "Not built" is written up with an approach instead.
+>
+> **Live demo:** _URL to be added when this branch merges to `main` (not
+> deployed yet)._
 
 ---
 
@@ -62,7 +68,7 @@ flowchart LR
     CO["POST /api/checkout<br/>prices the order, creates the payment"]
     PAY["GET /api/payment<br/>authoritative status read"]
     OS["POST /api/order-state<br/>shipped / received / disputed"]
-    REF["POST /api/refund"]
+    REF["POST /api/refund<br/>admin, full refund only"]
     ORD["GET /api/orders"]
   end
 
@@ -92,7 +98,9 @@ flowchart LR
 - The secret key (`JUSPAY_API_TEST_KEY`) is read only inside `api/` and never
   has a `VITE_` prefix, since Vite would inline it into the bundle.
 - **The server sets the amount** from its own catalogue. The checkout request
-  type has no `amount` field at all.
+  type has no `amount` field at all. One demo simplification: a listing a
+  collector creates in the browser (`usr_…`) isn't in the server catalogue, so
+  its price comes from the client.
 - Card numbers only ever enter Hyperswitch's iframe, so they stay out of our
   code and our PCI scope.
 
@@ -113,12 +121,12 @@ sequenceDiagram
   F->>F: amount = price + shipping + tax, from server data
   F->>H: POST /payments (payment_id = attempt id, amount, metadata)
   H-->>F: client_secret
-  F-->>B: client_secret, publishable key, amount
+  F-->>B: client_secret, publishable key, price breakdown
   B->>H: SDK confirmPayment (card, or PayPal)
   H->>H: routing rule picks the processor
   H->>P: authorise
-  alt 3DS challenge or PayPal
-    H-->>B: redirect to bank / PayPal
+  alt PayPal
+    H-->>B: redirect to PayPal
     B->>B: buyer returns to /order/:paymentId
   else no redirect needed
     H-->>B: result
@@ -134,11 +142,13 @@ sequenceDiagram
 so the browser's attempt id doubles as the `payment_id`. A duplicate submit,
 refresh or second tab re-sends the same id. Hyperswitch rejects it with
 `HE_01`, and the server reads the existing payment instead of creating a
-second one.
+second one: it resumes it if it's still unattempted and the amount matches,
+and otherwise sends the buyer to the order page.
 
 **Every Hyperswitch status is mapped**, all 17 of them, not only the four in
 the quickstart. `requires_customer_action` and `processing` are their own
-states, never failures, and an unrecognised status maps to `unknown`, which
+states, never failures. The order page polls the server for about 30 seconds
+while a payment is in flight or its status is unrecognised (`unknown`), then
 shows "Don't pay again yet" and a **Check again** button that only re-reads.
 
 ---
@@ -210,7 +220,8 @@ stateDiagram-v2
   Shipped --> Received: buyer marks received
   Received --> [*]
   Shipped --> Disputed: buyer disputes
-  Disputed --> Refunded: admin refunds (real Hyperswitch refund)
+  Received --> Disputed: buyer disputes
+  Disputed --> Refunded: admin refunds in full (real Hyperswitch refund)
   Refunded --> [*]
 
   note right of Paid
@@ -225,9 +236,11 @@ stateDiagram-v2
   end note
 ```
 
-The buyer is charged **item + shipping + sales tax** (flat rate) as one
-payment. The seller is credited **item + shipping − commission** later. The
-buyer never sees the commission and the seller never sees the tax.
+The buyer is charged **item + shipping + sales tax** (a flat 8% on items) as
+one payment. The seller is credited **item + shipping − commission** (5% of
+items) later. The buyer never sees the commission and the seller never sees the
+tax. Refunds are **full only**: the whole payment goes back, and the sale's
+commission and net drop to zero.
 
 ---
 
@@ -235,23 +248,23 @@ buyer never sees the commission and the seller never sees the tax.
 
 | Decision | Why |
 | --- | --- |
-| **Unified Checkout SDK** | Card data never touches our code, and payment methods are a dashboard setting. PayPal was added and Affirm removed without a code change, which is the practical argument for an orchestrator |
-| **Simulated processors, not real Stripe** | Real Stripe needs a support ticket for raw card data access, with unknown lead time. The simulators cover everything the core flow needs: distinct declines, a 3DS challenge, a PayPal redirect, and three connectors to route between |
+| **Unified Checkout SDK** | Card data never touches our code, and payment methods are a dashboard setting. Affirm was removed without a code change, and PayPal needed only a return URL passed to the SDK, which is the practical argument for an orchestrator |
+| **Simulated processors, not real Stripe** | Real Stripe needs a support ticket for raw card data access, with unknown lead time. The simulators cover everything the core flow needs: distinct hard declines, a PayPal redirect, and three connectors to route between |
 | **Capture immediately; the hold is a ledger, not an authorisation** | Card authorisations expire in about 7 days, and an individual seller ships when they reach the post office. The reversal tool is a refund, not a void |
 | **Seller pays the commission, at release** | Nothing is added to a buyer's total after they've decided on a $1,800 item. A sale refunded before release never pays a fee |
 | **Never auto-retry an ambiguous payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
 | **One payment per seller in a multi-seller cart** | A single split payment can't represent one seller's half failing, and that is the normal failure |
-| **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so seller views page through payments and filter in memory, which is fine at demo volume |
-| **3DS left at its default** | We're US-only, so it isn't a mandate. It buys liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
+| **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so order lists page through the last 90 days of payments (at most 2,000) and filter in memory. Measured: 1.3–2.0 s warm, 4.6–6.5 s on a cold first call. A KV index of order ids is the upgrade |
+| **3DS out of scope for this build** | The dashboard default is untouched, but no challenge flow is built or tested. We're US-only, so it isn't a mandate. It would buy liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
 
 ### Hyperswitch features, and what we did with each
 
 | Feature | Verdict |
 | --- | --- |
-| Unified Checkout, Payments, Refunds, Metadata update | **Built on** |
+| Unified Checkout, Payments, Refunds (full only), Metadata update | **Built on** |
 | Rule-based routing (amount + volume split) | **Configured**, verified |
-| PayPal wallet | **Configured**, no code change |
-| 3DS | **Default**, exercised with the 3DS test card |
+| PayPal wallet | **Configured**, plus a return URL passed to the SDK |
+| 3DS | **Out of scope**: dashboard default untouched, no challenge flow built or tested |
 | Auto Retries / Smart Retries | **Turned off**, for the double-charge reason above |
 | Auth Rate Based and elimination routing | **Deferred**: needs payment history and real processors |
 | Least Cost (US debit) routing | **Deferred**: sandbox supports it through Adyen only |
@@ -288,23 +301,28 @@ buyer never sees the commission and the seller never sees the tax.
 - **Seller payouts.** Stripe Connect separate charges and transfers, called
   when the seller ships. Hyperswitch's split payments only support
   direct/destination charges, which pay the seller too early.
+- **3DS challenges, partial refunds, soft declines on demand, and an
+  abandoned PayPal payment** (the message exists; the flow isn't tested).
 - **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
   release, authenticity checks, seller KYC, saved cards.**
 
 **Known gaps in what is built**
-- `update_metadata` returns a connector error on every simulated processor even
-  though the write lands, so every write is read back before the UI reports
-  success.
+- `update_metadata` returns a connector error (`IR_20`, seen on both
+  `paypal_test` and `stripe_test`) even though the write lands, so every write
+  is read back before the UI reports success.
+- Order lists take 4.6–6.5 s on a cold first call (see the read-model decision
+  above).
 
 ---
 
 ## Running it
 
-Requires Node 22+ and a Hyperswitch sandbox account.
+Requires Node 20.19+ (Vite 8's minimum) and a Hyperswitch sandbox account with
+the setup below.
 
 ```bash
 npm install
-cp .env.example .env   # fill in the sandbox keys
+cp .env.example .env   # secret key, publishable key, merchant id
 npm run dev            # Vite serves the front end and api/ functions together
 ```
 
@@ -312,9 +330,9 @@ npm run dev            # Vite serves the front end and api/ functions together
 | --- | --- |
 | `npm run dev` | App and API functions locally (Vite middleware runs `api/`) |
 | `npm run build` | Typecheck and production build |
-| `npm run test:unit` | Money, cart, attempt-id and state-mapping tests |
-| `npm run test:sandbox` | Tests against the live Hyperswitch sandbox |
-| `npm run e2e` | Playwright, real browser, real sandbox |
+| `npm run test:unit` | 39 money, cart, attempt-id and state-mapping tests. No keys needed |
+| `npm run test:sandbox` | 21 tests that call the `api/` handlers against the live sandbox. Needs `.env`; skipped without the key. Creates real payments tagged `test` |
+| `npm run e2e` | 11 Playwright tests in a real browser against the real sandbox. Needs `.env` and `npx playwright install chromium`; starts its own dev server on port 5190 |
 | `npm run lint` / `npm run format` | oxlint / Prettier |
 
 ### Sandbox setup
@@ -330,17 +348,18 @@ npm run dev            # Vite serves the front end and api/ functions together
 
 ### Test cards
 
-Any future expiry, any CVC. Test declines and 3DS on listings of $500 or more,
-so they always go to `stripe_test`.
+Any future expiry, any CVC. These cards behave the same on `stripe_test` and
+`fauxpay`, so routing doesn't change the result.
 
 | Case | Card | Buyer sees |
 | --- | --- | --- |
 | Success | `4242 4242 4242 4242` | Paid |
 | Declined | `4000 0000 0000 0002` | "Your bank declined this payment." |
 | Lost / stolen | `4000 0000 0000 9987` / `…9979` | "Your bank declined this card." |
-| Soft decline, retry allowed | `4000 0000 0000 9995` | "Nothing has been charged. We hit a problem processing this payment." (the docs call this card insufficient funds; the sandbox returns a connector error) |
-| 3DS challenge | `4000 0038 0000 0446` | Redirect to the bank, then back |
 | PayPal | PayPal button | Redirect to simulated PayPal, then back |
+
+A soft decline (`4000 0000 0000 9995`) can't be shown on demand: it succeeds on
+`stripe_test` and only fails on `fauxpay`, which routing reaches at random.
 
 ## Stack
 
