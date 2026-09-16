@@ -38,8 +38,8 @@ export const COPY = {
       action: 'Browse',
     },
     listings: {
-      title: 'No listings yet',
-      fact: 'Graded coins and slabbed cards sell fastest.',
+      title: 'Nothing listed yet',
+      fact: 'List a graded coin or slabbed card with its cert number, price and shipping. It goes live in the shop as soon as you publish.',
       action: 'Create a listing',
     },
     orders: {
@@ -49,12 +49,12 @@ export const COPY = {
     },
     sales: {
       title: 'No sales yet',
-      fact: 'When someone buys, you ship directly — funds become available when you mark it shipped.',
+      fact: 'When a buyer checks out, the sale shows up here with their shipping details. Ship it, mark it shipped, and your earnings are released.',
       action: 'List an item',
     },
     balance: {
-      title: 'No balance yet',
-      fact: 'Sold → Shipped → Available.',
+      title: 'No earnings yet',
+      fact: 'A sale counts as pending until you ship it. Once it is marked shipped, the price plus shipping, minus 5% commission, becomes available.',
       action: 'List an item',
     },
   } satisfies Record<string, EmptyCopy>,
@@ -175,6 +175,10 @@ export const COPY = {
       admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
     },
     reset: 'Reset demo',
+    resetConfirm:
+      'Reset the demo? This clears your cart, created listings and sign-in in this browser.',
+    footer:
+      'Slabbed is a demo. Listings, sellers and accounts are synthetic; payments run in the Hyperswitch sandbox.',
     resetBody:
       "Clears this browser's cart, created listings, sold markers and sign-in. Real sandbox orders are never touched.",
   },
@@ -203,6 +207,25 @@ export const COPY = {
     back: 'Back to sign-in options',
   },
 
+  /** Shared labels for the catalogue listing card. */
+  tile: {
+    grade: 'Grade',
+    cert: 'Cert',
+    year: 'Year',
+    viewDetails: 'View details',
+    watch: 'Add to watch list',
+    unwatch: 'Remove from watch list',
+  },
+
+  /** Page headers: a short eyebrow over one plain headline. */
+  pageHeaders: {
+    orders: { eyebrow: 'Your collection', title: 'Orders' },
+    sell: { eyebrow: 'Seller', title: 'Your sales and listings' },
+    admin: { eyebrow: 'Marketplace operations', title: 'Payments and disputes' },
+    order: { eyebrow: 'Order' },
+    adminPayment: { eyebrow: 'Payment review' },
+  },
+
   sold: {
     label: 'Sold',
     listing: 'This one-of-one item has sold.',
@@ -217,12 +240,14 @@ export const COPY = {
       graded: 'Graded',
       raw: 'Raw',
       free: 'Free shipping',
+      watching: 'Watching',
     },
     filters: 'Filters',
     filterGroups: [
       { label: 'Category', chips: ['coin', 'card'] },
       { label: 'Grading', chips: ['graded', 'raw'] },
       { label: 'Shipping', chips: ['free'] },
+      { label: 'Watch list', chips: ['watching'] },
     ],
     clearFilters: 'Clear',
     results: 'listings',
@@ -351,13 +376,19 @@ export const COPY = {
     adminFact: 'Switch to Alex or Mike to list items and ship sales.',
     listings: 'Your listings',
     newListing: 'Create a listing',
+    remove: 'Remove',
+    soldTag: 'Sold',
+    removeTitle: 'Remove this listing?',
+    removeBody: (title: string) =>
+      `${title} comes off the shop straight away and can no longer be bought. Sales you have already made are not affected.`,
+    removeConfirm: 'Remove listing',
+    keepListing: 'Keep it',
     sales: 'Your sales',
     loading: 'Loading sales…',
     boughtBy: 'Bought by',
     balance: 'Balance',
     loadFailed: "We couldn't load your sales.",
     loadFailedFact: 'Nothing has changed. Check your connection and try again.',
-    noPayouts: 'Payouts to PayPal or a bank are not part of this demo.',
     gross: 'Gross (items + shipping)',
     grossShort: 'Gross',
     commission: 'Commission',

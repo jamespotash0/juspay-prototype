@@ -13,6 +13,7 @@ import { breakdown } from '../shared/money.ts'
 import { PERSONAS } from '../shared/seed.ts'
 import type { Breakdown, CheckoutResponse, ShipTo } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card, SectionHeading } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
@@ -22,7 +23,7 @@ import { PageLayout } from './Layout.tsx'
 const TEXT = COPY.checkoutPage
 
 const input =
-  'h-10 w-full rounded-slab border border-rule bg-paper px-3 text-sm focus-visible:border-accent disabled:bg-bone disabled:text-ink-muted'
+  'h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm font-normal hover:border-ink focus-visible:border-ink disabled:border-rule disabled:bg-well disabled:text-ink-muted'
 
 export default function Checkout({ params }: { params: Params }) {
   const sellerId = params.sellerId
@@ -48,7 +49,7 @@ export default function Checkout({ params }: { params: Params }) {
 
   if (lines.length === 0)
     return (
-      <PageLayout title={TEXT.title}>
+      <PageLayout title={TEXT.title} width="narrow">
         <EmptyState
           title={TEXT.emptyGroup}
           fact={COPY.empty.cart.fact}
@@ -59,8 +60,8 @@ export default function Checkout({ params }: { params: Params }) {
 
   if (persona === 'admin' || persona === sellerId)
     return (
-      <PageLayout title={TEXT.title}>
-        <div className="mx-auto max-w-xl">
+      <PageLayout title={TEXT.title} width="narrow">
+        <div>
           <Notice
             tone="info"
             title={persona === 'admin' ? TEXT.admin : TEXT.ownListing}
@@ -125,37 +126,34 @@ export default function Checkout({ params }: { params: Params }) {
   const shown: Breakdown = session?.breakdown ?? breakdown(lines, listings)
 
   return (
-    <PageLayout title={TEXT.title}>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <form onSubmit={start} className="flex flex-col gap-4">
-            <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
-              <legend className="mb-3 font-display text-lg font-bold">
-                {TEXT.shipTo}
-              </legend>
-              {field('name', TEXT.fields.name, 'col-span-6')}
-              {field('line1', TEXT.fields.line1, 'col-span-6')}
-              {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
-              {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
-              {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
-            </fieldset>
-            {!session && (
-              <Button type="submit" disabled={busy} className="self-start">
-                {busy ? TEXT.starting : TEXT.continue}
-              </Button>
-            )}
-          </form>
+    <PageLayout title={TEXT.title} width="narrow">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_17rem] md:items-start lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card as="div">
+            <form onSubmit={start} className="flex flex-col gap-5">
+              <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
+                <legend className="mb-3 text-lg font-bold tracking-tight">
+                  {TEXT.shipTo}
+                </legend>
+                {field('name', TEXT.fields.name, 'col-span-6')}
+                {field('line1', TEXT.fields.line1, 'col-span-6')}
+                {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
+                {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
+                {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
+              </fieldset>
+              {!session && (
+                <Button type="submit" disabled={busy} className="self-start">
+                  {busy ? TEXT.starting : TEXT.continue}
+                </Button>
+              )}
+            </form>
+          </Card>
 
           {message && <Notice tone="danger" title={message} body={null} />}
 
           {session && (
-            <section
-              aria-labelledby="pay"
-              className="flex flex-col gap-3 border-t border-rule pt-5"
-            >
-              <h2 id="pay" className="font-display text-lg font-bold">
-                {TEXT.payment}
-              </h2>
+            <Card as="section" aria-labelledby="pay">
+              <SectionHeading id="pay">{TEXT.payment}</SectionHeading>
               <HyperCheckout
                 clientSecret={session.clientSecret}
                 publishableKey={session.publishableKey}
@@ -165,13 +163,17 @@ export default function Checkout({ params }: { params: Params }) {
                 onError={setMessage}
                 onSubmittingChange={setPaying}
               />
-            </section>
+            </Card>
           )}
         </div>
 
-        <aside className="flex flex-col gap-4 self-start rounded-slab border border-rule bg-paper p-5 lg:sticky lg:top-20">
-          <h2 className="font-display text-lg font-bold">{TEXT.summary}</h2>
-          <ul className="flex flex-col gap-3 border-t border-rule pt-3">
+        <Card
+          as="aside"
+          padding="sm"
+          className="flex flex-col gap-4 sm:p-5 md:sticky md:top-20"
+        >
+          <h2 className="text-lg font-bold tracking-tight">{TEXT.summary}</h2>
+          <ul className="flex flex-col gap-3">
             {lines.map((l) => {
               const listing = listings.find((x) => x.id === l.listingId)
               if (!listing) return null
@@ -180,10 +182,12 @@ export default function Checkout({ params }: { params: Params }) {
                   <img
                     src={listing.imageUrl}
                     alt=""
-                    className="size-14 shrink-0 rounded-slab border border-rule bg-bone object-contain p-1"
+                    className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
                   />
                   <div className="flex min-w-0 flex-1 flex-col text-sm">
-                    <span className="line-clamp-2 leading-snug">{listing.title}</span>
+                    <span className="line-clamp-2 leading-snug font-medium">
+                      {listing.title}
+                    </span>
                     <span className="text-xs text-ink-muted">
                       {gradeLabel(listing)}
                       {l.qty > 1 && <span className="money"> × {l.qty}</span>}
@@ -198,16 +202,16 @@ export default function Checkout({ params }: { params: Params }) {
             })}
           </ul>
           <BreakdownList b={shown} />
-        </aside>
+        </Card>
       </div>
     </PageLayout>
   )
 }
 
 export function BreakdownList({ b }: { b: Breakdown }) {
-  const row = 'flex justify-between gap-4'
+  const row = 'flex items-baseline justify-between gap-4'
   return (
-    <dl className="flex flex-col gap-1.5 border-t border-rule pt-3 text-sm">
+    <dl className="money flex flex-col gap-2 border-t border-rule pt-3 text-sm [&>div:not(:last-child)>dt]:text-ink-muted">
       <div className={row}>
         <dt>{TEXT.items}</dt>
         <dd>
@@ -230,7 +234,7 @@ export function BreakdownList({ b }: { b: Breakdown }) {
           <Money cents={b.taxCents} />
         </dd>
       </div>
-      <div className={`${row} mt-1 border-t border-rule pt-2 text-base font-bold`}>
+      <div className={`${row} mt-1 border-t border-rule pt-3 text-base font-bold`}>
         <dt>{TEXT.total}</dt>
         <dd>
           <Money cents={b.totalCents} />

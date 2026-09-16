@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { INSIGHTS_COPY as T } from '../shared/copy.insights.ts'
 import type { SellerLedger } from '../shared/types.ts'
+import { Card } from '../ui/Card.tsx'
 import { Money } from '../ui/Money.tsx'
 import { usd } from '../ui/format.ts'
 
@@ -33,17 +34,17 @@ export default function SellInsights({ sales }: { sales: InsightSale[] }) {
   const pending = live.filter((l) => l.balance === 'pending')
 
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="insights-title">
+    <Card as="section" className="flex flex-col gap-5" aria-labelledby="insights-title">
       <div className="flex flex-col gap-1">
-        <h2 id="insights-title" className="font-display text-xl font-bold">
+        <h2 id="insights-title" className="text-lg font-bold tracking-tight">
           {T.title}
         </h2>
         <p className="max-w-[65ch] text-sm text-ink-muted">{T.lead}</p>
       </div>
 
-      <div className="grid gap-x-8 gap-y-6 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4 text-sm">
-          <dl className="grid grid-cols-[1fr_auto] border-b border-rule">
+      <div className="grid gap-x-10 gap-y-6 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+        <div className="flex flex-col text-sm">
+          <dl className="grid grid-cols-[1fr_auto] [&>:nth-child(-n+2)]:border-t-0 [&>:nth-child(-n+2)]:pt-0">
             <Row
               label={T.gross}
               note={T.sales(ledgers.length)}
@@ -66,7 +67,7 @@ export default function SellInsights({ sales }: { sales: InsightSale[] }) {
               strong
             />
           </dl>
-          <dl className="grid grid-cols-[1fr_auto] border-b border-rule">
+          <dl className="grid grid-cols-[1fr_auto]">
             <Row
               label={T.available}
               note={T.shippedSales(available.length)}
@@ -83,7 +84,7 @@ export default function SellInsights({ sales }: { sales: InsightSale[] }) {
         </div>
         <NetChart sales={sales} />
       </div>
-    </section>
+    </Card>
   )
 }
 
@@ -103,19 +104,19 @@ function Row({
   const weight = strong ? 'font-semibold' : ''
   return (
     <>
-      <dt className={`border-t border-rule py-2 ${weight}`}>
+      <dt className={`border-t border-rule py-2.5 ${weight}`}>
         <span className="flex items-center gap-2">
           {swatch && (
             <span
               aria-hidden="true"
-              className={`size-2.5 shrink-0 rounded-[2px] ${swatch}`}
+              className={`size-2 shrink-0 rounded-full ${swatch}`}
             />
           )}
           {label}
         </span>
         <span className="block text-xs font-normal text-ink-muted">{note}</span>
       </dt>
-      <dd className={`border-t border-rule py-2 pl-4 text-right ${weight}`}>
+      <dd className={`money border-t border-rule py-2.5 pl-4 text-right ${weight}`}>
         <Money cents={cents} />
       </dd>
     </>
@@ -338,31 +339,34 @@ function NetChart({ sales }: { sales: InsightSale[] }) {
         )}
       </p>
       <details className="text-sm">
-        <summary className="cursor-pointer text-accent hover:underline">
+        <summary className="w-fit cursor-pointer text-accent hover:underline">
           {T.showTable}
         </summary>
         <table className="mt-2 w-full text-left text-sm">
           <thead className="text-xs text-ink-muted">
             <tr className="border-b border-rule">
-              <th className="py-1 font-medium">{T.period(week)}</th>
-              <th className="py-1 text-right font-medium">{T.available}</th>
-              <th className="py-1 text-right font-medium">{T.pending}</th>
-              <th className="py-1 text-right font-medium">{T.refunded}</th>
+              <th className="py-1.5 font-medium">{T.period(week)}</th>
+              <th className="py-1.5 text-right font-medium">{T.available}</th>
+              <th className="py-1.5 text-right font-medium">{T.pending}</th>
+              <th className="py-1.5 text-right font-medium">{T.refunded}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="money">
             {list
               .filter((b) => b.count + b.refunded > 0)
               .map((b) => (
-                <tr key={b.start.getTime()} className="border-b border-rule">
-                  <td className="py-1">{dayLabel(b.start)}</td>
-                  <td className="py-1 text-right">
+                <tr
+                  key={b.start.getTime()}
+                  className="border-b border-rule last:border-b-0"
+                >
+                  <td className="py-1.5">{dayLabel(b.start)}</td>
+                  <td className="py-1.5 text-right">
                     <Money cents={b.available} />
                   </td>
-                  <td className="py-1 text-right">
+                  <td className="py-1.5 text-right">
                     <Money cents={b.pending} />
                   </td>
-                  <td className="money py-1 text-right">{b.refunded}</td>
+                  <td className="py-1.5 text-right">{b.refunded}</td>
                 </tr>
               ))}
           </tbody>
@@ -375,7 +379,7 @@ function NetChart({ sales }: { sales: InsightSale[] }) {
 function Key({ swatch, label }: { swatch: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span aria-hidden="true" className={`size-2.5 rounded-[2px] ${swatch}`} />
+      <span aria-hidden="true" className={`size-2 rounded-full ${swatch}`} />
       {label}
     </span>
   )

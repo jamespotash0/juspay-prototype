@@ -2,20 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { useListings } from '../lib/listings.ts'
 import { navigate, useSearchParams } from '../lib/navigation.ts'
 import { useSoldIds } from '../lib/sold.ts'
+import { toggleWatch, useWatchedIds } from '../lib/watchlist.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { Listing } from '../shared/types.ts'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { ListingTile } from '../ui/ListingTile.tsx'
+import { buttonClass } from '../ui/buttonClass.ts'
+import { SectionHeading } from '../ui/Card.tsx'
 import { PageLayout } from './Layout.tsx'
 
-type Chip = 'coin' | 'card' | 'graded' | 'raw' | 'free'
+type Chip = 'coin' | 'card' | 'graded' | 'raw' | 'free' | 'watching'
 
-const PAGE_SIZE = 24
+// 60 divides evenly by 2, 3, 4 and 5 columns, so every full page ends on a complete row.
+const PAGE_SIZE = 60
 
 // Chips in the same pair (Coins/Cards, Graded/Raw) widen; different pairs narrow.
-function matches(l: Listing, on: Set<Chip>, q: string): boolean {
+function matches(l: Listing, on: Set<Chip>, q: string, watched: Set<string>): boolean {
+  if (on.has('watching') && !watched.has(l.id)) return false
   if ((on.has('coin') || on.has('card')) && !on.has(l.category)) return false
   if ((on.has('graded') || on.has('raw')) && !on.has(l.graded ? 'graded' : 'raw'))
     return false
@@ -41,6 +46,7 @@ function matches(l: Listing, on: Set<Chip>, q: string): boolean {
 
 export default function Catalogue() {
   const sold = useSoldIds()
+  const watched = useWatchedIds()
   // Sold one-of-ones leave the catalogue; the listing page still says Sold for anyone with the link.
   const listings = useListings().filter((l) => !sold.has(l.id))
   const params = useSearchParams()
@@ -48,7 +54,7 @@ export default function Catalogue() {
   const [on, setOn] = useState<Set<Chip>>(new Set())
 
   const newestFirst = [...listings].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const shown = newestFirst.filter((l) => matches(l, on, q))
+  const shown = newestFirst.filter((l) => matches(l, on, q, watched))
   const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
   const page = Math.min(pages, Math.max(1, Number(params.get('page')) || 1))
 
@@ -83,18 +89,18 @@ export default function Catalogue() {
 
   return (
     <PageLayout>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-6 flex items-center gap-3 sm:mb-8">
         <form
           role="search"
           onSubmit={(e) => e.preventDefault()}
-          className="relative min-w-0 grow basis-60 sm:max-w-md"
+          className="relative min-w-0 flex-1 sm:max-w-2xl"
         >
           <label className="sr-only" htmlFor="catalogue-search">
             {COPY.shell.searchLabel}
           </label>
           <Icon
             name="search"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
+            className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-ink-muted"
           />
           <input
             id="catalogue-search"
@@ -102,7 +108,7 @@ export default function Catalogue() {
             value={params.get('q') ?? ''}
             onChange={(e) => search(e.target.value)}
             placeholder={COPY.shell.searchPlaceholder}
-            className="h-10 w-full rounded-slab border border-rule bg-paper pr-3 pl-9 text-sm placeholder:text-ink-muted focus-visible:border-accent"
+            className="h-12 w-full rounded-full border border-rule-strong bg-paper pr-5 pl-12 text-base placeholder:text-ink-muted hover:border-ink focus-visible:border-ink"
           />
         </form>
         <Filters
@@ -112,32 +118,31 @@ export default function Catalogue() {
           count={`${shown.length} ${COPY.catalogue.of} ${listings.length}`}
         />
       </div>
-
       {shown.length === 0 ? (
-        <>
+        <div className="flex flex-col gap-8">
           <EmptyState
             title={COPY.empty.noResults.title}
             fact={COPY.empty.noResults.fact}
             action={{ label: COPY.empty.noResults.action, onClick: clear }}
           />
           {/* Never a bare page: the real catalogue sits under the empty state. */}
-          <h2 className="mt-8 mb-4 font-display text-lg font-bold">
-            {COPY.catalogue.allListings}
-          </h2>
-          <Grid listings={newestFirst.slice(0, PAGE_SIZE)} />
-        </>
+          <section>
+            <SectionHeading>{COPY.catalogue.allListings}</SectionHeading>
+            <Grid listings={newestFirst.slice(0, PAGE_SIZE)} />
+          </section>
+        </div>
       ) : (
         <>
           <Grid listings={shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)} />
           {pages > 1 && (
             <nav
               aria-label={COPY.catalogue.pagination}
-              className="money mt-8 flex items-center justify-center gap-4 text-sm"
+              className="money mt-8 flex items-center justify-center gap-3 text-sm"
             >
               <PageLink href={pageHref(page - 1)} disabled={page === 1}>
                 {COPY.catalogue.prev}
               </PageLink>
-              <span className="text-ink-muted" aria-current="page">
+              <span className="px-2 text-ink-muted" aria-current="page">
                 {COPY.catalogue.page} {page} {COPY.catalogue.of} {pages}
               </span>
               <PageLink href={pageHref(page + 1)} disabled={page === pages}>
@@ -185,10 +190,10 @@ function Filters({
   const T = COPY.catalogue
   return (
     <details ref={ref} className="group relative">
-      <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-slab border border-rule bg-paper px-3 text-sm font-medium hover:border-accent group-open:border-accent [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-12 cursor-pointer list-none items-center gap-2 rounded-full border border-rule-strong bg-paper px-5 text-base font-medium hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
         {T.filters}
         {on.size > 0 && (
-          <span className="money inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-ink">
+          <span className="money inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-ink">
             {on.size}
           </span>
         )}
@@ -197,29 +202,29 @@ function Filters({
           className="size-4 transition-transform group-open:rotate-180"
         />
       </summary>
-      <div className="absolute left-0 z-20 mt-1 w-56 rounded-slab border border-rule bg-paper p-3 shadow-lg">
+      <div className="absolute right-0 z-20 mt-2 w-60 rounded-card border border-rule bg-paper p-3 shadow-pop">
         {T.filterGroups.map((g) => (
           <fieldset key={g.label} className="mb-3 last:mb-2">
-            <legend className="mb-1 text-xs font-semibold tracking-wide text-ink-muted uppercase">
+            <legend className="mb-1 px-1.5 text-xs font-semibold tracking-[0.12em] text-ink-muted uppercase">
               {g.label}
             </legend>
             {(g.chips as readonly Chip[]).map((id) => (
               <label
                 key={id}
-                className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-bone"
+                className="flex cursor-pointer items-center gap-2 rounded-control px-1.5 py-1.5 text-sm hover:bg-well"
               >
                 <input
                   type="checkbox"
                   checked={on.has(id)}
                   onChange={() => toggle(id)}
-                  className="size-4 accent-accent"
+                  className="size-4 accent-[var(--color-primary)]"
                 />
                 {T.chips[id]}
               </label>
             ))}
           </fieldset>
         ))}
-        <div className="flex items-center justify-between gap-2 border-t border-rule pt-2 text-sm">
+        <div className="flex items-center justify-between gap-2 border-t border-rule px-1.5 pt-2.5 text-sm">
           <p className="money text-ink-muted" aria-live="polite">
             {count} {T.results}
           </p>
@@ -247,10 +252,10 @@ function PageLink({
   disabled: boolean
   children: string
 }) {
-  const box = 'inline-flex h-9 items-center rounded-slab border px-3 font-semibold'
+  const box = buttonClass('secondary', 'sm')
   if (disabled)
     return (
-      <span aria-disabled="true" className={`${box} border-rule text-ink-muted`}>
+      <span aria-disabled="true" className={`${box} pointer-events-none opacity-50`}>
         {children}
       </span>
     )
@@ -262,7 +267,7 @@ function PageLink({
         e.preventDefault()
         navigate(href)
       }}
-      className={`${box} border-accent text-accent hover:bg-accent/5`}
+      className={box}
     >
       {children}
     </a>
@@ -270,8 +275,9 @@ function PageLink({
 }
 
 function Grid({ listings }: { listings: Listing[] }) {
+  const watched = useWatchedIds()
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
       {listings.map((l) => {
         const seller = SELLERS.find((s) => s.id === l.sellerId)
         if (!seller) return null
@@ -282,6 +288,8 @@ function Grid({ listings }: { listings: Listing[] }) {
               seller={seller}
               href={`/listing/${l.id}`}
               onNavigate={navigate}
+              watched={watched.has(l.id)}
+              onToggleWatch={() => toggleWatch(l.id)}
             />
           </li>
         )

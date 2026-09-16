@@ -4,7 +4,7 @@ const sales = (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'}`
 
 export const INSIGHTS_COPY = {
   title: 'Sales and payouts',
-  lead: 'What your payouts would have been. Payouts to PayPal or a bank are not part of this demo.',
+  lead: 'What you have earned after commission, sale by sale and over time.',
 
   gross: 'Gross sold (items + shipping)',
   reversed: 'Reversed by refund',

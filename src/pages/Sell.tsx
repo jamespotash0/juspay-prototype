@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
-import { useListings } from '../lib/listings.ts'
+import { removeListing, useListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
+import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderView, PersonaId, SellerLedger } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card, SectionHeading } from '../ui/Card.tsx'
+import { ConfirmDialog } from '../ui/ConfirmDialog.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
+import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
 import { personName, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 import SellInsights from './SellInsights.tsx'
 
 const T = COPY.sell
+const H = COPY.pageHeaders.sell
 
 // Contract: a reversed sale shows commission and net as 0, whatever the server sent.
 const shown = (l: SellerLedger) =>
@@ -24,6 +29,8 @@ const shown = (l: SellerLedger) =>
 export default function Sell() {
   const persona = usePersona()
   const listings = useListings().filter((l) => l.sellerId === persona)
+  const sold = useSoldIds()
+  const [removing, setRemoving] = useState<{ id: string; title: string } | null>(null)
   const [reload, setReload] = useState(0)
   // Tagged with the request it answers, so a persona switch or retry shows loading again.
   const key = `${persona}:${reload}`
@@ -49,7 +56,7 @@ export default function Sell() {
 
   if (persona === 'admin') {
     return (
-      <PageLayout title={T.title}>
+      <PageLayout title={H.title} eyebrow={H.eyebrow}>
         <Notice tone="info" title={T.adminOnly} body={T.adminFact} />
       </PageLayout>
     )
@@ -71,8 +78,16 @@ export default function Sell() {
   }
 
   return (
-    <PageLayout title={T.title}>
-      <div className="flex flex-col gap-12">
+    <PageLayout
+      title={H.title}
+      eyebrow={H.eyebrow}
+      actions={
+        <Button size="sm" onClick={() => navigate('/sell/new')}>
+          {T.newListing}
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-8">
         {orders && !loadError && (
           <SellInsights
             sales={orders.map((o) => ({
@@ -81,15 +96,8 @@ export default function Sell() {
             }))}
           />
         )}
-        <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="font-display text-xl font-bold">{T.listings}</h2>
-            {listings.length > 0 && (
-              <Button variant="secondary" onClick={() => navigate('/sell/new')}>
-                {T.newListing}
-              </Button>
-            )}
-          </div>
+        <section>
+          <SectionHeading>{T.listings}</SectionHeading>
           {listings.length === 0 ? (
             <EmptyState
               title={COPY.empty.listings.title}
@@ -100,29 +108,62 @@ export default function Sell() {
               }}
             />
           ) : (
-            <ul className="divide-y divide-rule border-y border-rule">
-              {listings.map((l) => (
-                <li key={l.id} className="flex items-center gap-3 py-2.5">
-                  <img
-                    src={l.imageUrl}
-                    alt=""
-                    className="size-12 shrink-0 rounded-slab border border-rule bg-paper object-contain"
-                  />
-                  <Link
-                    to={`/listing/${l.id}`}
-                    className="min-w-0 flex-1 truncate text-sm font-medium text-accent hover:underline"
+            <Card padding="none">
+              <ul className="divide-y divide-rule">
+                {listings.map((l) => (
+                  <li
+                    key={l.id}
+                    className="flex items-center gap-3 px-4 py-2 first:rounded-t-card last:rounded-b-card hover:bg-well sm:px-5"
                   >
-                    {l.title}
-                  </Link>
-                  <Money cents={l.priceCents} className="text-sm font-semibold" />
-                </li>
-              ))}
-            </ul>
+                    <div
+                      aria-hidden="true"
+                      className="size-10 shrink-0 rounded-control border border-rule bg-paper p-0.5"
+                    >
+                      <Slab listing={l} />
+                    </div>
+                    <Link
+                      to={`/listing/${l.id}`}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
+                    >
+                      {l.title}
+                    </Link>
+                    <Money cents={l.priceCents} className="text-sm font-semibold" />
+                    {sold.has(l.id) ? (
+                      <span className="w-[4.5rem] text-center text-xs font-medium text-ink-muted">
+                        {T.soldTag}
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="quiet"
+                        className="w-[4.5rem]"
+                        onClick={() => setRemoving({ id: l.id, title: l.title })}
+                      >
+                        {T.remove}
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
+          <ConfirmDialog
+            open={!!removing}
+            danger
+            title={T.removeTitle}
+            body={<p>{T.removeBody(removing?.title ?? '')}</p>}
+            confirmLabel={T.removeConfirm}
+            cancelLabel={T.keepListing}
+            onConfirm={() => {
+              if (removing) removeListing(removing.id)
+              setRemoving(null)
+            }}
+            onCancel={() => setRemoving(null)}
+          />
         </section>
 
-        <section className="flex flex-col gap-4">
-          <h2 className="font-display text-xl font-bold">{T.sales}</h2>
+        <section>
+          <SectionHeading>{T.sales}</SectionHeading>
           {loadError ? (
             <Notice
               tone="danger"
@@ -144,17 +185,19 @@ export default function Sell() {
               action={toNew}
             />
           ) : (
-            <ul className="flex flex-col divide-y divide-rule border-y border-rule">
-              {orders.map((o) => (
-                <Sale
-                  key={o.paymentId}
-                  order={o}
-                  sellerId={persona}
-                  released={released === o.paymentId}
-                  onChange={update}
-                />
-              ))}
-            </ul>
+            <Card padding="none">
+              <ul className="divide-y divide-rule">
+                {orders.map((o) => (
+                  <Sale
+                    key={o.paymentId}
+                    order={o}
+                    sellerId={persona}
+                    released={released === o.paymentId}
+                    onChange={update}
+                  />
+                ))}
+              </ul>
+            </Card>
           )}
         </section>
 
@@ -207,10 +250,10 @@ function Sale({
   }
 
   return (
-    <li className="grid gap-4 py-4 md:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="flex min-w-0 flex-col gap-2">
-        <p className="font-semibold">{titles.join(', ')}</p>
-        <p className="text-sm text-ink-muted">
+    <li className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1fr)_18rem] md:gap-6">
+      <div className="flex min-w-0 flex-col items-start gap-1.5">
+        <p className="text-sm font-semibold">{titles.join(', ')}</p>
+        <p className="text-xs text-ink-muted">
           {T.boughtBy} {personName(order.buyerId)} · {shortDate(order.createdAt)}
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -222,8 +265,8 @@ function Sale({
           <StatusPill status={order.fulfilment} />
         </div>
         {canShip && (
-          <div className="mt-1 flex flex-col items-start gap-2">
-            <Button onClick={ship} disabled={busy}>
+          <div className="mt-1.5 flex flex-col items-start gap-2">
+            <Button size="sm" onClick={ship} disabled={busy}>
               {busy ? COPY.common.saving : COPY.orderActions.ship}
             </Button>
           </div>
@@ -243,27 +286,27 @@ function Ledger({ ledger, released }: { ledger: SellerLedger; released: boolean 
   const expected = ledger.balance === 'pending' ? T.expected : ''
   const reversed = ledger.balance === 'reversed'
   return (
-    <div className="flex flex-col gap-2 rounded-slab border border-rule bg-paper p-3">
-      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-        <dt>{T.gross}</dt>
-        <dd className="text-right">
+    <div className="flex flex-col gap-2.5 rounded-control bg-well p-3">
+      <dl className="money grid grid-cols-[1fr_auto] gap-y-1 text-sm">
+        <dt className="text-ink-muted">{T.gross}</dt>
+        <dd className="pl-4 text-right">
           <Money cents={ledger.grossCents} className={reversed ? 'line-through' : ''} />
         </dd>
-        <dt>
+        <dt className="text-ink-muted">
           {T.commission}
           {expected}
         </dt>
-        <dd className="text-right">
+        <dd className="pl-4 text-right">
           <Money cents={ledger.commissionCents ? -ledger.commissionCents : 0} />
         </dd>
         <dt className="border-t border-rule pt-1 font-semibold">
           {T.net}
           {expected}
         </dt>
-        <dd className="border-t border-rule pt-1 text-right font-semibold">
+        <dd className="border-t border-rule pt-1 pl-4 text-right font-semibold">
           <Money
             cents={ledger.netCents}
-            className={released ? 'release-amount rounded-slab px-1' : ''}
+            className={released ? 'release-amount rounded-control px-1' : ''}
           />
         </dd>
       </dl>
@@ -348,8 +391,8 @@ function Balance({
   const reversed = ledgers.length - live.length
 
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="font-display text-xl font-bold">{T.balance}</h2>
+    <section>
+      <SectionHeading>{T.balance}</SectionHeading>
       {live.length === 0 ? (
         <EmptyState
           title={COPY.empty.balance.title}
@@ -357,7 +400,7 @@ function Balance({
           action={{ label: COPY.empty.balance.action, onClick: onList }}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
           <BalanceBox
             // A new key replays the animation for each release.
             key={`pending-${released}`}
@@ -375,29 +418,28 @@ function Balance({
             note={T.shipped(available.length)}
             motion={released ? 'release-in' : ''}
           />
-          <div className="flex flex-col gap-2 rounded-slab border border-rule bg-paper p-3 text-sm">
+          <Card padding="sm" className="flex flex-col gap-2 text-sm">
             <p className="font-semibold">{T.allSales}</p>
-            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
-              <dt>{T.grossShort}</dt>
-              <dd className="text-right">
+            <dl className="money grid grid-cols-[1fr_auto] gap-y-1">
+              <dt className="text-ink-muted">{T.grossShort}</dt>
+              <dd className="pl-4 text-right">
                 <Money cents={sum(live, 'grossCents')} />
               </dd>
-              <dt>{T.commission}</dt>
-              <dd className="text-right">
+              <dt className="text-ink-muted">{T.commission}</dt>
+              <dd className="pl-4 text-right">
                 <Money cents={-sum(live, 'commissionCents')} />
               </dd>
               <dt className="border-t border-rule pt-1 font-semibold">{T.net}</dt>
-              <dd className="border-t border-rule pt-1 text-right font-semibold">
+              <dd className="border-t border-rule pt-1 pl-4 text-right font-semibold">
                 <Money cents={sum(live, 'netCents')} />
               </dd>
             </dl>
             {reversed > 0 && (
               <p className="text-xs text-ink-muted">{T.reversedNote(reversed)}</p>
             )}
-          </div>
+          </Card>
         </div>
       )}
-      <p className="text-xs text-ink-muted">{T.noPayouts}</p>
     </section>
   )
 }
@@ -416,10 +458,10 @@ function BalanceBox({
   motion: string
 }) {
   return (
-    <div className="flex flex-col items-start gap-2 rounded-slab border border-rule bg-paper p-3">
+    <Card padding="sm" className="flex flex-col items-start gap-1.5">
       <StatusPill status={status} label={title} />
-      <Money cents={cents} className={`text-2xl font-bold ${motion}`} />
+      <Money cents={cents} className={`text-2xl font-bold tracking-tight ${motion}`} />
       <p className="text-xs text-ink-muted">{note}</p>
-    </div>
+    </Card>
   )
 }

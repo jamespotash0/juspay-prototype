@@ -1,4 +1,4 @@
-// One authored stroke set (16px grid, 1.5 stroke) shared by StatusPill and Notice.
+// One authored stroke set (16px grid, 1.5 stroke) shared across the UI.
 const PATHS = {
   check: 'M3.5 8.5l3 3 6-7',
   clock: 'M8 4.5V8l2.5 1.5M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0',
@@ -18,6 +18,10 @@ const PATHS = {
   chevronDown: 'M4 6l4 4 4-4',
   search: 'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM10.5 10.5L14 14',
   arrowLeft: 'M13 8H3M7 4L3 8l4 4',
+  refresh: 'M13.5 8A5.5 5.5 0 1 1 11.9 4.1M12 1.5v2.8H9.2',
+  star: 'M8 2l1.8 3.8 4.2.5-3.1 2.9.8 4.1L8 11.3l-3.7 2 .8-4.1L2 6.3l4.2-.5z',
+  heart: 'M8 13.5S2 10 2 5.8A3.1 3.1 0 0 1 8 4.4a3.1 3.1 0 0 1 6 1.4C14 10 8 13.5 8 13.5z',
+  arrowRight: 'M3 8h10M9 4l4 4-4 4',
 } as const
 
 export type IconName = keyof typeof PATHS

@@ -7,14 +7,17 @@ import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderView } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card, SectionHeading } from '../ui/Card.tsx'
 import { ConfirmDialog } from '../ui/ConfirmDialog.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
-import { dateTime, personName, refundLabel, shortDate, usd } from '../ui/format.ts'
+import { dateTime, personName, shortDate, usd } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.adminPayment
+const EYEBROW = COPY.pageHeaders.adminPayment.eyebrow
 
 export default function AdminPayment({ params }: { params: Params }) {
   const persona = usePersona()
@@ -59,16 +62,19 @@ export default function AdminPayment({ params }: { params: Params }) {
   const loadError = !!current?.failed
 
   const back = (
-    <Link to="/admin" className="text-sm font-medium text-accent hover:underline">
+    <Link
+      to="/admin"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+    >
+      <Icon name="arrowLeft" className="size-4" />
       {T.back}
     </Link>
   )
 
   if (loadError || !order) {
     return (
-      <PageLayout title={T.title}>
+      <PageLayout title={T.title} eyebrow={EYEBROW} back={back} width="narrow">
         <div className="flex flex-col gap-4">
-          {back}
           {loadError ? (
             <Notice
               tone="danger"
@@ -145,19 +151,11 @@ export default function AdminPayment({ params }: { params: Params }) {
   }
 
   return (
-    <PageLayout title={T.title}>
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-3">
-          {back}
-          <p className="money text-sm break-all text-ink-muted">
-            <span className="select-all font-medium text-ink">{order.paymentId}</span>
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <StatusPill status={order.state} />
-            <StatusPill status={order.fulfilment} />
-            <StatusPill status={refund.state} label={refundLabel(order)} />
-          </div>
-        </div>
+    <PageLayout title={T.title} eyebrow={EYEBROW} back={back} width="narrow">
+      <div className="flex flex-col gap-4 sm:gap-5">
+        <p className="money -mt-3 text-xs break-all text-ink-muted sm:-mt-4">
+          <span className="select-all">{order.paymentId}</span>
+        </p>
 
         {disputed && (
           <Notice
@@ -165,8 +163,8 @@ export default function AdminPayment({ params }: { params: Params }) {
             title={refundDone ? T.disputeResolved : T.disputed}
             body={
               <div className="flex flex-col gap-2">
-                <blockquote className="max-w-[65ch] border-l border-state-disputed pl-3 text-base">
-                  <span className="block text-xs font-semibold text-ink-muted">
+                <blockquote className="max-w-[65ch] rounded-control bg-paper/70 px-3 py-2 text-sm">
+                  <span className="mb-0.5 block text-xs font-medium text-ink-muted">
                     {T.disputeReason}
                   </span>
                   {order.disputeReason ? (
@@ -219,7 +217,7 @@ export default function AdminPayment({ params }: { params: Params }) {
           />
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
           <Panel title={T.order}>
             <Row label={T.date}>{shortDate(order.createdAt)}</Row>
             <Row label={T.buyer}>{personName(order.buyerId)}</Row>
@@ -242,13 +240,13 @@ export default function AdminPayment({ params }: { params: Params }) {
             </Row>
           </Panel>
 
-          <section className="flex flex-col gap-2 rounded-slab border border-rule bg-paper p-4">
-            <h2 className="font-display text-base font-bold">{T.timeline}</h2>
+          <Card as="section">
+            <SectionHeading>{T.timeline}</SectionHeading>
             <ol className="flex flex-col text-sm">
               {timeline.map(([label, at]) => (
                 <li
                   key={label}
-                  className="grid grid-cols-[1rem_1fr_auto] items-baseline gap-3 border-b border-rule py-1.5 last:border-b-0"
+                  className="grid grid-cols-[1rem_1fr_auto] items-baseline gap-3 border-b border-rule py-2 first:pt-0 last:border-b-0 last:pb-0"
                 >
                   <span
                     aria-hidden="true"
@@ -265,7 +263,7 @@ export default function AdminPayment({ params }: { params: Params }) {
                 </li>
               ))}
             </ol>
-          </section>
+          </Card>
 
           <Panel title={T.charged}>
             <Row label={T.items}>
@@ -334,19 +332,16 @@ export default function AdminPayment({ params }: { params: Params }) {
           </Panel>
 
           {canRefund && (
-            <section className="flex flex-col gap-2 rounded-slab border border-rule bg-paper p-4">
-              <h2 className="font-display text-base font-bold">
-                {COPY.orderActions.refund}
-              </h2>
-              <p className="text-sm">
-                {T.fullRefund} <Money cents={remaining} className="font-semibold" />
+            <Card as="section" className="flex flex-col items-start">
+              <SectionHeading>{COPY.orderActions.refund}</SectionHeading>
+              <p className="text-sm text-ink-muted">
+                {T.fullRefund}{' '}
+                <Money cents={remaining} className="font-semibold text-ink" />
               </p>
-              <div className="pt-2">
-                <Button variant="danger" onClick={askConfirm}>
-                  {COPY.orderActions.refund}
-                </Button>
-              </div>
-            </section>
+              <Button variant="danger" onClick={askConfirm} className="mt-4">
+                {COPY.orderActions.refund}
+              </Button>
+            </Card>
           )}
         </div>
       </div>
@@ -367,10 +362,10 @@ export default function AdminPayment({ params }: { params: Params }) {
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-slab border border-rule bg-paper p-4">
-      <h2 className="font-display text-base font-bold">{title}</h2>
-      <dl className="flex flex-col divide-y divide-rule text-sm">{children}</dl>
-    </section>
+    <Card as="section">
+      <SectionHeading>{title}</SectionHeading>
+      <dl className="money flex flex-col divide-y divide-rule text-sm">{children}</dl>
+    </Card>
   )
 }
 
@@ -385,10 +380,10 @@ function Row({
 }) {
   return (
     <div
-      className={`flex items-start justify-between gap-4 py-1.5 ${strong ? 'font-semibold' : ''}`}
+      className={`flex items-baseline justify-between gap-4 py-2 first:pt-0 last:pb-0 ${strong ? 'font-semibold' : ''}`}
     >
       <dt className={strong ? '' : 'text-ink-muted'}>{label}</dt>
-      <dd className="text-right">{children}</dd>
+      <dd className="text-right font-medium">{children}</dd>
     </div>
   )
 }

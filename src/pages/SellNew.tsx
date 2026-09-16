@@ -5,6 +5,7 @@ import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { Category, GradingService } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card } from '../ui/Card.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { dollarsToCents } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
@@ -15,11 +16,11 @@ const SERVICES: GradingService[] = ['PCGS', 'NGC', 'PSA', 'BGS', 'CGC']
 
 // A neutral slab outline for listings without a photo.
 const PLACEHOLDER = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect x="6" y="6" width="288" height="408" rx="10" fill="#ebe7dd" stroke="#dcd7cb" stroke-width="3"/><rect x="40" y="106" width="220" height="290" rx="4" fill="#f6f3ec" stroke="#dcd7cb"/></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect x="6" y="6" width="288" height="408" rx="10" fill="#eef0f3" stroke="#dde0e5" stroke-width="3"/><rect x="40" y="106" width="220" height="290" rx="4" fill="#f7f8fa" stroke="#dde0e5"/></svg>',
 )}`
 
 const field =
-  'h-10 w-full rounded-slab border border-rule bg-paper px-3 text-sm aria-[invalid=true]:border-state-failed'
+  'h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm placeholder:text-ink-muted hover:border-ink focus-visible:border-ink aria-[invalid=true]:border-state-failed'
 
 export default function SellNew() {
   const persona = usePersona()
@@ -29,7 +30,7 @@ export default function SellNew() {
 
   if (persona === 'admin') {
     return (
-      <PageLayout title={T.title}>
+      <PageLayout title={T.title} width="narrow">
         <Notice tone="info" title={T.adminOnly} body={T.adminFact} />
       </PageLayout>
     )
@@ -91,155 +92,161 @@ export default function SellNew() {
   const err = (k: string) => errors[k]
 
   return (
-    <PageLayout title={T.title}>
-      <form onSubmit={submit} noValidate className="flex max-w-xl flex-col gap-5">
-        {Object.keys(errors).length > 0 && (
-          <p role="alert" className="text-sm font-medium text-state-failed">
-            {T.fixErrors}
-          </p>
-        )}
+    <PageLayout title={T.title} width="narrow">
+      <Card>
+        <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+          {Object.keys(errors).length > 0 && (
+            <p role="alert" className="text-sm font-medium text-state-failed">
+              {T.fixErrors}
+            </p>
+          )}
 
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 text-sm font-semibold">{T.category}</legend>
-          <div className="flex gap-2">
-            {(['coin', 'card'] as const).map((c) => (
-              <label
-                key={c}
-                className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-slab border border-rule bg-paper px-4 text-sm font-medium has-checked:border-accent has-checked:text-accent"
-              >
-                <input
-                  type="radio"
-                  name="category"
-                  value={c}
-                  checked={category === c}
-                  onChange={() => setCategory(c)}
-                  className="accent-accent"
-                />
-                {c === 'coin' ? COPY.listing.coin : COPY.listing.card}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+          <fieldset className="flex flex-col">
+            <legend className="mb-2 text-sm font-semibold">{T.category}</legend>
+            <div className="flex gap-2">
+              {(['coin', 'card'] as const).map((c) => (
+                <label
+                  key={c}
+                  className="inline-flex h-10 cursor-pointer items-center rounded-full border border-rule-strong bg-paper px-5 text-sm font-medium hover:border-ink has-checked:border-primary has-checked:bg-primary has-checked:text-primary-ink has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+                >
+                  <input
+                    type="radio"
+                    name="category"
+                    value={c}
+                    checked={category === c}
+                    onChange={() => setCategory(c)}
+                    className="sr-only"
+                  />
+                  {c === 'coin' ? COPY.listing.coin : COPY.listing.card}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-        <Field label={T.listingTitle} name="title" error={err('title')}>
-          <input
-            id="title"
-            name="title"
-            className={field}
-            aria-invalid={!!err('title')}
-          />
-        </Field>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label={T.price} name="price" error={err('price')} hint={T.priceHint}>
+          <Field label={T.listingTitle} name="title" error={err('title')}>
             <input
-              id="price"
-              name="price"
-              inputMode="decimal"
-              className={`money ${field}`}
-              aria-invalid={!!err('price')}
+              id="title"
+              name="title"
+              className={field}
+              aria-invalid={!!err('title')}
             />
           </Field>
-          <Field
-            label={T.shipping}
-            name="shipping"
-            error={err('shipping')}
-            hint={T.shippingHint}
-          >
-            <input
-              id="shipping"
-              name="shipping"
-              inputMode="decimal"
-              defaultValue="0"
-              className={`money ${field}`}
-              aria-invalid={!!err('shipping')}
-            />
-          </Field>
-        </div>
 
-        {category === 'coin' && (
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label={T.year} name="year" error={err('year')} hint={T.optional}>
+            <Field label={T.price} name="price" error={err('price')} hint={T.priceHint}>
               <input
-                id="year"
-                name="year"
-                inputMode="numeric"
+                id="price"
+                name="price"
+                inputMode="decimal"
                 className={`money ${field}`}
-                aria-invalid={!!err('year')}
+                aria-invalid={!!err('price')}
               />
             </Field>
-            <Field label={T.mintMark} name="mintMark" hint={T.mintMarkHint}>
-              <input id="mintMark" name="mintMark" className={field} />
-            </Field>
-          </div>
-        )}
-
-        <label className="inline-flex items-center gap-2 text-sm font-semibold">
-          <input
-            type="checkbox"
-            checked={graded}
-            onChange={(e) => setGraded(e.target.checked)}
-            className="size-4 accent-accent"
-          />
-          {T.graded}
-        </label>
-
-        {graded && (
-          <div className="grid gap-5 border-l border-rule pl-4 sm:grid-cols-3">
-            <Field label={T.service} name="service" error={err('service')}>
-              <select
-                id="service"
-                name="service"
-                defaultValue=""
-                className={field}
-                aria-invalid={!!err('service')}
-              >
-                <option value="" disabled>
-                  {T.choose}
-                </option>
-                {SERVICES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label={T.grade} name="grade" error={err('grade')}>
+            <Field
+              label={T.shipping}
+              name="shipping"
+              error={err('shipping')}
+              hint={T.shippingHint}
+            >
               <input
-                id="grade"
-                name="grade"
-                placeholder={category === 'coin' ? 'MS-65' : 'PSA 9'}
-                className={field}
-                aria-invalid={!!err('grade')}
-              />
-            </Field>
-            <Field label={T.cert} name="certNumber" error={err('certNumber')}>
-              <input
-                id="certNumber"
-                name="certNumber"
+                id="shipping"
+                name="shipping"
+                inputMode="decimal"
+                defaultValue="0"
                 className={`money ${field}`}
-                aria-invalid={!!err('certNumber')}
+                aria-invalid={!!err('shipping')}
               />
             </Field>
           </div>
-        )}
 
-        <Field label={T.imageUrl} name="imageUrl" hint={T.imageHint}>
-          <input id="imageUrl" name="imageUrl" type="url" className={field} />
-        </Field>
+          {category === 'coin' && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label={T.year} name="year" error={err('year')} hint={T.optional}>
+                <input
+                  id="year"
+                  name="year"
+                  inputMode="numeric"
+                  className={`money ${field}`}
+                  aria-invalid={!!err('year')}
+                />
+              </Field>
+              <Field label={T.mintMark} name="mintMark" hint={T.mintMarkHint}>
+                <input id="mintMark" name="mintMark" className={field} />
+              </Field>
+            </div>
+          )}
 
-        <Field label={T.description} name="description" error={err('description')}>
-          <textarea
-            id="description"
-            name="description"
-            rows={4}
-            className={`${field} h-auto py-2`}
-            aria-invalid={!!err('description')}
-          />
-        </Field>
+          <div className="flex flex-col gap-4 border-t border-rule pt-5">
+            <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-sm font-semibold">
+              <input
+                type="checkbox"
+                checked={graded}
+                onChange={(e) => setGraded(e.target.checked)}
+                className="size-4 accent-[var(--color-primary)]"
+              />
+              {T.graded}
+            </label>
 
-        <div>
-          <Button type="submit">{T.publish}</Button>
-        </div>
-      </form>
+            {graded && (
+              <div className="grid gap-4 rounded-control bg-well p-4 sm:grid-cols-3">
+                <Field label={T.service} name="service" error={err('service')}>
+                  <select
+                    id="service"
+                    name="service"
+                    defaultValue=""
+                    className={field}
+                    aria-invalid={!!err('service')}
+                  >
+                    <option value="" disabled>
+                      {T.choose}
+                    </option>
+                    {SERVICES.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={T.grade} name="grade" error={err('grade')}>
+                  <input
+                    id="grade"
+                    name="grade"
+                    placeholder={category === 'coin' ? 'MS-65' : 'PSA 9'}
+                    className={field}
+                    aria-invalid={!!err('grade')}
+                  />
+                </Field>
+                <Field label={T.cert} name="certNumber" error={err('certNumber')}>
+                  <input
+                    id="certNumber"
+                    name="certNumber"
+                    className={`money ${field}`}
+                    aria-invalid={!!err('certNumber')}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-5 border-t border-rule pt-5">
+            <Field label={T.imageUrl} name="imageUrl" hint={T.imageHint}>
+              <input id="imageUrl" name="imageUrl" type="url" className={field} />
+            </Field>
+
+            <Field label={T.description} name="description" error={err('description')}>
+              <textarea
+                id="description"
+                name="description"
+                rows={4}
+                className={`${field} h-auto py-2`}
+                aria-invalid={!!err('description')}
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end border-t border-rule pt-5">
+            <Button type="submit">{T.publish}</Button>
+          </div>
+        </form>
+      </Card>
     </PageLayout>
   )
 }
@@ -261,7 +268,7 @@ function Field({
     <div className="flex flex-col gap-1.5">
       <label htmlFor={name} className="text-sm font-semibold">
         {label}
-        {hint && <span className="ml-2 font-normal text-ink-muted">{hint}</span>}
+        {hint && <span className="ml-2 text-xs font-normal text-ink-muted">{hint}</span>}
       </label>
       {children}
       {error && <p className="text-sm text-state-failed">{error}</p>}

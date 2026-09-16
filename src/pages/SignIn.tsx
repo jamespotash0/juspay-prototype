@@ -2,6 +2,7 @@ import { navigate, useSearchParams } from '../lib/navigation.ts'
 import type { AuthProvider } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card } from '../ui/Card.tsx'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.signIn
@@ -17,21 +18,22 @@ export function safeNext(params: URLSearchParams): string {
 export default function SignIn() {
   const next = safeNext(useSearchParams())
   return (
-    <PageLayout title={T.title}>
-      <div className="flex max-w-sm flex-col gap-4">
+    <PageLayout title={T.title} width="narrow">
+      <Card className="flex max-w-md flex-col gap-4">
         <p className="text-sm text-ink-muted">{T.demo}</p>
         <div className="flex flex-col gap-2">
           {PROVIDERS.map((p) => (
             <Button
               key={p}
               variant="secondary"
+              className="w-full"
               onClick={() => navigate(`/signin/${p}?next=${encodeURIComponent(next)}`)}
             >
               {T.providers[p]}
             </Button>
           ))}
         </div>
-      </div>
+      </Card>
     </PageLayout>
   )
 }

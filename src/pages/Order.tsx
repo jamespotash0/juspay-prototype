@@ -11,6 +11,7 @@ import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderAction, OrderView, PaymentState, PersonaId } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
+import { Card, SectionHeading } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
@@ -76,7 +77,11 @@ export default function Order({ params }: { params: Params }) {
 
   if (notFound)
     return (
-      <PageLayout title={TEXT.title}>
+      <PageLayout
+        title={TEXT.title}
+        width="narrow"
+        eyebrow={COPY.pageHeaders.order.eyebrow}
+      >
         <EmptyState
           title={TEXT.notFound}
           fact={TEXT.notFoundFact}
@@ -98,17 +103,19 @@ export default function Order({ params }: { params: Params }) {
   return (
     <PageLayout
       title={TEXT.title}
+      width="narrow"
+      eyebrow={COPY.pageHeaders.order.eyebrow}
       back={
         <Link
           to={back.to}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
         >
           <Icon name="arrowLeft" className="size-4" />
           {back.label}
         </Link>
       }
     >
-      <div className="flex max-w-3xl flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-5">
         {ambiguous ? (
           <Notice
             tone="ambiguous"
@@ -134,55 +141,54 @@ export default function Order({ params }: { params: Params }) {
 
         {order && (
           <>
-            <section
-              aria-labelledby="items"
-              className="flex flex-col gap-3 border-t border-rule pt-5"
-            >
-              <h2 id="items" className="font-display text-lg font-bold">
-                {TEXT.items}
-              </h2>
-              <ul className="flex flex-col gap-3">
+            <Card as="section" aria-labelledby="items">
+              <SectionHeading id="items">{TEXT.items}</SectionHeading>
+              <ul className="flex flex-col divide-y divide-rule">
                 {order.listingIds.map((id) => {
                   const l = listings.find((x) => x.id === id)
                   return (
-                    <li key={id} className="flex items-center gap-3 text-sm">
+                    <li
+                      key={id}
+                      className="flex items-center gap-3 py-3 text-sm first:pt-0 last:pb-0 sm:gap-4"
+                    >
                       {l && (
                         <img
                           src={l.imageUrl}
                           alt=""
-                          className="size-14 shrink-0 rounded-slab border border-rule bg-bone object-contain p-1"
+                          className="size-14 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
                         />
                       )}
-                      <span className="min-w-0 flex-1">{l?.title ?? id}</span>
+                      <span className="min-w-0 flex-1 font-medium">{l?.title ?? id}</span>
                       {l && <Money cents={l.priceCents} className="font-semibold" />}
                     </li>
                   )
                 })}
               </ul>
-            </section>
+            </Card>
 
-            <section aria-labelledby="amounts" className="border-t border-rule pt-5">
-              <h2 id="amounts" className="font-display text-lg font-bold">
+            <Card as="section" aria-labelledby="amounts">
+              <SectionHeading id="amounts">
                 {isSeller ? TEXT.yourSale : TEXT.amounts}
-              </h2>
+              </SectionHeading>
               {isSeller ? (
                 // The seller never sees tax or the buyer's total.
-                <dl className="mt-2 flex max-w-sm flex-col gap-1.5 text-sm">
+                <dl className="money flex flex-col divide-y divide-rule text-sm">
                   <Row label={TEXT.gross} cents={order.ledger.grossCents} />
                   <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
                   <Row label={TEXT.net} cents={order.ledger.netCents} bold />
                 </dl>
               ) : (
-                <div className="max-w-sm">
+                // BreakdownList is shared with checkout; drop its own top rule inside the card.
+                <div className="[&>dl]:border-t-0 [&>dl]:pt-0">
                   <BreakdownList b={order.breakdown} />
                 </div>
               )}
-            </section>
+            </Card>
           </>
         )}
 
         {/* The payment id: what support needs if something goes wrong. Small print, not a headline. */}
-        <p className="money border-t border-rule pt-4 text-xs text-ink-muted">
+        <p className="money px-1 text-xs text-ink-muted">
           {COPY.checkout.ambiguous.reference}{' '}
           <span className="select-all font-medium text-ink">{paymentId}</span>
           {order && <> · {new Date(order.createdAt).toLocaleString('en-US')}</>}
@@ -195,10 +201,10 @@ export default function Order({ params }: { params: Params }) {
 function Row({ label, cents, bold }: { label: string; cents: number; bold?: boolean }) {
   return (
     <div
-      className={`flex justify-between gap-4 ${bold ? 'border-t border-rule pt-2 font-bold' : ''}`}
+      className={`flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0 ${bold ? 'pt-3 text-base font-bold' : ''}`}
     >
-      <dt>{label}</dt>
-      <dd>
+      <dt className={bold ? 'text-ink' : 'text-ink-muted'}>{label}</dt>
+      <dd className="text-right font-medium">
         <Money cents={cents} />
       </dd>
     </div>
@@ -350,23 +356,23 @@ function Fulfilment({
   if (refunded) steps.push({ label: TEXT.steps.refunded, done: true, branch: true })
 
   return (
-    <section
-      aria-labelledby="progress"
-      className="flex flex-col gap-4 border-t border-rule pt-5"
-    >
-      <h2 id="progress" className="font-display text-lg font-bold">
+    <Card as="section" aria-labelledby="progress" className="flex flex-col gap-4">
+      <h2 id="progress" className="text-lg font-bold tracking-tight">
         {TEXT.progress}
       </h2>
-      <ol className="flex flex-col gap-0 sm:flex-row sm:items-center">
+      <ol className="flex flex-col gap-2.5 rounded-control bg-well p-3 sm:flex-row sm:items-center sm:gap-0 sm:px-4">
         {steps.map((s, i) => (
-          <li key={s.label} className="flex items-center gap-2 text-sm sm:flex-1">
+          <li
+            key={s.label}
+            className="flex items-center gap-2 text-sm sm:flex-1 sm:last:flex-none"
+          >
             <span
-              className={`inline-flex size-6 items-center justify-center rounded-full border ${
+              className={`inline-flex size-6 shrink-0 items-center justify-center rounded-full border ${
                 s.done
                   ? s.branch
                     ? 'border-dotted border-ink bg-paper text-ink'
-                    : 'border-ink bg-ink text-paper'
-                  : 'border-dashed border-rule text-ink-muted'
+                    : 'border-primary bg-primary text-primary-ink'
+                  : 'border-dashed border-rule-strong bg-paper text-ink-muted'
               }`}
             >
               <Icon
@@ -385,7 +391,7 @@ function Fulfilment({
             {i < steps.length - 1 && (
               <span
                 aria-hidden="true"
-                className="mx-2 hidden h-px flex-1 bg-rule sm:block"
+                className="mx-3 hidden h-px flex-1 bg-rule-strong sm:block"
               />
             )}
           </li>
@@ -426,7 +432,7 @@ function Fulfilment({
       )}
 
       {issue === 'menu' && (
-        <div className="flex max-w-xl flex-col gap-3 rounded-slab border border-rule bg-paper p-4">
+        <div className="flex flex-col gap-3 rounded-control bg-well p-3 sm:p-4">
           <p id="issue-menu" className="text-sm font-semibold">
             {A.whatsWrong}
           </p>
@@ -436,19 +442,17 @@ function Fulfilment({
                 <button
                   type="button"
                   onClick={() => setIssue(k)}
-                  className="flex w-full items-center justify-between rounded-slab border border-rule px-3 py-2.5 text-left text-sm font-medium hover:border-accent focus-visible:border-accent"
+                  className="flex w-full items-center justify-between rounded-control border border-rule-strong bg-paper px-3 py-2.5 text-left text-sm font-medium hover:border-ink focus-visible:border-ink"
                 >
                   {A.issues[k]}
-                  <span aria-hidden="true" className="text-ink-muted">
-                    →
-                  </span>
+                  <Icon name="arrowRight" className="size-4 text-ink-muted" />
                 </button>
               </li>
             ))}
           </ul>
           <Button
             variant="quiet"
-            className="self-start"
+            className="h-8 self-start px-0!"
             onClick={() => setIssue('closed')}
           >
             {COPY.common.cancel}
@@ -462,7 +466,7 @@ function Fulfilment({
             e.preventDefault()
             act('dispute')
           }}
-          className="flex max-w-xl flex-col gap-3 rounded-slab border border-rule bg-paper p-4"
+          className="flex flex-col gap-3 rounded-control bg-well p-3 sm:p-4"
         >
           <p className="text-sm font-semibold">{A.issues[issue]}</p>
           <p className="text-sm text-ink-muted">{A.issueHint}</p>
@@ -474,7 +478,7 @@ function Fulfilment({
               rows={3}
               disabled={busy}
               onChange={(e) => setDetails(e.target.value)}
-              className="rounded-slab border border-rule bg-paper p-2 text-sm focus-visible:border-accent"
+              className="rounded-control border border-rule-strong bg-paper p-3 text-sm hover:border-ink focus-visible:border-ink"
             />
           </label>
           <div className="flex gap-2">
@@ -487,6 +491,6 @@ function Fulfilment({
           </div>
         </form>
       )}
-    </section>
+    </Card>
   )
 }

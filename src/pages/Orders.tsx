@@ -7,6 +7,7 @@ import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type { OrderView } from '../shared/types.ts'
+import { Card } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
@@ -66,7 +67,10 @@ export default function Orders() {
   const failed = current?.failed
 
   return (
-    <PageLayout title={T.title}>
+    <PageLayout
+      title={COPY.pageHeaders.orders.title}
+      eyebrow={COPY.pageHeaders.orders.eyebrow}
+    >
       {failed ? (
         <Notice
           tone="danger"
@@ -78,11 +82,16 @@ export default function Orders() {
           }}
         />
       ) : !orders ? (
-        <ul aria-busy="true" aria-label={T.loading} className="flex flex-col">
-          {[0, 1, 2].map((i) => (
-            <li key={i} className="h-20 animate-pulse border-b border-rule bg-paper/60" />
-          ))}
-        </ul>
+        <Card padding="none">
+          <ul aria-busy="true" aria-label={T.loading} className="divide-y divide-rule">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
+                <span className="size-12 shrink-0 animate-pulse rounded-control bg-well" />
+                <span className="h-3 w-1/3 animate-pulse rounded-full bg-well" />
+              </li>
+            ))}
+          </ul>
+        </Card>
       ) : orders.length === 0 ? (
         <EmptyState
           title={COPY.empty.orders.title}
@@ -92,61 +101,73 @@ export default function Orders() {
       ) : (
         <>
           {cached && (
-            <p aria-live="polite" className="mb-2 text-xs text-ink-muted">
+            <p aria-live="polite" className="mb-2 px-1 text-xs text-ink-muted">
               {T.updating}
             </p>
           )}
-          <ul className="flex flex-col border-t border-rule">
-            {[...orders]
-              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-              .map((o) => {
-                const items = o.listingIds.map((id) => listings.find((l) => l.id === id))
-                const first = items[0]
-                const title = first?.title ?? T.gone
-                const more = items.length > 1 ? T.more(items.length - 1) : ''
-                const seller = SELLERS.find((s) => s.id === o.sellerId)
-                return (
-                  <li key={o.paymentId}>
-                    <Link
-                      to={`/order/${o.paymentId}`}
-                      className="group flex items-center gap-3 border-b border-rule py-3 hover:bg-paper sm:gap-4 sm:px-2"
-                    >
-                      {first ? (
-                        <img
-                          src={first.imageUrl}
-                          alt=""
-                          className="size-14 shrink-0 rounded-slab border border-rule bg-bone object-contain p-1"
-                        />
+          <Card padding="none">
+            <ul className="divide-y divide-rule">
+              {[...orders]
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .map((o) => {
+                  const items = o.listingIds.map((id) =>
+                    listings.find((l) => l.id === id),
+                  )
+                  const first = items[0]
+                  const title = first?.title ?? T.gone
+                  const more = items.length > 1 ? T.more(items.length - 1) : ''
+                  const seller = SELLERS.find((s) => s.id === o.sellerId)
+                  const pills = (
+                    <>
+                      <StatusPill status={o.state} />
+                      {o.refund.state !== 'none' ? (
+                        <StatusPill status={o.refund.state} label={refundLabel(o)} />
                       ) : (
-                        <span className="size-14 shrink-0 rounded-slab border border-dashed border-rule" />
+                        <StatusPill status={o.fulfilment} />
                       )}
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <p className="truncate font-medium group-hover:underline">
-                          {title}
-                          {more}
-                        </p>
-                        <p className="money text-xs text-ink-muted">
-                          {seller?.handle ?? o.sellerId} ·{' '}
-                          {date.format(new Date(o.createdAt))}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          <StatusPill status={o.state} />
-                          {o.refund.state !== 'none' ? (
-                            <StatusPill status={o.refund.state} label={refundLabel(o)} />
-                          ) : (
-                            <StatusPill status={o.fulfilment} />
-                          )}
+                    </>
+                  )
+                  return (
+                    <li key={o.paymentId}>
+                      <Link
+                        to={`/order/${o.paymentId}`}
+                        className="group flex items-center gap-3 px-4 py-3 hover:bg-well sm:gap-4 sm:px-5 [li:first-child>&]:rounded-t-card [li:last-child>&]:rounded-b-card"
+                      >
+                        {first ? (
+                          <img
+                            src={first.imageUrl}
+                            alt=""
+                            className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+                          />
+                        ) : (
+                          <span className="size-12 shrink-0 rounded-control border border-dashed border-rule-strong" />
+                        )}
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <p className="line-clamp-2 text-sm font-semibold sm:truncate">
+                            {title}
+                            {more}
+                          </p>
+                          <p className="money truncate text-xs text-ink-muted">
+                            {seller?.handle ?? o.sellerId} ·{' '}
+                            {date.format(new Date(o.createdAt))}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1.5 sm:hidden">
+                            {pills}
+                          </div>
                         </div>
-                      </div>
-                      <Money
-                        cents={o.breakdown.totalCents}
-                        className="self-start text-right font-semibold"
-                      />
-                    </Link>
-                  </li>
-                )
-              })}
-          </ul>
+                        <div className="hidden shrink-0 flex-wrap justify-end gap-1.5 sm:flex">
+                          {pills}
+                        </div>
+                        <Money
+                          cents={o.breakdown.totalCents}
+                          className="w-20 shrink-0 text-right text-sm font-semibold sm:w-24"
+                        />
+                      </Link>
+                    </li>
+                  )
+                })}
+            </ul>
+          </Card>
         </>
       )}
     </PageLayout>
