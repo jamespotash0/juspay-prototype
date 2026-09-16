@@ -45,7 +45,7 @@ export function ListingTile({
         className="group flex flex-col overflow-hidden rounded-card border border-rule bg-paper shadow-card transition-[border-color,box-shadow] hover:border-rule-strong hover:shadow-pop"
       >
         {/* Photo well: the whole item, never cropped. */}
-        <div className="aspect-square min-h-0 border-b border-rule bg-paper p-2.5 sm:p-3">
+        <div className="aspect-[5/4] min-h-0 border-b border-rule bg-paper p-2.5">
           <Slab listing={l} />
         </div>
 

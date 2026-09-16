@@ -29,7 +29,7 @@ interface TopBarProps {
 const S = COPY.shell
 
 const PILL =
-  'inline-flex h-9 shrink-0 items-center rounded-full border border-rule-strong bg-paper text-sm font-medium text-ink transition-colors hover:border-ink'
+  'inline-flex h-8 shrink-0 items-center rounded-full border border-rule-strong bg-paper text-sm font-medium text-ink transition-colors hover:border-ink'
 
 // Desktop: one row — wordmark, links, account, cart, reset. Search lives on the catalogue.
 // Below sm: row 1 wordmark · links · cart · reset; row 2 account. Nothing is hidden.
@@ -54,11 +54,11 @@ export function TopBar({
 
   return (
     <header className="sticky top-0 z-10 border-b px-4 sm:px-6 border-rule bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-1.5 gap-y-2 py-2.5 sm:flex-nowrap sm:gap-x-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-1.5 gap-y-1.5 py-2 sm:flex-nowrap sm:gap-x-3">
         <a
           href={homeHref}
           onClick={go(homeHref)}
-          className="order-1 inline-flex items-center gap-1.5 font-wordmark text-lg font-bold tracking-tight sm:order-none sm:mr-3 sm:text-xl"
+          className="order-1 inline-flex items-center gap-1.5 font-wordmark text-base font-bold tracking-tight sm:order-none sm:mr-3 sm:text-lg"
         >
           <img src="/favicon.svg" alt="" aria-hidden="true" className="h-[1.25em] w-auto" />
           {S.wordmark}
@@ -71,7 +71,7 @@ export function TopBar({
               href={l.href}
               onClick={go(l.href)}
               aria-current={l.current ? 'page' : undefined}
-              className="inline-flex h-9 items-center rounded-full px-2 font-medium text-ink-muted sm:px-3.5 transition-colors hover:text-ink aria-[current=page]:bg-bone aria-[current=page]:text-ink"
+              className="inline-flex h-8 items-center rounded-full px-2 font-medium text-ink-muted sm:px-3.5 transition-colors hover:text-ink aria-[current=page]:bg-bone aria-[current=page]:text-ink"
             >
               {l.label}
             </a>
@@ -105,7 +105,7 @@ export function TopBar({
             <button
               type="button"
               onClick={onSignOut}
-              className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap text-ink-muted transition-colors hover:bg-bone hover:text-ink"
+              className="inline-flex h-8 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap text-ink-muted transition-colors hover:bg-bone hover:text-ink"
             >
               {S.signOut}
             </button>
@@ -129,7 +129,7 @@ export function TopBar({
           <span className="max-sm:sr-only">{S.cart}</span>
           <span
             aria-label={`${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}
-            className={`money inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${cartCount > 0 ? 'bg-primary text-primary-ink' : 'bg-bone text-ink-muted'}`}
+            className={`money inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${cartCount > 0 ? 'bg-primary text-primary-ink' : 'bg-bone text-ink-muted'}`}
           >
             {cartCount}
           </span>
@@ -144,7 +144,7 @@ export function TopBar({
             onClick={() => {
               if (window.confirm(S.resetConfirm)) onReset()
             }}
-            className={`${PILL} size-9 justify-center text-ink-muted hover:text-ink`}
+            className={`${PILL} size-8 justify-center text-ink-muted hover:text-ink`}
           >
             <Icon name="refresh" className="size-4" />
           </button>
