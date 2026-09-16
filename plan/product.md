@@ -101,12 +101,11 @@ This is the grade:
 
 - ✅ Payment creation, server-side; secret key never in the browser
 - ✅ Successful payment — a real `succeeded` in the sandbox dashboard
-- ✅ Failed payment — hard declines (declined, lost, stolen) and a soft "try again later" decline, each with its own message
-- ✅ 3DS — `requires_customer_action` as its own state, via the 3DS test card
+- ✅ Failed payment — hard declines (declined, lost, stolen), each with its own message. The soft "try again" decline is handled in code but only occurs on `fauxpay` at random, so it is not demonstrated (engineering §10)
 - ✅ PayPal — a redirect to PayPal and back, confirmed server-side like any other payment
 - ✅ Routing — a $40 card and a $2,000 coin land on different connectors, visible per payment in the dashboard; the buyer sees only "Card" or "PayPal", never the processor
 - ✅ Payment status — authoritative server-side read, never the redirect
-- ✅ Refund — full and partial, reached through a buyer dispute
+- ✅ Refund — full, reached through a buyer dispute
 - ✅ Marketplace fee calculation — visible on the seller page
 - ✅ Seller balance — `pending → available`, moved by the seller shipping
 
@@ -122,7 +121,7 @@ Apple and Google Pay · **ACH bank debit** and **Affirm** (both approaches in
 payments · real payouts · card-network dispute
 handling (our "dispute" is an in-marketplace claim, not a chargeback) ·
 authenticity guarantee · promoted listings · seller subscriptions · real auth ·
-sign-up (the mocked sign-in covers it).
+sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds** — refunds are full only · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
 
 ---
 
@@ -391,7 +390,7 @@ support is unverified. Both deferred; nothing in the build reaches `paid_out`.
 **Why the build uses simulated processors, not real Stripe.** Real Stripe needs
 a support ticket for raw card data access with unknown lead time. The sandbox's
 simulated processors cover every state the core flow needs: distinct decline
-reasons, a 3DS challenge, and a PayPal redirect (verified, engineering §10).
+reasons and a PayPal redirect (verified, engineering §10).
 Three of them on one profile make routing something a reviewer can see. What
 we give up: decline messages come from a simulator, not an issuer, and bank
 debit's `processing` state has no connector, so ACH is deferred (approach
@@ -431,7 +430,7 @@ with the wallet. `paypal_test` can also take cards, which is why it sits last
 in fallback. We offer PayPal to every buyer at every price because collectors
 expect it; limiting it by price or category (it doesn't protect gold coins) is
 a later option. It shows orchestration, not optimisation: nothing
-learns, and none of the processors is real. Failure and 3DS states are tested
+learns, and none of the processors is real. Failure states are tested
 on listings of $500 or more, so they always hit one known connector. This is
 **routing before an attempt, not retrying after one**. Smart Retries stays
 refused (engineering §10): re-sending a timed-out $6,000 payment to a second

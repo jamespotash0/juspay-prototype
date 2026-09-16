@@ -330,20 +330,24 @@ un-charge the card.
 `paypal_test` also has the PayPal wallet. Control center setup done 2026-09-16: routing rule active, Affirm off, Auto
 Retries off, Default Fallback `stripe_test`, `fauxpay`, `paypal_test`.
 
-**Test cards, verified on 2026-09-16** with direct API calls (before routing
-was live, so all on `paypal_test`):
+**Test cards, re-verified per connector on 2026-09-16 after routing went live**
+(QA-4a probed each card on each processor before asserting anything):
 
-| Case | Test data | Result |
-| --- | --- | --- |
-| Success | `4242424242424242` | `succeeded` |
-| Hard decline | `4000000000000002` · `4000000000009987` · `4000000000009979` | `failed`, `DC_08`, "Card declined" / "Lost card" / "Stolen card" |
-| Soft decline | `4000000000009995` | `failed`, `DC_08`, "Internal Server Error from Connector, Please try again later". The docs call it insufficient funds; the sandbox returns this |
-| 3DS challenge | `4000003800000446` | `requires_customer_action` with a redirect |
-| PayPal | wallet `paypal_redirect` | `requires_customer_action` with a redirect |
+| Card | `stripe_test` | `fauxpay` | Our `decline.reason` |
+| --- | --- | --- | --- |
+| `4242424242424242` | succeeded | succeeded | — |
+| `4000000000000002` | failed · DC_08 "Card declined" | same | `generic`, hard |
+| `4000000000009987` | failed · DC_08 "Lost card" | same | `lost_or_stolen`, hard |
+| `4000000000009979` | failed · DC_08 "Stolen card" | same | `lost_or_stolen`, hard |
+| `4000000000000119` | failed · DC_04 "Card not supported" | same | `generic`, hard |
+| `4000000000009995` | **succeeded** | failed · DC_08 "Internal Server Error from Connector" | `processing_error`, **soft** (retriable) |
 
-Any future date and CVC. All declines share `DC_08`, so the UI tells hard from
-soft by `error_message`, not by code. Re-check the rows against their assigned
-connectors once routing is live.
+**A soft decline cannot be demonstrated on demand.** `9995` only declines on
+`fauxpay`, which routing reaches at random on ~20% of orders under $500. The
+demo therefore shows **hard** declines; tests pin cards to `stripe_test` with a
+listing of $500 or more, so they are deterministic. Every decline returns
+`unified_code` `UE_9000`, so the UI tells reasons apart by `error_message`.
+PayPal uses wallet `paypal_redirect` on `paypal_test`. 3DS is out of scope.
 
 **Further connectors, if we went on:**
 

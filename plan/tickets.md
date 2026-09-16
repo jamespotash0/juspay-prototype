@@ -272,46 +272,120 @@ correctly by buyer and seller.
 
 ---
 
+## W2 result ✅
+
+Committed and pushed as `48ecc01` (engine) and `9b645f1` (UI). Build, typecheck,
+lint green; 38 unit tests pass; the post-payment lifecycle passes against the
+live sandbox. Buyer → seller → admin flows all work: ship, receive, dispute,
+refund, with the seller ledger reversing.
+
+Since W2, in the control center: **routing live** (PayPal → `paypal_test`;
+cards ≥ $500 → `stripe_test`; cards < $500 → 80/20 `stripe_test` / `fauxpay`),
+**Auto Retries off** after we observed a failed `paypal_test` attempt retried
+and charged on `stripe_test` 1.3 s later. PayPal wallet and the abandoned-PayPal
+state are in (`f17944c`).
+
+---
+
 ## W3 — Integrate & verify
 
-### ENG-4 · Integration
-*Section H · Engineering*
+Split in two so each half is committed and pushed before the next starts.
 
-Wire every design page into the route table, persona switcher driving
-`session.ts`, top bar on every route. Fix the seams between agents. Build,
-typecheck and lint green. Report anything that couldn't be fixed without
-crossing ownership.
+**Cut from scope on 2026-09-16, after W3a started:** 3DS challenges, partial
+refunds (refunds are **full only**), and handling for a buyer who abandons
+PayPal (its message stays in the code; it is not demonstrated or tested).
+Decisions 1 and 2 below are therefore **superseded**. W3a built them because it
+was already running; they were then removed before W3a was committed — the
+contract has no refund amount, `/api/refund` always refunds the whole order and
+returns 409 `ALREADY_REFUNDED` / `REFUND_PENDING` on a second attempt, and the
+admin form is a single confirmed **Refund** action.
 
-### QA-4 · Browser end-to-end
-*Section I · QA · depends on: ENG-4*
+**Decisions for W3** (product, 2026-09-16) — already in `types.ts`:
 
-Playwright, real browser, real sandbox:
-1. As Alex: browse → listing → Buy now → checkout → **fill the card inside the
-   Hyperswitch iframe** → order page shows paid.
-2. Switch to Mike: `/sell` shows the sale → Mark shipped → ledger `available`.
-3. Switch to Alex: Mark received.
-4. Second purchase → ship → Alex disputes → Admin refunds → order `Refunded`,
-   Mike's balance reversed.
-5. A decline card, if the connector honours one: the decline state renders and
-   the cart survives.
+1. **Partial refunds come off the seller's net.** `netCents = gross −
+   commission − refundedCents`, floored at 0; the balance state is unchanged.
+   Only a **full** refund makes the balance `reversed` with fee and net 0.
+   `SellerLedger` gains `refundedCents`.
+2. **Minimum refund is 100 cents ($1.00)** — Hyperswitch rejects less. Enforced
+   on the server (400 `INVALID_AMOUNT`) and in the admin form.
+3. **`Decline.reason`** (a `DeclineReason`) — pages branch on it, never on
+   message text.
+4. **`OrderView.disputeReason`** and **`OrderView.fulfilledAt`** (shipped /
+   received / disputed timestamps) — admin shows them.
 
-Plus the reviewer checklist from engineering.md §9 as automated assertions:
-no `VITE_` in `api/`, secret key absent from `dist/`, no `amount` field in the
-checkout request type. Report every failure with the command to reproduce it.
+### W3a — Close out W2's gaps
 
-### PROD-2 · Acceptance review
-*Section J · Product*
+#### ENG-4 · Engineering carry-overs
+Implement decisions 1–4 in `api/_lib/orderView.ts`, `src/shared/money.ts`,
+`api/refund.ts`. A reactive query-string hook in `src/lib/router.tsx` (so
+search stops relying on a `popstate` workaround). Render the SDK **Pay** button
+with the `Button` primitive in `src/checkout/HyperCheckout.tsx`, and expose a
+submitting callback so checkout can lock its form. Clear lint warnings in
+engineering-owned files.
 
-Walk the running app against product.md §2's *"What Hyperswitch must visibly
-do"* checklist and the definition of done in PLAN.md. Pass / fail per line with
-evidence. Product decides; anything failing becomes a fix ticket.
+#### DES-5 · Design carry-overs
+*Owns `copy.ts` for W3a as well as all of design's files.*
+- **Mobile:** the top bar overflows at 390 px on every collector page — fix in
+  `src/ui/TopBar.tsx`.
+- **`ListingTile`:** grades render "PSA PSA 1"; add a shipping line so
+  "Free shipping" no longer needs an overlay from the catalogue.
+- **Copy:** move every page-local string into `COPY`. Fix: the soft-decline
+  title repeating its body, `refundFailed` saying "the dispute is still open"
+  when there was no dispute, and the insufficient-funds action saying "try a
+  different card" on a retriable decline.
+- **Order page:** branch on `decline.reason`, not message prefixes.
+- **Admin payment:** show `disputeReason` and the `fulfilledAt` timestamps;
+  validate refunds ≥ $1.00.
+- **Seller balance:** animate pending → available (design.md §2 rule 3).
+- Switch search to engineering's query hook once it exists; clear lint
+  warnings in design-owned files.
 
-### DES-5 · Design review
-*Section J · Design*
+#### QA-4a · Tests for the new routing
+*Depends on ENG-4.* The decline tests assumed every card went to `paypal_test`;
+routing broke that. Pin cards to **`stripe_test` with a listing ≥ $500**
+(deterministic), assert `OrderView.connector` and `decline.reason`. Re-probe
+the decline and 3DS cards on `stripe_test`, and probe `fauxpay` with bounded
+small payments. Add a routing test (≥ $500 card → `stripe_test`). Update money
+unit tests for partial refunds. Write the per-connector test-card results back
+as a table in the handback, for engineering.md §10.
 
-Screenshot every screen and state at desktop and mobile, then review against
-design.md and the direction contract. Findings only, ranked; fixes go through
-a batched round.
+### W3b — Prove it
+
+#### ENG-5 · A faster order list
+Runs first.
+
+**Faster `/api/orders`.** It pages through every sandbox payment and takes
+7–11 s for admin, growing by ~14 payments per test run. Bound it with the list
+endpoint's creation-date filter to recent payments (verify the exact parameter
+name — `created.gte` vs `created_gte` — against the sandbox), keeping the
+existing page cap. Record the window as a `ponytail:` ceiling.
+
+#### QA-4 · Browser end-to-end
+Playwright, real browser, real sandbox, against localhost (Vercel previews sit
+behind a login):
+1. Alex buys a **large** item with `4242` typed into the Hyperswitch iframe →
+   order page `paid`, connector `stripe_test`.
+2. Mike: `/sell` shows the sale → **Mark shipped** → ledger `available`.
+3. Alex: **Mark received**.
+4. Second purchase → shipped → Alex **disputes** → Admin **refunds** → order
+   refunded, Mike's balance reversed.
+5. A **decline** card → decline state with the right reason; the cart survives.
+6. **PayPal** → redirect → back → `paid`.
+7. The engineering.md §9 reviewer checklist as assertions: no `VITE_` in
+   `api/`, secret key absent from `dist/`, no `amount` on the checkout request
+   type.
+
+#### DES-6 · Design review
+Screenshot every screen and state at desktop and mobile, review against
+design.md and the direction contract. Ranked findings only.
+
+#### PROD-2 · Acceptance review
+Walk the running app against product.md §2 and PLAN.md's definition of done,
+using QA-4's and DES-6's evidence. Pass / fail per line.
+
+#### One batched fix round
+Engineering and design fix whatever QA-4, DES-6 and PROD-2 raised, in parallel
+on their own files; QA-4 re-runs.
 
 ---
 

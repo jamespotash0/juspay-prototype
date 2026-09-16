@@ -52,7 +52,7 @@ Thinnest path to a real payment first:
 1. Catalogue constant, seeded with ~10 sellers and ~30 listings
 2. `POST /api/checkout` → SDK mount → `GET /api/payment` → confirmation
    *(this is the whole grade; everything else is around it)*
-3. Failure, 3DS, pending and ambiguous states, using the simulated processors' test cards
+3. Failure, pending and ambiguous states, using the simulated processors' test cards
 3b. PayPal redirect and return
 4. Catalogue, search, listing detail, cart
 5. Seller page — mark as shipped, fee calculation, balance
@@ -70,10 +70,10 @@ workaround for a connector-layer 400 (engineering §3).
 
 A payment id showing `succeeded` in the Hyperswitch sandbox dashboard · a
 PayPal payment `succeeded` after the redirect · a failed payment showing its
-decline reason · a 3DS challenge reaching `requires_customer_action` and resolving ·
+decline reason ·
 the routing rule visible in the control center, with a small and a large card
 payment on different connectors · the ambiguous-outcome state
-handled · a buyer dispute reaching admin and producing a real refund against
+handled · a buyer dispute reaching admin and producing a real **full** refund against
 that payment · the commission and seller balance visible and moved by the
 seller marking an item shipped · the statuses in engineering §4 mapped ·
 README written · deployed on Vercel.
