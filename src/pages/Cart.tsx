@@ -2,7 +2,8 @@ import { groupBySeller, removeFromCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
-import { usePersona } from '../lib/session.ts'
+import { useSession } from '../lib/session.ts'
+import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
 import { PERSONAS, SELLERS } from '../shared/seed.ts'
@@ -10,6 +11,7 @@ import type { Cents } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Money } from '../ui/Money.tsx'
+import { StatusPill } from '../ui/StatusPill.tsx'
 import { gradeLabel } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
@@ -21,7 +23,9 @@ function Shipping({ cents }: { cents: Cents }) {
 
 export default function Cart() {
   const listings = useListings()
-  const persona = usePersona()
+  // Public page: signed out, checkout goes through sign-in.
+  const persona = useSession()?.persona
+  const sold = useSoldIds()
   const isAdmin = PERSONAS.find((p) => p.id === persona)?.kind === 'admin'
   const groups = [...groupBySeller(useCart(), listings)]
 
@@ -47,7 +51,9 @@ export default function Cart() {
           {groups.map(([sellerId, lines]) => {
             const seller = SELLERS.find((s) => s.id === sellerId)
             const handle = seller?.handle ?? sellerId
-            const b = breakdown(lines, listings)
+            // Sold lines stay visible so the buyer knows why, but never reach checkout or the subtotal.
+            const open = lines.filter((line) => !sold.has(line.listingId))
+            const b = breakdown(open, listings)
             return (
               <section
                 key={sellerId}
@@ -72,6 +78,7 @@ export default function Cart() {
                 <ul>
                   {lines.map((line) => {
                     const l = listings.find((x) => x.id === line.listingId)!
+                    const isSold = sold.has(l.id)
                     return (
                       <li
                         key={l.id}
@@ -89,6 +96,12 @@ export default function Cart() {
                           >
                             {l.title}
                           </Link>
+                          {isSold && (
+                            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+                              <StatusPill status="sold" />
+                              {COPY.sold.cartLine}
+                            </p>
+                          )}
                           <p className="money text-xs text-ink-muted">
                             {gradeLabel(l)}
                             {l.certNumber && ` · #${l.certNumber}`}
@@ -102,7 +115,9 @@ export default function Cart() {
                             {T.remove}
                           </button>
                         </div>
-                        <div className="text-right text-sm">
+                        <div
+                          className={`text-right text-sm ${isSold ? 'text-ink-muted line-through' : ''}`}
+                        >
                           <Money
                             cents={l.priceCents * line.qty}
                             className="font-semibold"
@@ -124,22 +139,26 @@ export default function Cart() {
                 </ul>
 
                 <div className="flex flex-col gap-3 border-t border-rule bg-bone/60 px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
-                  <dl className="money grid grid-cols-[auto_auto] gap-x-6 gap-y-0.5 text-sm sm:min-w-56">
-                    <dt className="text-ink-muted">{T.items}</dt>
-                    <dd className="text-right">
-                      <Money cents={b.itemsCents} />
-                    </dd>
-                    <dt className="text-ink-muted">{T.shipping}</dt>
-                    <dd className="text-right">
-                      <Shipping cents={b.shippingCents} />
-                    </dd>
-                    <dt className="font-semibold">{T.subtotal}</dt>
-                    <dd className="text-right font-semibold">
-                      <Money cents={b.itemsCents + b.shippingCents} />
-                    </dd>
-                    <dd className="col-span-2 text-xs text-ink-muted">{T.taxLater}</dd>
-                  </dl>
-                  {sellerId === persona ? (
+                  {open.length > 0 && (
+                    <dl className="money grid grid-cols-[auto_auto] gap-x-6 gap-y-0.5 text-sm sm:min-w-56">
+                      <dt className="text-ink-muted">{T.items}</dt>
+                      <dd className="text-right">
+                        <Money cents={b.itemsCents} />
+                      </dd>
+                      <dt className="text-ink-muted">{T.shipping}</dt>
+                      <dd className="text-right">
+                        <Shipping cents={b.shippingCents} />
+                      </dd>
+                      <dt className="font-semibold">{T.subtotal}</dt>
+                      <dd className="text-right font-semibold">
+                        <Money cents={b.itemsCents + b.shippingCents} />
+                      </dd>
+                      <dd className="col-span-2 text-xs text-ink-muted">{T.taxLater}</dd>
+                    </dl>
+                  )}
+                  {open.length === 0 ? (
+                    <p className="text-sm text-ink-muted">{COPY.sold.groupAllSold}</p>
+                  ) : sellerId === persona ? (
                     <p className="text-sm font-semibold">{T.own}</p>
                   ) : isAdmin ? (
                     <p className="text-sm text-ink-muted">{T.admin}</p>

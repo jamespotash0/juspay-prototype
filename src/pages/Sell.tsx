@@ -13,6 +13,7 @@ import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
 import { personName, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
+import SellInsights from './SellInsights.tsx'
 
 const T = COPY.sell
 
@@ -72,6 +73,14 @@ export default function Sell() {
   return (
     <PageLayout title={T.title}>
       <div className="flex flex-col gap-12">
+        {orders && !loadError && (
+          <SellInsights
+            sales={orders.map((o) => ({
+              createdAt: o.createdAt,
+              ledger: shown(o.ledger),
+            }))}
+          />
+        )}
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-display text-xl font-bold">{T.listings}</h2>

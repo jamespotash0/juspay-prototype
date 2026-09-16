@@ -10,8 +10,11 @@ export interface NavLink {
 
 interface TopBarProps {
   personas: Persona[]
-  activePersonaId: PersonaId
+  /** null while signed out: the bar shows a Sign in button instead of the account area. */
+  activePersonaId: PersonaId | null
   onPersonaChange: (id: PersonaId) => void
+  onSignOut: () => void
+  onSignIn: () => void
   onSearch: (query: string) => void
   searchValue: string
   links: NavLink[]
@@ -24,12 +27,14 @@ interface TopBarProps {
 
 const S = COPY.shell
 
-// Desktop: one row — wordmark, search, links, persona, cart.
-// Below sm: row 1 wordmark · links · cart; row 2 search · persona. Nothing is hidden.
+// Desktop: one row — wordmark, search, links, account, cart.
+// Below sm: row 1 wordmark · links · cart; row 2 search · account. Nothing is hidden.
 export function TopBar({
   personas,
   activePersonaId,
   onPersonaChange,
+  onSignOut,
+  onSignIn,
   onSearch,
   searchValue,
   links,
@@ -87,22 +92,42 @@ export function TopBar({
           ))}
         </nav>
 
-        <label className="sr-only" htmlFor="topbar-persona">
-          {S.signedInAs}
-        </label>
-        <select
-          id="topbar-persona"
-          value={activePersonaId}
-          onChange={(e) => onPersonaChange(e.target.value as PersonaId)}
-          className="order-5 h-9 max-w-40 shrink-0 rounded-slab border border-rule bg-paper px-2 text-sm font-medium text-accent hover:border-accent sm:order-none sm:max-w-none"
-        >
-          {personas.map((p) => (
-            <option key={p.id} value={p.id}>
-              {/* "Slabbed Admin" already names the role; no suffix, so it fits at 390px. */}
-              {p.name}
-            </option>
-          ))}
-        </select>
+        {activePersonaId ? (
+          <div className="order-5 flex shrink-0 items-center gap-3 sm:order-none">
+            {/* The select shows the signed-in name; switching keeps the provider. */}
+            <label className="sr-only" htmlFor="topbar-persona">
+              {S.switchAccount}
+            </label>
+            <select
+              id="topbar-persona"
+              value={activePersonaId}
+              onChange={(e) => onPersonaChange(e.target.value as PersonaId)}
+              className="h-9 max-w-36 rounded-slab border border-rule bg-paper px-2 text-sm font-medium text-accent hover:border-accent sm:max-w-none"
+            >
+              {personas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {/* "Slabbed Admin" already names the role; no suffix, so it fits at 390px. */}
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="text-sm font-medium whitespace-nowrap text-accent hover:underline"
+            >
+              {S.signOut}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="order-5 inline-flex h-9 shrink-0 items-center rounded-slab border border-accent px-3 text-sm font-semibold text-accent hover:bg-accent/5 sm:order-none"
+          >
+            {S.signIn}
+          </button>
+        )}
 
         <a
           href={cartHref}

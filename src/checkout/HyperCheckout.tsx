@@ -60,8 +60,9 @@ function PayForm({
         options={{
           // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
           wallets: { walletReturnUrl: `${location.origin}/order/${paymentId}` },
-          // Saved cards are out of scope.
-          displaySavedPaymentMethodsCheckbox: false,
+          // "Save card" checkbox (unticked by default) and this buyer's saved cards. Consent is the tick.
+          displaySavedPaymentMethodsCheckbox: true,
+          displaySavedPaymentMethods: true,
         }}
       />
     ),

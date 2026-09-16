@@ -1,7 +1,8 @@
+import { COPY } from '../shared/copy'
 import type { Fulfilment, PaymentState, RefundState } from '../shared/types'
 import { Icon, type IconName } from './Icon'
 
-type Status = PaymentState | Fulfilment | RefundState
+type Status = PaymentState | Fulfilment | RefundState | 'sold'
 
 // Structure carries the state before colour does:
 // solid border = settled, dashed = waiting on someone, dotted = held for a human,
@@ -80,6 +81,8 @@ const LOOKS: Record<Status, Look> = {
   // RefundState ('pending' and 'failed' are shared with PaymentState above)
   none: { label: 'No refund', icon: 'dash', tone: NEUTRAL, border: 'border-solid' },
   succeeded: { label: 'Refunded', icon: 'undo', tone: REFUNDED, border: 'border-solid' },
+  // Listing: a one-of-one that has been bought. Settled, and not a payment colour.
+  sold: { label: COPY.sold.label, icon: 'dash', tone: NEUTRAL, border: 'border-solid' },
 }
 
 /** Pass `label` to override the words, e.g. "Refund pending" where context needs it. */

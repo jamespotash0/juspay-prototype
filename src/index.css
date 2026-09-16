@@ -35,6 +35,11 @@
   --color-state-neutral: #5c5a52;
   --color-state-neutral-bg: #ebe7dd;
 
+  /* Seller insights chart. Available = the paid state; pending needs a lighter amber than
+     the pill ink to stay apart from green (validated: protan ΔE 16, normal ΔE 26). Table view
+     carries every value, since this step is under 3:1 on paper. */
+  --color-chart-pending: #c98f1c;
+
   /* Form: square-ish, hairlines, no shadow above 1dp */
   --radius-*: initial;
   --radius-slab: 4px;
