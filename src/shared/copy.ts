@@ -228,6 +228,8 @@ export const COPY = {
     email: 'Email',
     signedInWith: (provider: string) => `Signed in with ${provider}`,
     saved: 'Saved',
+    addresses: 'Addresses',
+    addressesFact: 'Checkout fills these in for you. Anything you use at checkout is saved here too.',
     methods: 'Payment methods',
     methodsLoading: 'Loading saved cards…',
     methodsFailed: "We couldn't load your saved cards.",
@@ -261,7 +263,7 @@ export const COPY = {
       'Slabbed will see this PayPal email address. You can unlink it any time.',
     reset: 'Reset demo',
     resetFact:
-      "Clears this browser's cart, created listings, sold markers, saved name, linked PayPal and sign-in. Real sandbox orders and saved cards are never touched.",
+      "Clears this browser's cart, created listings, sold markers, saved name and addresses, linked PayPal and sign-in. Real sandbox orders and saved cards are never touched.",
     demo: 'Demo account',
     demoFact: 'Switch to another demo person to see the marketplace from their side.',
   },

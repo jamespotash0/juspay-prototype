@@ -5,24 +5,22 @@ import { ApiRequestError, api } from '../lib/api.ts'
 import { checkoutLines, useCart } from '../lib/cart.ts'
 import { useListings, userListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
-import { useDisplayName } from '../lib/profile.ts'
+import { saveAddresses, useDisplayName, useSavedAddresses } from '../lib/profile.ts'
 import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
 import type { Breakdown, CheckoutResponse, SavedCard, ShipTo } from '../shared/types.ts'
+import { AddressFields } from '../ui/AddressFields.tsx'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { Sheet } from '../ui/Sheet.tsx'
-import { gradeLabel, plural } from '../ui/format.ts'
+import { gradeLabel, oneLineAddress, plural } from '../ui/format.ts'
 
 const TEXT = COPY.checkoutPage
-
-const input =
-  'h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm font-normal hover:border-ink focus-visible:border-ink disabled:border-rule disabled:bg-well disabled:text-ink-muted'
 
 export default function Checkout() {
   const persona = usePersona()
@@ -32,21 +30,13 @@ export default function Checkout() {
   // The whole cart in one payment. A sold one-of-one can't be bought again, and your own listings
   // stay in the cart but out of the charge.
   const lines = checkoutLines(useCart(), listings, sold, persona)
-  const [shipTo, setShipTo] = useState<ShipTo>({
-    name: displayName,
-    line1: '1 Main St',
-    city: 'Austin',
-    state: 'TX',
-    zip: '78701',
-  })
-  const [billingSame, setBillingSame] = useState(true)
-  const [billTo, setBillTo] = useState<ShipTo>({
-    name: displayName,
-    line1: '',
-    city: '',
-    state: '',
-    zip: '',
-  })
+  // Pre-filled from the account's saved addresses; what's used here is saved back for next time.
+  const profile = useSavedAddresses(persona)
+  const [shipTo, setShipTo] = useState<ShipTo>(profile.shipTo)
+  const [billingSame, setBillingSame] = useState(profile.billTo === null)
+  const [billTo, setBillTo] = useState<ShipTo>(
+    profile.billTo ?? { name: displayName, line1: '', city: '', state: '', zip: '' },
+  )
   const [saved, setSaved] = useState<SavedCard[]>([])
   const [session, setSession] = useState<CheckoutResponse | null>(null)
   const [busy, setBusy] = useState(false)
@@ -93,6 +83,7 @@ export default function Checkout() {
     setMessage('')
     // Stored before the fetch: a timeout, refresh or double-submit resumes this same payment.
     const attemptId = attemptFor(lines)
+    saveAddresses(persona, { shipTo, billTo: billingSame ? null : billTo })
     try {
       setSession(
         await api.checkout({
@@ -119,32 +110,6 @@ export default function Checkout() {
       setBusy(false)
     }
   }
-
-  const addressFields = (value: ShipTo, set: (a: ShipTo) => void, legend: string) => {
-    const field = (k: keyof ShipTo, label: string, className = '') => (
-      <label className={`flex flex-col gap-1 text-sm font-medium ${className}`}>
-        {label}
-        <input
-          required
-          className={input}
-          value={value[k]}
-          disabled={busy || paying}
-          onChange={(e) => set({ ...value, [k]: e.target.value })}
-        />
-      </label>
-    )
-    return (
-      <fieldset className="grid grid-cols-6 gap-3" disabled={busy}>
-        <legend className="sr-only">{legend}</legend>
-        {field('name', TEXT.fields.name, 'col-span-6')}
-        {field('line1', TEXT.fields.line1, 'col-span-6')}
-        {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
-        {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
-        {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
-      </fieldset>
-    )
-  }
-  const oneLine = (a: ShipTo) => `${a.name}, ${a.line1}, ${a.city}, ${a.state} ${a.zip}`
 
   // Before the intent exists this is the same calculation the server runs; once it exists, the server's.
   const shown: Breakdown = session?.breakdown ?? breakdown(lines, listings)
@@ -224,12 +189,12 @@ export default function Checkout() {
             <dl className="flex min-w-0 flex-col gap-1.5 text-ink-muted">
               <div>
                 <dt className="sr-only">{TEXT.shipTo}</dt>
-                <dd>{oneLine(shipTo)}</dd>
+                <dd>{oneLineAddress(shipTo)}</dd>
               </div>
               <div>
                 <dt className="inline font-medium text-ink">{TEXT.billing}: </dt>
                 <dd className="inline">
-                  {billingSame ? TEXT.sameAsShipping : oneLine(billTo)}
+                  {billingSame ? TEXT.sameAsShipping : oneLineAddress(billTo)}
                 </dd>
               </div>
             </dl>
@@ -244,7 +209,12 @@ export default function Checkout() {
           </div>
         ) : (
           <form onSubmit={start} className="flex flex-col gap-4">
-            {addressFields(shipTo, setShipTo, TEXT.shipTo)}
+            <AddressFields
+              value={shipTo}
+              onChange={setShipTo}
+              legend={TEXT.shipTo}
+              disabled={busy}
+            />
             <div className="flex flex-col gap-3">
               <h4 className="text-sm font-semibold">{TEXT.billing}</h4>
               <label className="flex items-center gap-2 text-sm">
@@ -257,7 +227,14 @@ export default function Checkout() {
                 />
                 {TEXT.sameAsShipping}
               </label>
-              {!billingSame && addressFields(billTo, setBillTo, TEXT.billing)}
+              {!billingSame && (
+                <AddressFields
+                  value={billTo}
+                  onChange={setBillTo}
+                  legend={TEXT.billing}
+                  disabled={busy}
+                />
+              )}
             </div>
             <Button type="submit" disabled={busy} className="h-11">
               {busy ? TEXT.starting : TEXT.continue}

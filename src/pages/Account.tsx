@@ -3,15 +3,18 @@ import { api } from '../lib/api.ts'
 import { navigate } from '../lib/navigation.ts'
 import {
   linkPaypal,
+  saveAddresses,
   setDisplayName,
   useDisplayName,
   useLinkedPaypal,
+  useSavedAddresses,
 } from '../lib/profile.ts'
 import { resetDemo } from '../lib/reset.ts'
 import { signIn, signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
 import type { PersonaId, SaveCardResponse, SavedCard } from '../shared/types.ts'
+import { AddressFields } from '../ui/AddressFields.tsx'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
 import { Icon } from '../ui/Icon.tsx'
@@ -62,6 +65,7 @@ export default function Account() {
           email={persona.email}
           provider={session.provider}
         />
+        {isCollector && <Addresses key={`addr-${persona.id}`} id={persona.id} />}
         {isCollector && <PaymentMethods key={persona.id} customer={persona.id} />}
 
         <Card as="section" aria-labelledby="demo">
@@ -155,6 +159,70 @@ function Profile({
           <span className="font-medium">{T.email}</span>
           <span className="text-ink-muted">
             {email} · {T.signedInWith(providerName)}
+          </span>
+        </div>
+      </form>
+    </Card>
+  )
+}
+
+/** Shipping and billing addresses checkout fills in, so they're typed once. */
+function Addresses({ id }: { id: PersonaId }) {
+  const current = useSavedAddresses(id)
+  const [shipTo, setShipTo] = useState(current.shipTo)
+  const [billingSame, setBillingSame] = useState(current.billTo === null)
+  const [billTo, setBillTo] = useState(
+    current.billTo ?? { ...current.shipTo, line1: '', city: '', state: '', zip: '' },
+  )
+  const [saved, setSaved] = useState(false)
+  const touch =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v)
+      setSaved(false)
+    }
+
+  return (
+    <Card as="section" aria-labelledby="addresses">
+      <SectionHeading id="addresses">{T.addresses}</SectionHeading>
+      <p className="mb-4 text-sm text-ink-muted">{T.addressesFact}</p>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          saveAddresses(id, { shipTo, billTo: billingSame ? null : billTo })
+          setSaved(true)
+        }}
+      >
+        <h3 className="text-sm font-semibold">{COPY.checkoutPage.shipTo}</h3>
+        <AddressFields
+          value={shipTo}
+          onChange={touch(setShipTo)}
+          legend={COPY.checkoutPage.shipTo}
+        />
+        <h3 className="text-sm font-semibold">{COPY.checkoutPage.billing}</h3>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={billingSame}
+            onChange={(e) => touch(setBillingSame)(e.target.checked)}
+            className="size-4 accent-[var(--color-primary)]"
+          />
+          {COPY.checkoutPage.sameAsShipping}
+        </label>
+        {!billingSame && (
+          <AddressFields
+            value={billTo}
+            onChange={touch(setBillTo)}
+            legend={COPY.checkoutPage.billing}
+          />
+        )}
+        <div className="flex items-center gap-3">
+          <Button type="submit" variant="secondary" size="sm">
+            {COPY.common.save}
+          </Button>
+          <span className="text-xs text-ink-muted" aria-live="polite">
+            {saved ? T.saved : ''}
           </span>
         </div>
       </form>
