@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { navigate, useSearchParams, type Params } from '../lib/navigation.ts'
 import { signIn, type AuthProvider } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
-import { PERSONAS } from '../shared/seed.ts'
+import { DEMO_PERSONAS } from '../shared/seed.ts'
 import type { Persona } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card } from '../ui/Card.tsx'
@@ -80,7 +80,7 @@ export default function SignInProvider({ params }: { params: Params }) {
             <>
               <p className="text-sm font-semibold">{T.choose}</p>
               <ul className="-mx-2 flex flex-col">
-                {PERSONAS.map((p) => (
+                {DEMO_PERSONAS.map((p) => (
                   <li key={p.id}>
                     <button
                       type="button"
@@ -172,7 +172,7 @@ function EmailStep({
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    const p = PERSONAS.find((x) => x.email === email.trim().toLowerCase())
+    const p = DEMO_PERSONAS.find((x) => x.email === email.trim().toLowerCase())
     setUnknown(!p)
     if (p) onMatch(p)
   }
@@ -200,19 +200,19 @@ function EmailStep({
             className="h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm placeholder:text-ink-muted hover:border-ink focus-visible:border-ink disabled:bg-well disabled:text-ink-muted"
           />
           <datalist id="demo-emails">
-            {PERSONAS.map((p) => (
+            {DEMO_PERSONAS.map((p) => (
               <option key={p.id} value={p.email} />
             ))}
           </datalist>
         </label>
         <p id="email-hint" className="-mt-2 text-sm text-ink-muted">
-          {T.emailHint} <span>{PERSONAS.map((p) => p.email).join(', ')}</span>
+          {T.emailHint} <span>{DEMO_PERSONAS.map((p) => p.email).join(', ')}</span>
         </p>
         {unknown && (
           <p role="alert" className="text-sm">
             {T.unknownEmail}{' '}
             <span className="font-semibold">
-              {PERSONAS.map((p) => p.email).join(', ')}
+              {DEMO_PERSONAS.map((p) => p.email).join(', ')}
             </span>
           </p>
         )}

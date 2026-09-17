@@ -5,9 +5,8 @@ from browsing to a **real, completed payment in the Hyperswitch sandbox**, then
 on through shipping, problems, returns and refunds.
 
 **Live demo:** <https://juspay-prototype.vercel.app>
-Sign in with a demo account: **Alex** (buyer flow), **Mike** (seller flow) or
-**Admin** (operations). Pay with test card `4242 4242 4242 4242`, any future
-expiry, any CVC.
+Sign in with a demo account: **Alex** (buyer flow) or **Mike** (seller flow).
+Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC.
 
 [PLAN.md](PLAN.md) holds the full reasoning and sign-off log.
 
@@ -173,6 +172,7 @@ flowchart TD
   M --> C5["Ask the seller<br/>any time"]
   C1 & C2 & C3 & C4 --> RR["Refund request: seller's payout is held"]
   RR --> SR["Seller refunds the order in full"]
+  RR -. "seller doesn't act (not built)" .-> AD["Admin steps in and refunds"]
   C5 --> QN["Question recorded; order doesn't change"]
 ```
 
@@ -200,12 +200,6 @@ flowchart LR
   A --> G["Shipping and billing address"]
   G --> H["Pre-filled at checkout"]
 ```
-
-### Admin
-
-Every transaction across the marketplace, a disputes filter and a per-payment
-review page. The admin view is read-only: the seller decides refunds, because
-they know the item and answer the buyer.
 
 ---
 
@@ -334,7 +328,6 @@ and "needs the buyer" are never shown as failures.
 - **Sold items** can't be bought again, and **your own listings** stay out of
   the charge.
 - **Signing in at checkout** brings the buyer straight back into it.
-- **The admin account** can't check out.
 
 **After paying**
 - **Saving an order update**: Hyperswitch sometimes reports an error even when
@@ -360,6 +353,7 @@ and "needs the buyer" are never shown as failures.
 | **ACH bank debit** | Much cheaper on large orders, but reversible for 60 days. Offer only to repeat buyers, and hold the payout until it clears |
 | **Limiting PayPal on gold coins** | Not covered by PayPal buyer protection but still charged back to us. Restrict payment methods per order when the payment is created |
 | **Real seller payouts** | One charge per cart, then one transfer per seller when they ship (Stripe Connect) |
+| **Admin as the backup when a seller doesn't act** | Sellers refund their own orders today. If a seller ignores a refund request, never ships, or the buyer and seller can't agree, an admin steps in: a queue of refund requests past a response deadline, the ability to refund the order in full on the seller's behalf, and the seller's payout reversed. An early admin view (all transactions, a disputes filter) exists in the code but is hidden until this is designed |
 | **Webhooks and bank disputes** | Receive disputes and refund updates, freeze that seller's payout, and close any in-app request so the buyer isn't refunded twice |
 | **Return shipping and a return window** | "Returning" and "Returned" steps with tracking, refund after the item is back, 14–30 day window |
 | **Two-way messages and email** | A thread per order, and an email on every order action |

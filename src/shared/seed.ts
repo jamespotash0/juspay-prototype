@@ -11,6 +11,10 @@ export const PERSONAS: Persona[] = [
   { id: 'admin', name: 'Slabbed Admin', email: 'admin@example.com', kind: 'admin' },
 ]
 
+// ponytail: admin is hidden from sign-in and the account switcher for now (out of scope, see README);
+// its pages still exist. Swap this for PERSONAS to show it again.
+export const DEMO_PERSONAS = PERSONAS.filter((p) => p.kind !== 'admin')
+
 export const SELLERS: Seller[] = [
   {
     id: 'alex',

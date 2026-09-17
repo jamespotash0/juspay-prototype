@@ -12,7 +12,7 @@ import {
 import { resetDemo } from '../lib/reset.ts'
 import { signIn, signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
-import { PERSONAS } from '../shared/seed.ts'
+import { DEMO_PERSONAS, PERSONAS } from '../shared/seed.ts'
 import type { PersonaId, SaveCardResponse, SavedCard } from '../shared/types.ts'
 import { AddressFields } from '../ui/AddressFields.tsx'
 import { Button } from '../ui/Button.tsx'
@@ -80,7 +80,7 @@ export default function Account() {
             onChange={(e) => switchAccount(e.target.value as PersonaId)}
             className={`${input} sm:max-w-xs`}
           >
-            {PERSONAS.map((p) => (
+            {DEMO_PERSONAS.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} · {COPY.shell.personaRole[p.id].short}
               </option>
