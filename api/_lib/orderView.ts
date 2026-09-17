@@ -170,7 +170,7 @@ export async function toOrderViews(
       fulfilment,
       refund: { state: refundState, refundedCents },
       breakdown,
-      ledger: sellerLedger(breakdown, fulfilment, refundState, !!get(META.shippedAt)),
+      ledger: sellerLedger(breakdown, fulfilment, refundState),
       sellerId,
       buyerId: m[META.buyerId] ?? '',
       listingIds: listingIds ? listingIds.split(',') : [],

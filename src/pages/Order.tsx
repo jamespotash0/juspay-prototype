@@ -22,6 +22,7 @@ import { StatusPill } from '../ui/StatusPill.tsx'
 import { refundLabel } from '../ui/format.ts'
 import { BreakdownList } from './Checkout.tsx'
 import { PageLayout } from './Layout.tsx'
+import { RefundAction } from './RefundAction.tsx'
 
 const IN_FLIGHT: PaymentState[] = ['awaiting_payment', 'action_required', 'pending']
 const POLL_MS = 2000
@@ -470,6 +471,31 @@ function Fulfilment({
 
       {isBuyer && f === 'disputed' && !refunded && (
         <Notice tone="info" title={A.refundRequested} body={null} />
+      )}
+
+      {/* The seller answers refund requests, and can refund any paid order of theirs. */}
+      {persona === order.sellerId && order.state === 'paid' && !refunded && (
+        <div className="flex flex-col gap-3">
+          {f === 'disputed' && (
+            <Notice
+              tone="warning"
+              title={A.sellerRequest}
+              body={
+                <>
+                  <p className="font-medium">
+                    {order.disputeReason ? `“${order.disputeReason}”` : A.noReason}
+                  </p>
+                  <p className="mt-1">{A.sellerRequestFact}</p>
+                </>
+              }
+            />
+          )}
+          {order.refund.state !== 'pending' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <RefundAction order={order} sellerId={persona} onChange={onChange} />
+            </div>
+          )}
+        </div>
       )}
 
       {(canReceive || canDispute) && issue === 'closed' && (

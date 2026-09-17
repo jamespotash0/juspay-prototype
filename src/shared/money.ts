@@ -49,8 +49,6 @@ export function sellerLedger(
   b: Breakdown,
   fulfilment: Fulfilment,
   refundState: RefundState,
-  /** Whether the seller ever shipped. A buyer can dispute before shipping, and that must not release funds. */
-  shipped = fulfilment !== 'unshipped',
 ): SellerLedger {
   const grossCents = b.itemsCents + b.shippingCents
   if (refundState === 'succeeded')
@@ -67,6 +65,7 @@ export function sellerLedger(
     commissionCents,
     netCents: grossCents - commissionCents,
     refundedCents: 0,
-    balance: shipped ? 'available' : 'pending',
+    // Shipping releases the money; an open refund request holds it again until the seller decides.
+    balance: fulfilment === 'shipped' || fulfilment === 'received' ? 'available' : 'pending',
   }
 }

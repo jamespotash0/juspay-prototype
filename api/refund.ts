@@ -8,7 +8,7 @@ import {
   refundPrefix,
 } from './_lib/orderView.js'
 
-/** POST /api/refund — admin only, refunds one seller's order in full. Returns the re-read OrderView. */
+/** POST /api/refund — the order's seller refunds their order in full. Returns the re-read OrderView. */
 export async function POST(request: Request): Promise<Response> {
   try {
     return await refund(request)
@@ -22,11 +22,13 @@ async function refund(request: Request): Promise<Response> {
   const { paymentId: id, actorId, reason } = body ?? {}
   if (typeof id !== 'string' || !ORDER_ID.test(id))
     return jsonError(400, 'BAD_REQUEST', 'Invalid order id')
-  if (actorId !== 'admin') return jsonError(403, 'FORBIDDEN', 'Only an admin can refund')
 
   const found = await findOrder(id)
   if (found instanceof Response) return found
   const { order } = found
+  // The seller decides (product decision, 2026-09-16): they know the item and answer the buyer.
+  if (!actorId || actorId !== order.sellerId)
+    return jsonError(403, 'FORBIDDEN', 'Only the seller can refund this order')
   if (order.state !== 'paid')
     return jsonError(409, 'INVALID_TRANSITION', 'Only a paid order can be refunded')
 

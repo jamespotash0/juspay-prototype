@@ -58,7 +58,7 @@ Thinnest path to a real payment first:
 4. Catalogue, search, listing detail, cart
 5. Seller page — mark as shipped, fee calculation, balance
 6. Buyer order actions — mark as received, dispute
-7. Admin — transactions, dispute queue, refund
+7. Admin — transactions, dispute queue (read-only); the seller refunds
 8. Listing creation form
 9. Role switcher, empty states, polish
 
@@ -74,7 +74,7 @@ PayPal payment `succeeded` after the redirect · a failed payment showing its
 decline reason ·
 the routing rule visible in the control center, with a small and a large card
 payment on different connectors · the ambiguous-outcome state
-handled · a buyer dispute reaching admin and producing a real refund of that seller's
+handled · a buyer dispute reaching the seller and producing a real refund of that seller's
 order in full · the commission and seller balance visible and moved by the
 seller marking an item shipped · the statuses in engineering §4 mapped ·
 README written · deployed on Vercel.

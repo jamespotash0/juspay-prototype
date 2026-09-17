@@ -79,7 +79,7 @@ dropdown — a demo device, not auth.
 | --- | --- |
 | **Buyer** | Catalogue + search · listing detail · cart · checkout · confirmation · orders, with **mark as received** and **dispute** |
 | **Seller** | One page: my listings, my sales, and balance (gross → commission → net) · **mark as shipped** · create a listing |
-| **Admin** | Transactions table · payment detail · dispute queue · refund |
+| **Admin** | Transactions table · payment detail · dispute queue (read-only; the seller refunds) |
 
 The three role actions — **mark as shipped**, **mark as received**, **dispute**
 — are what move money. There is no timer.
@@ -181,8 +181,8 @@ Every state change is something a person does and a reviewer can click.
   pending          available               │
                                            │ buyer disputes
                                            ▼
-                                       DISPUTED ──► admin refunds ──► REFUNDED
-                                                    (reverses the balance)
+                                       DISPUTED ──► seller refunds ──► REFUNDED
+          (balance held again)         (reverses the balance)
 ```
 
 Seller balance is `pending` while the item is unshipped and `available` once
@@ -233,11 +233,16 @@ reviewer has to wait fourteen days to see. *Known gap:* release on a
 seller-controlled event is the obvious fraud, and a real build gates it on
 carrier delivery confirmation.
 
-**Refunds are reached through a buyer dispute, not only an admin god-button.**
-The buyer disputes from their own order, it lands in an admin queue, and the
-admin issues a real Hyperswitch refund that reverses the seller's balance. This
-is what a marketplace holding funds is *for* — someone adjudicates — and it
-closes the circuit with real money: real payment in, real refund out.
+**The seller issues refunds** (changed 2026-09-16 at the user's request; it was
+the admin). The buyer asks from their order, the request shows on the seller's
+sale, and the seller issues a real Hyperswitch refund of that order in full.
+While a request is open the seller's money for that sale is held (`pending`),
+so the marketplace still protects the buyer without adjudicating every case:
+a seller who ignores a request stays unpaid. *Known gap:* a seller who refuses
+a fair claim leaves the buyer with a chargeback or PayPal claim against us, as
+merchant of record. Production adds an escalation to Slabbed after a set
+number of days. The admin view stays read-only: every payment, dispute and
+refund, for oversight.
 
 **A negative balance blocks payouts, not selling or buying.** Documented only,
 since nothing reaches `paid_out` in the sandbox. Selling is how they repay, so

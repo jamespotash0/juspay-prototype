@@ -113,7 +113,8 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
       'INVALID_TRANSITION',
     ])
     // A dispute before shipping is allowed (a seller who never ships); the multi-seller test covers it.
-    expect((await refundReq({ paymentId: A, actorId: 'mike' })).status).toBe(403)
+    // Only the order's seller refunds: not the buyer, not the admin.
+    expect((await refundReq({ paymentId: A, actorId: 'admin' })).status).toBe(403)
     expect((await refundReq({ paymentId: A, actorId: 'alex' })).status).toBe(403)
     expect((await read(A)).fulfilment).toBe('unshipped')
   })
@@ -176,7 +177,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     ])
     expect(Date.parse(disputed.body.fulfilledAt!.disputedAt!)).not.toBeNaN()
 
-    const refunded = await refundReq({ paymentId: B, actorId: 'admin' })
+    const refunded = await refundReq({ paymentId: B, actorId: SELLER })
     expect(refunded.status, JSON.stringify(refunded.body)).toBe(200)
     expect(refunded.body.refund).toEqual({
       state: 'succeeded',
@@ -200,7 +201,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
   })
 
   it('refunds are full only: A refunds its whole total, and a second refund is 409', async () => {
-    const r = await refundReq({ paymentId: A, actorId: 'admin' })
+    const r = await refundReq({ paymentId: A, actorId: SELLER })
     expect(r.status, JSON.stringify(r.body)).toBe(200)
     expect(r.body.refund).toEqual({
       state: 'succeeded',
@@ -214,7 +215,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     expect(r.body.fulfilledAt?.receivedAt).toBeDefined()
     expect(r.body.disputeReason).toBeUndefined()
 
-    const again = await refundReq({ paymentId: A, actorId: 'admin' })
+    const again = await refundReq({ paymentId: A, actorId: SELLER })
     expect([again.status, again.body.error?.code]).toEqual([409, 'ALREADY_REFUNDED'])
   })
 
@@ -296,7 +297,14 @@ describe.skipIf(!KEY)('multi-seller payment (live sandbox)', () => {
     expect(shipped.body.fulfilment).toBe('shipped')
     expect((await read(theirs.orderId)).fulfilment).toBe('unshipped')
 
-    const refunded = await refundReq({ paymentId: theirs.orderId, actorId: 'admin' })
+    // Mike can't refund the other seller's order; that seller can.
+    expect((await refundReq({ paymentId: theirs.orderId, actorId: SELLER })).status).toBe(
+      403,
+    )
+    const refunded = await refundReq({
+      paymentId: theirs.orderId,
+      actorId: OTHER.sellerId as PersonaId,
+    })
     expect(refunded.status, JSON.stringify(refunded.body)).toBe(200)
     expect(refunded.body.refund).toEqual({
       state: 'succeeded',

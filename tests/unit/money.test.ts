@@ -119,18 +119,13 @@ describe('sellerLedger (seller)', () => {
     expect(l.netCents).toBe(1_899)
   })
 
-  it('balance: pending until shipped, available after, reversed only on a full refund', () => {
+  it('balance: pending until shipped, held again by a refund request, reversed on a refund', () => {
     expect(sellerLedger(b, 'unshipped', 'none').balance).toBe('pending')
     expect(sellerLedger(b, 'shipped', 'none').balance).toBe('available')
     expect(sellerLedger(b, 'received', 'none').balance).toBe('available')
-    expect(sellerLedger(b, 'disputed', 'none').balance).toBe('available')
+    expect(sellerLedger(b, 'disputed', 'none').balance).toBe('pending')
     expect(sellerLedger(b, 'disputed', 'succeeded').balance).toBe('reversed')
     expect(sellerLedger(b, 'unshipped', 'succeeded').balance).toBe('reversed')
-  })
-
-  it('a dispute before shipping keeps the balance pending', () => {
-    expect(sellerLedger(b, 'disputed', 'none', false).balance).toBe('pending')
-    expect(sellerLedger(b, 'disputed', 'none', true).balance).toBe('available')
   })
 
   it('pending and available keep commission and net; a full refund zeroes them, gross unchanged', () => {
@@ -167,7 +162,7 @@ describe('sellerLedger (seller)', () => {
   })
 
   it('a pending or failed refund does not reverse the balance', () => {
-    expect(sellerLedger(b, 'disputed', 'pending').balance).toBe('available')
-    expect(sellerLedger(b, 'disputed', 'failed').balance).toBe('available')
+    expect(sellerLedger(b, 'shipped', 'pending').balance).toBe('available')
+    expect(sellerLedger(b, 'received', 'failed').balance).toBe('available')
   })
 })

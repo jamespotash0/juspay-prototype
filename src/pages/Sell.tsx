@@ -19,6 +19,7 @@ import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
 import { personName, refundLabel, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
+import { RefundAction } from './RefundAction.tsx'
 import SellInsights from './SellInsights.tsx'
 
 const T = COPY.sell
@@ -115,7 +116,7 @@ export default function Sell() {
       }
     >
       <div className="flex flex-col gap-10">
-        {!loadError && <BalanceStrip orders={orders} released={released} />}
+        {!loadError && <SummaryCards orders={orders} released={released} />}
 
         <section aria-labelledby="sell-sold">
           <SectionHeading id="sell-sold">{T.sales}</SectionHeading>
@@ -293,6 +294,11 @@ function Sale({
     order.state === 'paid' &&
     order.fulfilment === 'unshipped' &&
     order.refund.state === 'none'
+  // A refund request is the seller's to answer.
+  const canRefund =
+    order.state === 'paid' &&
+    order.fulfilment === 'disputed' &&
+    (order.refund.state === 'none' || order.refund.state === 'failed')
 
   async function ship() {
     setBusy(true)
@@ -344,6 +350,9 @@ function Sale({
           <Button size="sm" onClick={ship} disabled={busy}>
             {busy ? COPY.common.saving : COPY.orderActions.ship}
           </Button>
+        )}
+        {canRefund && (
+          <RefundAction order={order} sellerId={sellerId} onChange={onChange} size="sm" />
         )}
       </div>
 
@@ -478,71 +487,85 @@ function Active({ listings }: { listings: Listing[] }) {
   )
 }
 
-/** Pending, available and commission at a glance. Marking a sale shipped moves money across. */
-function BalanceStrip({
+const DAY_MS = 86_400_000
+
+/**
+ * What a seller needs at a glance: money waiting on them to ship, what they've sold lately, and
+ * refund requests only they can answer. Marking a sale shipped moves money out of the first card.
+ */
+function SummaryCards({
   orders,
   released,
 }: {
   orders: OrderView[] | null
   released: string | null
 }) {
-  const ledgers = (orders ?? []).map((o) => shown(o.ledger))
-  const total = (b: SellerLedger['balance']) =>
-    ledgers.filter((l) => l.balance === b).reduce((n, l) => n + l.netCents, 0)
-  const count = (b: SellerLedger['balance']) =>
-    ledgers.filter((l) => l.balance === b).length
-  const commission = ledgers.reduce((n, l) => n + l.commissionCents, 0)
-  const boxes = [
+  const all = orders ?? []
+  const toShip = all.filter((o) => o.state === 'paid' && o.fulfilment === 'unshipped')
+  // Fixed at mount: the 90-day window shouldn't shift between renders.
+  const [since] = useState(() => Date.now() - 90 * DAY_MS)
+  const recent = all.filter(
+    (o) => o.ledger.balance !== 'reversed' && Date.parse(o.createdAt) >= since,
+  )
+  const requests = all.filter(
+    (o) => o.fulfilment === 'disputed' && o.refund.state !== 'succeeded',
+  )
+  const sum = (list: OrderView[], pick: (o: OrderView) => number) =>
+    list.reduce((n, o) => n + pick(o), 0)
+  const cards = [
     {
-      label: T.pendingBox,
-      cents: total('pending'),
-      note: T.notShipped(count('pending')),
+      label: T.toShipCard,
+      cents: sum(toShip, (o) => o.ledger.netCents),
+      note: T.toShipNote(toShip.length),
       swatch: 'bg-chart-pending',
       motion: released ? 'release-out' : '',
     },
     {
-      label: T.available,
-      cents: total('available'),
-      note: T.shipped(count('available')),
+      label: T.recentCard,
+      cents: sum(recent, (o) => o.ledger.grossCents),
+      note: T.recentNote(recent.length),
       swatch: 'bg-state-paid',
-      motion: released ? 'release-in' : '',
+      motion: '',
     },
     {
-      label: T.commission,
-      cents: commission,
-      note: T.commissionNote,
-      swatch: 'bg-ink-muted',
+      label: T.requestsCard,
+      cents: sum(requests, (o) => o.breakdown.totalCents),
+      note: T.requestsNote(requests.length),
+      swatch: requests.length ? 'bg-state-disputed' : 'bg-ink-muted',
       motion: '',
     },
   ]
   return (
-    <section aria-label={T.balance} className="grid grid-cols-3 gap-2 sm:gap-4">
-      {boxes.map((b) => (
+    <section
+      aria-label={T.summary}
+      className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-4"
+    >
+      {cards.map((c) => (
         // A new key replays the animation for each release.
         <Card
-          key={`${b.label}-${released}`}
+          key={`${c.label}-${released}`}
           padding="sm"
-          className="flex min-w-0 flex-col gap-1 max-sm:p-3"
+          className="flex min-w-0 flex-col gap-1 max-sm:flex-row max-sm:items-center max-sm:justify-between max-sm:p-3"
         >
-          <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-muted sm:gap-2">
+          <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink-muted">
             <span
               aria-hidden="true"
-              className={`size-2 shrink-0 rounded-full ${b.swatch}`}
+              className={`size-2 shrink-0 rounded-full ${c.swatch}`}
             />
-            <span className="truncate">{b.label}</span>
+            <span className="truncate">{c.label}</span>
           </p>
           {orders ? (
-            <>
+            <div className="flex flex-col max-sm:items-end">
               <Money
-                cents={b.cents}
-                className={`text-base font-bold tracking-tight sm:text-2xl ${b.motion}`}
+                cents={c.cents}
+                className={`text-base font-bold tracking-tight sm:text-2xl ${c.motion}`}
               />
-              <p className="hidden text-xs text-ink-muted sm:block">{b.note}</p>
-            </>
+              <p className="text-xs text-ink-muted">{c.note}</p>
+            </div>
           ) : (
-            <div aria-hidden="true" className="flex flex-col gap-2 py-1">
+            <div aria-hidden="true" className="flex flex-col gap-2 py-1 max-sm:items-end">
               <span className="h-6 w-28 animate-pulse rounded-full bg-well" />
-              <span className="h-3 w-36 animate-pulse rounded-full bg-well" />
+              <span className="h-3 w-24 animate-pulse rounded-full bg-well" />
             </div>
           )}
         </Card>

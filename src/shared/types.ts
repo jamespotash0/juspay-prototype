@@ -210,7 +210,7 @@ export interface OrderStateRequest {
   reason?: string // dispute only
 }
 
-/** POST /api/refund → OrderView. Admin only. Always refunds one seller's order in full — there is no amount. */
+/** POST /api/refund → OrderView. The order's seller only. Always refunds that order in full — there is no amount. */
 export interface RefundRequest {
   /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string

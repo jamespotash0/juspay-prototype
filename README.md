@@ -68,7 +68,7 @@ flowchart LR
     CO["POST /api/checkout<br/>prices the order, creates the payment"]
     PAY["GET /api/payment<br/>authoritative status read"]
     OS["POST /api/order-state<br/>shipped / received / disputed"]
-    REF["POST /api/refund<br/>admin, refunds one seller's order"]
+    REF["POST /api/refund<br/>the seller refunds their order"]
     ORD["GET /api/orders"]
   end
 
@@ -221,7 +221,7 @@ stateDiagram-v2
   Received --> [*]
   Shipped --> Disputed: buyer disputes
   Received --> Disputed: buyer disputes
-  Disputed --> Refunded: admin refunds in full (real Hyperswitch refund)
+  Disputed --> Refunded: seller refunds in full (real Hyperswitch refund)
   Refunded --> [*]
 
   note right of Paid

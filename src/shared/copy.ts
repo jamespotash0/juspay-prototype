@@ -24,7 +24,7 @@ interface DeclineCopy {
 }
 
 export const COPY = {
-  hold: "The seller isn't paid until they ship. If something's wrong with your order, tell us from the order page and we can refund you.",
+  hold: "The seller isn't paid until they ship. If something's wrong, ask the seller for a refund from the order page.",
 
   empty: {
     noResults: {
@@ -108,11 +108,6 @@ export const COPY = {
 
   postPayment: {
     actionDidNotSave: "That didn't save — try again.",
-    /** No dispute on the order. */
-    refundFailed: 'No money has moved. You can retry the refund.',
-    refundFailedDispute:
-      'No money has moved. The dispute is still open, and you can retry the refund.',
-    refundSucceeded: "Refunded. The seller's balance has been reversed.",
     /** Buyer-facing: where the money goes, not the seller's ledger. */
     refundSucceededBuyer:
       'Refunded in full to your original payment method. Your bank may take a few days to show it.',
@@ -130,11 +125,22 @@ export const COPY = {
       wrongItem: "Something's wrong with my item",
     },
     issueHint:
-      'Tell us what happened. The seller stays unpaid while Slabbed reviews your request.',
+      'Tell the seller what happened. They stay unpaid until they answer your request.',
     details: 'Details (optional)',
     requestRefund: 'Request refund',
     refundRequested:
-      "Refund requested. Slabbed is reviewing it, and the seller stays unpaid until it's resolved.",
+      "Refund requested. The seller reviews it and stays unpaid until it's resolved.",
+    sellerRequest: 'The buyer asked for a refund',
+    sellerRequestFact: 'You stay unpaid for this sale until you refund it.',
+    noReason: 'The buyer gave no reason.',
+    refundBuyer: 'Refund buyer',
+    refundTitle: (amount: string, buyer: string) => `Refund ${amount} to ${buyer}?`,
+    refundBody:
+      "The buyer's whole order from you goes back to how they paid. It can't be undone, and this sale pays you nothing.",
+    refunding: 'Refunding…',
+    refundConfirm: (amount: string) => `Refund ${amount}`,
+    refundFailed:
+      "The refund didn't go through. No money has moved, so you can try again.",
   },
 
   // ── Shared across pages ───────────────────────────────────────────────────
@@ -208,16 +214,19 @@ export const COPY = {
     cardNotSaved: "That card wasn't saved. Try again or use another card.",
     removeConfirm: (label: string) => `Remove ${label} from your account?`,
     removeFailed: "That card wasn't removed. Try again.",
-    otherMethods: 'Bank accounts aren’t saved yet. Cards are stored with Hyperswitch, never by Slabbed.',
+    otherMethods:
+      'Bank accounts aren’t saved yet. Cards are stored with Hyperswitch, never by Slabbed.',
     paypal: 'PayPal',
     paypalLinked: (email: string) => `Linked as ${email}`,
     paypalNone: 'Not linked',
     paypalLink: 'Link PayPal',
     paypalUnlink: 'Unlink',
-    paypalDemo: 'Demo link: nothing is sent to PayPal. At checkout, PayPal still signs in through Hyperswitch.',
+    paypalDemo:
+      'Demo link: nothing is sent to PayPal. At checkout, PayPal still signs in through Hyperswitch.',
     paypalTitle: 'Link PayPal (demo)',
     paypalChoose: 'Choose the PayPal account to link',
-    paypalConsent: 'Slabbed will see this PayPal email address. You can unlink it any time.',
+    paypalConsent:
+      'Slabbed will see this PayPal email address. You can unlink it any time.',
     reset: 'Reset demo',
     resetFact:
       "Clears this browser's cart, created listings, sold markers, saved name, linked PayPal and sign-in. Real sandbox orders and saved cards are never touched.",
@@ -349,6 +358,7 @@ export const COPY = {
 
   checkoutPage: {
     title: 'Checkout',
+    close: 'Close checkout',
     emptyGroup: 'Nothing in your cart to check out',
     backToCart: 'Back to cart',
     admin: 'Admins don’t check out',
@@ -426,12 +436,16 @@ export const COPY = {
     sales: 'Recently sold',
     loading: 'Loading sales',
     loadingListings: 'Loading listings',
-    balance: 'Balance',
-    pendingBox: 'Pending (expected)',
-    notShipped: (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'} not shipped yet`,
-    shipped: (n: number) => `${n} shipped ${n === 1 ? 'sale' : 'sales'}`,
-    commission: 'Commission',
-    commissionNote: '5% of each sale, taken when you ship',
+    summary: 'Sales summary',
+    toShipCard: 'Waiting on shipping',
+    toShipNote: (n: number) =>
+      n === 0
+        ? 'Nothing to ship'
+        : `Paid to you once ${n === 1 ? 'it ships' : `${n} sales ship`}`,
+    recentCard: 'Sales, last 90 days',
+    recentNote: (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'}, before fees`,
+    requestsCard: 'Refund requests',
+    requestsNote: (n: number) => (n === 0 ? 'None open' : `${n} waiting on you`),
     boughtBy: 'Bought by',
     loadFailed: "We couldn't load your sales.",
     loadFailedFact: 'Nothing has changed. Check your connection and try again.',
@@ -524,13 +538,10 @@ export const COPY = {
     disputed: 'The buyer disputed this order',
     disputeResolved: 'Dispute resolved by refund',
     disputedFact:
-      'The seller stays unpaid while Slabbed reviews it. Refund the buyer if the item did not arrive as described.',
+      'The seller decides whether to refund. Their balance for this sale is held until then.',
+    sellerRefunds: 'Refunds are issued by the seller from their sales.',
     disputeReason: 'Buyer’s reason',
     noDisputeReason: 'The buyer gave no reason.',
-    refundPending: 'Refund sent — waiting on the connector.',
-    refundPendingFact: 'Reload this page to check whether it has settled.',
-    refundFailedTitle: 'Refund failed',
-    refundDoneTitle: 'Refund complete',
     declinedTitle: 'Payment declined',
     declineCode: 'Decline code',
     retriable: ' · retriable',
@@ -565,11 +576,5 @@ export const COPY = {
     pending: 'Pending',
     available: 'Available',
     reversed: 'Reversed',
-    fullRefund: 'Full refund of',
-    confirmTitle: (amount: string, buyer: string) => `Refund ${amount} to ${buyer}?`,
-    confirmBody:
-      "The whole order goes back to the buyer's card and cannot be taken back. The seller's balance for this sale is reversed.",
-    refunding: 'Refunding…',
-    confirm: (amount: string) => `Refund ${amount}`,
   },
 } as const

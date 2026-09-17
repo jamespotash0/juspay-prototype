@@ -10,7 +10,17 @@ export function logPayment(label: string, id: string) {
 /** Switch persona the way a reviewer does: the demo account select on the account page. */
 export async function switchPersona(page: Page, persona: PersonaId) {
   await page.goto('/account')
-  await page.getByLabel('Demo account').selectOption(persona)
+  // Signed out, the account page sends you to sign-in first: take the email option.
+  const account = page.locator('#demo-account')
+  const email = page.getByRole('button', { name: 'Continue with email' })
+  await expect(account.or(email)).toBeVisible()
+  if (await email.isVisible()) {
+    await email.click()
+    await page.getByLabel('Email address').fill(`${persona}@example.com`)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await expect(account).toBeVisible({ timeout: 15_000 })
+  }
+  if ((await account.inputValue()) !== persona) await account.selectOption(persona)
 }
 
 /** Listing page → Buy now → demo sign-in → Continue to payment. Leaves the SDK mounted. */

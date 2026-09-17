@@ -6,14 +6,12 @@ import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderView } from '../shared/types.ts'
-import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
-import { ConfirmDialog } from '../ui/ConfirmDialog.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
-import { dateTime, personName, shortDate, usd } from '../ui/format.ts'
+import { dateTime, personName, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.adminPayment
@@ -30,12 +28,6 @@ export default function AdminPayment({ params }: { params: Params }) {
     order?: OrderView
     failed?: boolean
   }>()
-  // A refund answer replaces the loaded view until the next load.
-  const [refunded, setRefunded] = useState<{ key: string; order: OrderView }>()
-
-  const [confirming, setConfirming] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [outcome, setOutcome] = useState<'failed' | 'succeeded' | 'pending' | null>(null)
 
   useEffect(() => {
     if (persona !== 'admin') return
@@ -58,7 +50,7 @@ export default function AdminPayment({ params }: { params: Params }) {
   }
 
   const current = loaded?.key === key ? loaded : undefined
-  const order = (refunded?.key === key ? refunded.order : undefined) ?? current?.order
+  const order = current?.order
   const loadError = !!current?.failed
 
   const back = (
@@ -98,9 +90,6 @@ export default function AdminPayment({ params }: { params: Params }) {
 
   const { breakdown: b, ledger, refund } = order
   const remaining = b.totalCents - refund.refundedCents
-  const canRefund = order.state === 'paid' && remaining > 0
-  // Refunds are full only: always the whole order.
-  const refundCents = remaining
   const reversed = ledger.balance === 'reversed'
   const disputed = order.fulfilment === 'disputed'
   const items = order.listingIds.map(
@@ -121,34 +110,6 @@ export default function AdminPayment({ params }: { params: Params }) {
       : []),
     ...(refundDone ? [[T.steps.refunded, true] as [string, true]] : []),
   ]
-
-  function askConfirm() {
-    setOutcome(null)
-    setConfirming(true)
-  }
-
-  async function doRefund() {
-    setBusy(true)
-    try {
-      const next = await api.refund({
-        paymentId: order!.orderId,
-        actorId: persona,
-      })
-      setRefunded({ key, order: next })
-      setOutcome(
-        next.refund.state === 'succeeded'
-          ? 'succeeded'
-          : next.refund.state === 'pending'
-            ? 'pending'
-            : 'failed',
-      )
-    } catch {
-      setOutcome('failed')
-    } finally {
-      setBusy(false)
-      setConfirming(false)
-    }
-  }
 
   return (
     <PageLayout title={T.title} eyebrow={EYEBROW} back={back} width="narrow">
@@ -177,28 +138,6 @@ export default function AdminPayment({ params }: { params: Params }) {
               </div>
             }
           />
-        )}
-        {outcome === 'failed' && (
-          <Notice
-            tone="danger"
-            title={T.refundFailedTitle}
-            body={
-              disputed
-                ? COPY.postPayment.refundFailedDispute
-                : COPY.postPayment.refundFailed
-            }
-            supportRef={order.paymentId}
-          />
-        )}
-        {outcome === 'succeeded' && (
-          <Notice
-            tone="info"
-            title={T.refundDoneTitle}
-            body={COPY.postPayment.refundSucceeded}
-          />
-        )}
-        {outcome === 'pending' && (
-          <Notice tone="warning" title={T.refundPending} body={T.refundPendingFact} />
         )}
         {order.decline && (
           <Notice
@@ -331,31 +270,11 @@ export default function AdminPayment({ params }: { params: Params }) {
             </Row>
           </Panel>
 
-          {canRefund && (
-            <Card as="section" className="flex flex-col items-start">
-              <SectionHeading>{COPY.orderActions.refund}</SectionHeading>
-              <p className="text-sm text-ink-muted">
-                {T.fullRefund}{' '}
-                <Money cents={remaining} className="font-semibold text-ink" />
-              </p>
-              <Button variant="danger" onClick={askConfirm} className="mt-4">
-                {COPY.orderActions.refund}
-              </Button>
-            </Card>
+          {order.state === 'paid' && remaining > 0 && (
+            <p className="px-1 text-sm text-ink-muted">{T.sellerRefunds}</p>
           )}
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirming}
-        danger
-        busy={busy}
-        title={T.confirmTitle(usd(refundCents), personName(order.buyerId))}
-        body={<p>{T.confirmBody}</p>}
-        confirmLabel={busy ? T.refunding : T.confirm(usd(refundCents))}
-        onConfirm={doRefund}
-        onCancel={() => setConfirming(false)}
-      />
     </PageLayout>
   )
 }
