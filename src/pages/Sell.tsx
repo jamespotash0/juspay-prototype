@@ -17,7 +17,7 @@ import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { Slab } from '../ui/Slab.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
-import { personName, refundLabel, shortDate } from '../ui/format.ts'
+import { orderNumber, personName, refundLabel, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 import { RefundAction } from './RefundAction.tsx'
 import SellInsights from './SellInsights.tsx'
@@ -336,7 +336,10 @@ function Sale({
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="truncate text-sm font-semibold group-hover:underline">{title}</p>
           <p className="truncate text-xs text-ink-muted">
-            {T.boughtBy} {personName(order.buyerId)} · {shortDate(order.createdAt)}
+            <span className="money font-medium text-ink">
+              {orderNumber(order.paymentId)}
+            </span>{' '}
+            · {T.boughtBy} {personName(order.buyerId)} · {shortDate(order.createdAt)}
           </p>
         </div>
       </Link>
