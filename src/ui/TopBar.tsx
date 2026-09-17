@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
 import { COPY } from '../shared/copy'
 import { Icon } from './Icon'
 
@@ -15,6 +15,7 @@ interface TopBarProps {
   /** True on the account page itself. */
   accountCurrent?: boolean
   onSignIn: () => void
+  onSignOut: () => void
   links: NavLink[]
   cartCount: number
   cartHref?: string
@@ -28,13 +29,13 @@ const S = COPY.shell
 const PILL =
   'inline-flex h-8 shrink-0 items-center rounded-full border border-rule-strong bg-paper text-sm font-medium text-ink transition-colors hover:border-ink'
 
-// Desktop: one row — wordmark, links, then account and the cart at the far right.
-// Below sm: row 1 wordmark · links · cart; row 2 account. Nothing is hidden.
+// One row at every width: wordmark, links, then the cart and the account menu at the far right.
 export function TopBar({
   account,
   accountHref = '/account',
   accountCurrent,
   onSignIn,
+  onSignOut,
   links,
   cartCount,
   cartHref = '/cart',
@@ -49,11 +50,11 @@ export function TopBar({
 
   return (
     <header className="sticky top-0 z-10 border-b px-4 sm:px-6 border-rule bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-1.5 gap-y-1.5 py-2 sm:flex-nowrap sm:gap-x-3">
+      <div className="mx-auto flex max-w-7xl items-center gap-x-1.5 py-2 sm:gap-x-3">
         <a
           href={homeHref}
           onClick={go(homeHref)}
-          className="order-1 inline-flex items-center gap-1.5 font-wordmark text-base font-bold tracking-tight sm:order-none sm:mr-3 sm:text-lg"
+          className="inline-flex items-center gap-1.5 font-wordmark text-base font-bold tracking-tight sm:mr-3 sm:text-lg"
         >
           <img
             src="/favicon.svg"
@@ -61,10 +62,10 @@ export function TopBar({
             aria-hidden="true"
             className="h-[1.25em] w-auto"
           />
-          {S.wordmark}
+          <span className="max-[400px]:sr-only">{S.wordmark}</span>
         </a>
 
-        <nav className="order-2 ml-auto flex items-center text-sm sm:order-none sm:mr-auto sm:ml-0 sm:gap-0.5">
+        <nav className="mr-auto flex min-w-0 items-center text-sm sm:gap-0.5">
           {links.map((l) => (
             <a
               key={l.href}
@@ -78,38 +79,10 @@ export function TopBar({
           ))}
         </nav>
 
-        {account ? (
-          <div className="order-5 flex min-w-0 items-center gap-1.5 max-sm:w-full sm:order-none">
-            <a
-              href={accountHref}
-              onClick={go(accountHref)}
-              aria-current={accountCurrent ? 'page' : undefined}
-              aria-label={`${S.account}: ${account.name}`}
-              className={`${PILL} min-w-0 gap-2 pr-3.5 pl-1 aria-[current=page]:border-ink`}
-            >
-              <span
-                aria-hidden="true"
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold"
-              >
-                {account.name.trim().charAt(0).toUpperCase()}
-              </span>
-              <span className="truncate">{account.name}</span>
-            </a>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onSignIn}
-            className={`${PILL} order-5 px-4 font-semibold sm:order-none`}
-          >
-            {S.signIn}
-          </button>
-        )}
-
         <a
           href={cartHref}
           onClick={go(cartHref)}
-          className={`${PILL} order-3 gap-1.5 pr-1.5 pl-2.5 sm:order-none sm:pl-3`}
+          className={`${PILL} gap-1.5 pr-1.5 pl-2.5 sm:pl-3`}
         >
           <Icon name="cart" className="size-4" />
           <span className="max-sm:sr-only">{S.cart}</span>
@@ -120,7 +93,111 @@ export function TopBar({
             {cartCount}
           </span>
         </a>
+
+        {account ? (
+          <AccountMenu
+            name={account.name}
+            href={accountHref}
+            current={accountCurrent}
+            go={go}
+            onSignOut={onSignOut}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={onSignIn}
+            className={`${PILL} px-4 font-semibold`}
+          >
+            {S.signIn}
+          </button>
+        )}
       </div>
     </header>
+  )
+}
+
+const initials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('')
+
+/** Initials in a circle with a chevron; opens Account and Sign out. Native <details>, closed by Escape or a click outside. */
+function AccountMenu({
+  name,
+  href,
+  current,
+  go,
+  onSignOut,
+}: {
+  name: string
+  href: string
+  current?: boolean
+  go: (href: string) => (e: MouseEvent) => void
+  onSignOut: () => void
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = ref.current
+      if (!el?.open) return
+      if (
+        e instanceof KeyboardEvent ? e.key === 'Escape' : !el.contains(e.target as Node)
+      )
+        el.open = false
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [])
+  const shut = () => ref.current && (ref.current.open = false)
+
+  return (
+    <details ref={ref} className="group relative">
+      <summary
+        aria-label={`${S.account}: ${name}`}
+        className="flex h-8 cursor-pointer list-none items-center gap-1 rounded-full pr-1 hover:text-ink [&::-webkit-details-marker]:hidden"
+      >
+        <span
+          aria-hidden="true"
+          className={`inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-ink ring-offset-2 ring-offset-paper ${current ? 'ring-2 ring-ink' : ''}`}
+        >
+          {initials(name)}
+        </span>
+        <Icon
+          name="chevronDown"
+          className="size-3.5 text-ink-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="absolute right-0 z-20 mt-2 w-56 rounded-control border border-rule bg-paper p-1.5 shadow-pop">
+        <p className="truncate px-2.5 pt-1.5 pb-2 text-sm font-semibold">{name}</p>
+        <a
+          href={href}
+          onClick={(e) => {
+            shut()
+            go(href)(e)
+          }}
+          aria-current={current ? 'page' : undefined}
+          className="block rounded-control px-2.5 py-2 text-sm hover:bg-well aria-[current=page]:font-semibold"
+        >
+          {S.account}
+        </a>
+        <button
+          type="button"
+          onClick={() => {
+            shut()
+            onSignOut()
+          }}
+          className="block w-full rounded-control px-2.5 py-2 text-left text-sm text-ink-muted hover:bg-well hover:text-ink"
+        >
+          {S.signOut}
+        </button>
+      </div>
+    </details>
   )
 }

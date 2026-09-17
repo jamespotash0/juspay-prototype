@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
 import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
 import { useDisplayName } from '../lib/profile.ts'
-import { useSession } from '../lib/session.ts'
+import { signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
 import { TopBar } from '../ui/TopBar.tsx'
@@ -55,6 +55,11 @@ export function PageLayout({
       <TopBar
         account={session ? { name } : null}
         accountCurrent={path === '/account'}
+        onSignOut={() => {
+          // Home first, so a guarded page doesn't bounce to /signin as the session clears.
+          navigate('/')
+          signOut()
+        }}
         onSignIn={() => {
           const here = path + (params.size ? `?${params}` : '')
           navigate(`/signin?next=${encodeURIComponent(here)}`)
