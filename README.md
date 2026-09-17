@@ -4,9 +4,8 @@ A peer-to-peer marketplace for US coins and trading cards. It takes a buyer
 from browsing to a **real, completed payment in the Hyperswitch sandbox**, then
 on through shipping, problems, returns and refunds.
 
-**Live demo:** <https://juspay-prototype.vercel.app>
-Sign in with a demo account: **Alex** (buyer flow) or **Mike** (seller flow).
-Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC.
+**Live demo:** <https://juspay-prototype.vercel.app>. See [Try it](#try-it)
+for how to sign in and what to click.
 
 [PLAN.md](PLAN.md) holds the full reasoning and sign-off log.
 
@@ -22,7 +21,7 @@ Pay with test card `4242 4242 4242 4242`, any future expiry, any CVC.
 8. [Payment choices and why](#payment-choices-and-why)
 9. [Edge cases we handle](#edge-cases-we-handle)
 10. [Out of scope, with the approach](#out-of-scope-with-the-approach)
-11. [Running it](#running-it)
+11. [Try it](#try-it)
 
 ---
 
@@ -364,18 +363,60 @@ and "needs the buyer" are never shown as failures.
 
 ---
 
-## Running it
+## Try it
 
-Requires Node 20.19+ and a Hyperswitch sandbox account with the processors,
-routing rule and settings above.
+Everything runs on the live site: **<https://juspay-prototype.vercel.app>**.
+Nothing to install, and every payment is a real payment in the Hyperswitch
+sandbox, so no real money moves.
 
-```bash
-npm install
-cp .env.example .env   # Hyperswitch secret key, publishable key, merchant id
-npm run dev
-```
+### 1. Sign in
 
-Tests: `npm run test:unit` (no keys needed), `npm run test:sandbox` (against the
-live sandbox) and `npm run e2e` (in a real browser; the account and multi-seller
-tests still expect older card wording and haven't been re-run since the latest
-checkout changes).
+Sign-in is a demo: no real account is created, and nothing is sent to Google,
+Apple or anyone else.
+
+1. Click **Sign in** in the top right (or just press **Buy Now** on any listing;
+   you'll be asked to sign in and brought straight back).
+2. Pick any option:
+   - **Continue with Google** or **Continue with Apple** → choose **Alex Rivera**
+     or **Mike Chen** → **Continue**.
+   - **Continue with email** → type `alex@example.com` or `mike@example.com`.
+3. To switch accounts later, open the account menu (your initials, top right) →
+   **Account** → **Demo account**, or sign out and sign in again.
+
+| Account | Use it for |
+| --- | --- |
+| **Alex Rivera** (`alex@example.com`) | Buyer flow: buying, orders, problems and refunds, saved cards |
+| **Mike Chen** (`mike@example.com`) | Seller flow: every listing is Mike's, so he ships, sees payouts and refunds |
+
+### 2. Buy something (as Alex)
+
+1. Open any listing and press **Buy Now**. Checkout opens over the page.
+2. The address is pre-filled. Press **Continue to Payment**.
+3. Pay with a test card from the table below, or with **PayPal**.
+4. You land on the order page, which shows the real payment status.
+
+### 3. Follow the order through
+
+1. **As Mike:** **Sell** → find the sale → **Mark shipped**. His payout moves to
+   *Payout pending*.
+2. **As Alex:** **Orders** → open the order → **Mark received**, or
+   **Have a problem?** to cancel, report it not arriving or not as described,
+   return it, or ask the seller.
+3. **As Mike:** open the order → **Refund buyer**. The refund is a real
+   Hyperswitch refund, and Alex's tracker ends at *Refunded*.
+
+### Test cards
+
+Any future expiry date and any CVC.
+
+| To see | Use |
+| --- | --- |
+| A successful payment | `4242 4242 4242 4242` |
+| A declined payment | `4000 0000 0000 0002` |
+| A lost or stolen card | `4000 0000 0000 9987` |
+| Insufficient funds (only when routed to fauxpay, which is random under $500) | `4000 0000 0000 9995` |
+| Routing to the primary processor | Any card order of $500 or more |
+| PayPal | The PayPal button → approve on the simulated PayPal page |
+
+**Start over:** **Account** → **Reset demo** clears the cart, created listings
+and sign-in in your browser. Payments already made stay in the sandbox.
