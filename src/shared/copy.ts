@@ -24,6 +24,8 @@ interface DeclineCopy {
 }
 
 export const COPY = {
+  hold: "The seller isn't paid until they ship. If something's wrong, ask the seller for a refund from the order page.",
+
   empty: {
     noResults: {
       title: 'No listings match',
@@ -70,6 +72,7 @@ export const COPY = {
       reference: 'Reference',
       action: 'Check again',
     },
+    succeeded: "Payment complete. We're holding it until the seller ships.",
   },
 
   decline: {
@@ -114,7 +117,7 @@ export const COPY = {
     ship: 'Mark shipped',
     receive: 'Mark received',
     refund: 'Refund',
-    haveIssue: 'Report a problem',
+    haveIssue: 'Have an issue?',
     whatsWrong: "What's wrong?",
     issues: {
       notShipped: "It hasn't shipped",
@@ -125,6 +128,8 @@ export const COPY = {
       'Tell the seller what happened. They stay unpaid until they answer your request.',
     details: 'Details (optional)',
     requestRefund: 'Request refund',
+    refundRequested:
+      "Refund requested. The seller reviews it and stays unpaid until it's resolved.",
     sellerRequest: 'The buyer asked for a refund',
     sellerRequestFact: 'You stay unpaid for this sale until you refund it.',
     noReason: 'The buyer gave no reason.',
@@ -375,6 +380,7 @@ export const COPY = {
     title: 'Order',
     number: 'Order number',
     placed: 'Placed',
+    fromSeller: (handle: string) => `Shipped by ${handle}`,
     loading: 'Loading order…',
     backToOrders: 'Back to orders',
     backToSales: 'Back to sales',
@@ -388,26 +394,15 @@ export const COPY = {
     reviewBody: "Don't pay again. We'll update this order when the review finishes.",
     cancelled: 'This payment was cancelled. Nothing has been charged.',
     other: "This payment needs a look from us. Don't pay again.",
-    summary: 'Order summary',
-    itemsFrom: (items: number, sellers: number) =>
-      `${items} ${items === 1 ? 'item' : 'items'}${sellers > 1 ? ` from ${sellers} sellers` : ''}`,
-    priceDetails: 'Price details',
-    steps: {
-      paid: 'Paid',
-      shipped: 'Shipped',
-      received: 'Received',
-      refundRequested: 'Refund requested',
-      refunding: 'Refunding',
-      refunded: 'Refunded',
-      refundFailed: 'Refund failed',
-      done: 'done',
-      notYet: 'not yet',
-    },
+    items: 'Items',
+    amounts: 'Amounts',
     yourSale: 'Your sale',
     gross: 'Items + shipping',
     commission: 'Commission',
     refunded: 'Refunded to buyer',
     net: 'You receive',
+    status: 'Status',
+    updated: 'Updated',
     paidWith: 'Paid with',
     card: (network: string | undefined, last4: string) =>
       `${network ?? 'Card'} ending in ${last4}`,
