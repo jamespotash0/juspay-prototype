@@ -53,7 +53,7 @@ test('account: add a card through Hyperswitch, link demo PayPal, reset', async (
   await expect(methods.getByText(/Loading saved cards/)).toHaveCount(0, {
     timeout: 20_000,
   })
-  await page.getByRole('button', { name: 'Add a card' }).click()
+  await page.getByRole('button', { name: 'Add Payment Method' }).click()
 
   const fields = page
     .frameLocator(
@@ -91,6 +91,8 @@ test('account: add a card through Hyperswitch, link demo PayPal, reset', async (
     .click()
   await expect(saved).toHaveCount(0, { timeout: 20_000 })
 
+  // PayPal is offered inside the same Add Payment Method overlay.
+  await page.getByRole('button', { name: 'Add Payment Method' }).click()
   await page.getByRole('button', { name: 'Link PayPal' }).click()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByText('Linked as mike@example.com')).toBeVisible()

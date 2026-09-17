@@ -5,7 +5,6 @@ import { ApiRequestError, api } from '../lib/api.ts'
 import { checkoutLines, useCart } from '../lib/cart.ts'
 import { useListings, userListings } from '../lib/listings.ts'
 import { navigate } from '../lib/navigation.ts'
-import { Link } from '../lib/router.tsx'
 import { useDisplayName } from '../lib/profile.ts'
 import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
@@ -13,12 +12,12 @@ import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
 import type { Breakdown, CheckoutResponse, ShipTo } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
-import { Card, SectionHeading } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
-import { gradeLabel } from '../ui/format.ts'
-import { PageLayout } from './Layout.tsx'
+import { Sheet } from '../ui/Sheet.tsx'
+import { gradeLabel, plural } from '../ui/format.ts'
 
 const TEXT = COPY.checkoutPage
 
@@ -46,30 +45,24 @@ export default function Checkout() {
   const [paying, setPaying] = useState(false)
   const [message, setMessage] = useState('')
 
+  const close = () => navigate(location.pathname, { replace: true, scroll: false })
+
   if (lines.length === 0)
     return (
-      <PageLayout title={TEXT.title} width="narrow">
+      <Sheet title={TEXT.title} closeLabel={TEXT.close} onClose={close}>
         <EmptyState
           title={TEXT.emptyGroup}
           fact={COPY.empty.cart.fact}
           action={{ label: TEXT.backToCart, onClick: () => navigate('/cart') }}
         />
-      </PageLayout>
+      </Sheet>
     )
 
   if (persona === 'admin')
     return (
-      <PageLayout title={TEXT.title} width="narrow">
-        <div>
-          <Notice tone="info" title={TEXT.admin} body={TEXT.adminBody} />
-          <Link
-            to="/cart"
-            className="mt-4 inline-block text-sm text-accent hover:underline"
-          >
-            {TEXT.backToCart}
-          </Link>
-        </div>
-      </PageLayout>
+      <Sheet title={TEXT.title} closeLabel={TEXT.close} onClose={close}>
+        <Notice tone="info" title={TEXT.admin} body={TEXT.adminBody} />
+      </Sheet>
     )
 
   async function start(e: FormEvent) {
@@ -120,86 +113,112 @@ export default function Checkout() {
   // Before the intent exists this is the same calculation the server runs; once it exists, the server's.
   const shown: Breakdown = session?.breakdown ?? breakdown(lines, listings)
 
+  const count = lines.reduce((n, l) => n + l.qty, 0)
+  const step = 'flex flex-col gap-3 border-t border-rule px-5 py-5 sm:px-6'
+  const stepTitle = (n: number, label: string, done = false) => (
+    <h3 className="flex items-center gap-2.5 text-base font-bold tracking-tight">
+      <span
+        className={`money grid size-6 place-items-center rounded-full text-xs ${done ? 'bg-ink text-paper' : 'border border-rule-strong'}`}
+      >
+        {done ? <Icon name="check" className="size-3.5" /> : n}
+      </span>
+      {label}
+    </h3>
+  )
+
   return (
-    <PageLayout title={TEXT.title} width="narrow">
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_17rem] md:items-start lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card as="div">
-            <form onSubmit={start} className="flex flex-col gap-5">
-              <fieldset className="grid grid-cols-6 gap-3" disabled={paying}>
-                <legend className="mb-3 text-lg font-bold tracking-tight">
-                  {TEXT.shipTo}
-                </legend>
-                {field('name', TEXT.fields.name, 'col-span-6')}
-                {field('line1', TEXT.fields.line1, 'col-span-6')}
-                {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
-                {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
-                {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
-              </fieldset>
-              {!session && (
-                <Button type="submit" disabled={busy} className="self-start">
-                  {busy ? TEXT.starting : TEXT.continue}
-                </Button>
-              )}
-            </form>
-          </Card>
-
-          {message && <Notice tone="danger" title={message} body={null} />}
-
-          {session && (
-            <Card as="section" aria-labelledby="pay">
-              <SectionHeading id="pay">{TEXT.payment}</SectionHeading>
-              <HyperCheckout
-                clientSecret={session.clientSecret}
-                publishableKey={session.publishableKey}
-                paymentId={session.paymentId}
-                totalCents={session.breakdown.totalCents}
-                onSubmitted={() => navigate(`/order/${session.paymentId}`)}
-                onError={setMessage}
-                onSubmittingChange={setPaying}
-              />
-            </Card>
-          )}
-        </div>
-
-        <Card
-          as="aside"
-          padding="sm"
-          className="flex flex-col gap-4 sm:p-5 md:sticky md:top-20"
-        >
-          <h2 className="text-lg font-bold tracking-tight">{TEXT.summary}</h2>
-          <ul className="flex flex-col gap-3">
-            {lines.map((l) => {
-              const listing = listings.find((x) => x.id === l.listingId)
-              if (!listing) return null
-              return (
-                <li key={l.listingId} className="flex gap-3">
-                  <img
-                    src={listing.imageUrl}
-                    alt=""
-                    className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col text-sm">
-                    <span className="line-clamp-2 leading-snug font-medium">
-                      {listing.title}
-                    </span>
-                    <span className="text-xs text-ink-muted">
-                      {gradeLabel(listing)}
-                      {l.qty > 1 && <span className="money"> × {l.qty}</span>}
-                    </span>
-                  </div>
-                  <Money
-                    cents={listing.priceCents * l.qty}
-                    className="text-sm font-semibold"
-                  />
-                </li>
-              )
-            })}
-          </ul>
+    // Locked while the payment is starting or confirming: closing mustn't strand a live payment.
+    <Sheet
+      title={TEXT.title}
+      closeLabel={TEXT.close}
+      onClose={close}
+      locked={busy || paying}
+    >
+      <details className="group px-5 pb-4 sm:px-6">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm">
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            {TEXT.summary} · {count} {plural(count, 'item')}
+            <Icon
+              name="chevronDown"
+              className="size-4 transition group-open:rotate-180"
+            />
+          </span>
+          <Money cents={shown.totalCents} className="text-lg font-bold" />
+        </summary>
+        <ul className="mt-4 flex flex-col gap-3">
+          {lines.map((l) => {
+            const listing = listings.find((x) => x.id === l.listingId)
+            if (!listing) return null
+            return (
+              <li key={l.listingId} className="flex gap-3">
+                <img
+                  src={listing.imageUrl}
+                  alt=""
+                  className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+                />
+                <div className="flex min-w-0 flex-1 flex-col text-sm">
+                  <span className="line-clamp-2 leading-snug font-medium">
+                    {listing.title}
+                  </span>
+                  <span className="text-xs text-ink-muted">
+                    {gradeLabel(listing)}
+                    {listing.noReturns && ` · ${COPY.common.noReturns}`}
+                    {l.qty > 1 && <span className="money"> × {l.qty}</span>}
+                  </span>
+                </div>
+                <Money
+                  cents={listing.priceCents * l.qty}
+                  className="text-sm font-semibold"
+                />
+              </li>
+            )
+          })}
+        </ul>
+        <div className="mt-4">
           <BreakdownList b={shown} />
-        </Card>
-      </div>
-    </PageLayout>
+        </div>
+      </details>
+
+      <section className={step}>
+        {stepTitle(1, TEXT.shipTo, !!session)}
+        {session ? (
+          // The address is on the payment now; changing it means a new payment.
+          <p className="pl-8.5 text-sm text-ink-muted">
+            {shipTo.name}, {shipTo.line1}, {shipTo.city}, {shipTo.state} {shipTo.zip}
+          </p>
+        ) : (
+          <form onSubmit={start} className="flex flex-col gap-4">
+            <fieldset className="grid grid-cols-6 gap-3" disabled={busy}>
+              <legend className="sr-only">{TEXT.shipTo}</legend>
+              {field('name', TEXT.fields.name, 'col-span-6')}
+              {field('line1', TEXT.fields.line1, 'col-span-6')}
+              {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
+              {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
+              {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
+            </fieldset>
+            <Button type="submit" disabled={busy} className="h-11">
+              {busy ? TEXT.starting : TEXT.continue}
+            </Button>
+          </form>
+        )}
+      </section>
+
+      <section className={step} aria-labelledby="pay">
+        <div id="pay">{stepTitle(2, TEXT.payment)}</div>
+        {message && <Notice tone="danger" title={message} body={null} />}
+        {session && (
+          <HyperCheckout
+            clientSecret={session.clientSecret}
+            publishableKey={session.publishableKey}
+            paymentId={session.paymentId}
+            totalCents={session.breakdown.totalCents}
+            onSubmitted={() => navigate(`/order/${session.paymentId}`)}
+            onError={setMessage}
+            onSubmittingChange={setPaying}
+          />
+        )}
+      </section>
+    </Sheet>
   )
 }
 

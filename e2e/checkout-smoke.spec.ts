@@ -15,7 +15,7 @@ test('checkout mounts the Hyperswitch SDK iframe for a seeded listing', async ({
       JSON.stringify([{ listingId: 'lst_002', qty: 1 }]),
     )
   })
-  await page.goto('/checkout')
+  await page.goto('/cart?checkout')
   await page.getByRole('button', { name: 'Continue to Payment' }).click()
   await expect(page.locator('iframe[src*="hyperswitch.io"]').first()).toBeVisible({
     timeout: 20_000,

@@ -1,5 +1,5 @@
 import { useEffect, type ComponentType } from 'react'
-import { navigate, type Params } from './lib/navigation.ts'
+import { navigate, useSearchParams, type Params } from './lib/navigation.ts'
 import { Router, type Route } from './lib/router.tsx'
 import { useSession } from './lib/session.ts'
 import Account from './pages/Account.tsx'
@@ -32,6 +32,9 @@ function signedIn(Page: Page): Page {
   }
 }
 
+// Checkout isn't a route: it opens over whichever page has ?checkout.
+const GuardedCheckout = signedIn(Checkout)
+
 // Pages receive { params }; stubs may ignore it.
 const routes: Route[] = [
   { path: '/', component: Catalogue },
@@ -39,7 +42,6 @@ const routes: Route[] = [
   { path: '/cart', component: Cart },
   { path: '/signin', component: SignIn },
   { path: '/signin/:provider', component: SignInProvider },
-  { path: '/checkout', component: signedIn(Checkout) },
   // A bare payment id shows every seller's order in that purchase; <paymentId>.<sellerId> shows one.
   { path: '/order/:paymentId', component: signedIn(Order) },
   { path: '/orders', component: signedIn(Orders) },
@@ -56,5 +58,11 @@ function NotFound() {
 }
 
 export default function App() {
-  return <Router routes={routes} notFound={NotFound} />
+  const checkout = useSearchParams().has('checkout')
+  return (
+    <>
+      <Router routes={routes} notFound={NotFound} />
+      {checkout && <GuardedCheckout params={{}} />}
+    </>
+  )
 }

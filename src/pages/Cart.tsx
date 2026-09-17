@@ -1,6 +1,6 @@
 import { checkoutLines, groupBySeller, removeFromCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
-import { navigate } from '../lib/navigation.ts'
+import { navigate, openCheckout } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { useSession } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
@@ -179,7 +179,7 @@ export default function Cart() {
           ) : (
             <Button
               disabled={buyable.length === 0}
-              onClick={() => navigate('/checkout')}
+              onClick={() => openCheckout()}
               className="w-full sm:w-auto sm:self-end"
             >
               {T.checkOut}

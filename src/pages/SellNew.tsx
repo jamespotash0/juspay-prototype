@@ -26,6 +26,7 @@ export default function SellNew() {
   const persona = usePersona()
   const [category, setCategory] = useState<Category>('coin')
   const [graded, setGraded] = useState(true)
+  const [returns, setReturns] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   if (persona === 'admin') {
@@ -85,6 +86,7 @@ export default function SellNew() {
       ...(category === 'coin' && year !== undefined ? { year } : {}),
       ...(category === 'coin' && get('mintMark') ? { mintMark: get('mintMark') } : {}),
       description,
+      ...(returns ? {} : { noReturns: true }),
     })
     navigate(`/listing/${created.id}`)
   }
@@ -175,6 +177,16 @@ export default function SellNew() {
               </Field>
             </div>
           )}
+
+          <label className="inline-flex w-fit cursor-pointer items-center gap-2 border-t border-rule pt-5 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={returns}
+              onChange={(e) => setReturns(e.target.checked)}
+              className="size-4 accent-[var(--color-primary)]"
+            />
+            {T.returns}
+          </label>
 
           <div className="flex flex-col gap-4 border-t border-rule pt-5">
             <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-sm font-semibold">

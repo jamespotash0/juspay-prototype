@@ -84,6 +84,8 @@ async function checkout(request: Request): Promise<Response> {
     return {
       sellerId,
       listingIds: own.map((l) => l.listing.id),
+      // A return refunds the whole seller order, so one ineligible item makes the order ineligible.
+      noReturns: own.some((l) => l.listing.noReturns === true),
       b: breakdown(
         own.map((l) => l.line),
         catalogue,
@@ -132,10 +134,10 @@ async function checkout(request: Request): Promise<Response> {
       metadata: {
         [META.sellers]: sellerIds.join(','),
         [META.buyerId]: buyer.id,
-        // ponytail: 3 + 9 keys per seller. Hyperswitch documents 50 keys (5 sellers); the sandbox accepted
+        // ponytail: 3 + 9 keys per seller (+1 if ineligible for return, +3 once disputed and asked). Hyperswitch documents 50 keys (5 sellers); the sandbox accepted
         // 111 (12 sellers) on 2026-09-16. Cap the cart at 5 sellers if a real account enforces the limit.
         ...Object.fromEntries(
-          groups.flatMap(({ sellerId, listingIds, b: g }) =>
+          groups.flatMap(({ sellerId, listingIds, noReturns, b: g }) =>
             Object.entries({
               [META.listingIds]: listingIds.join(','),
               [META.itemsCents]: String(g.itemsCents),
@@ -146,6 +148,8 @@ async function checkout(request: Request): Promise<Response> {
               [META.receivedAt]: '',
               [META.disputedAt]: '',
               [META.disputeReason]: '',
+              // Eligibility is fixed at purchase: a seller changing policy later doesn't change this order.
+              ...(noReturns ? { [META.noReturns]: '1' } : {}),
             }).map(([k, v]) => [`${sellerId}.${k}`, v]),
           ),
         ),

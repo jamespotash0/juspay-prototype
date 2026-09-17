@@ -9,6 +9,7 @@ import { breakdown } from '../../src/shared/money.ts'
 import { LISTINGS } from '../../src/shared/seed.ts'
 import type {
   CheckoutResponse,
+  Listing,
   OrderStateRequest,
   OrderView,
   PersonaId,
@@ -52,7 +53,10 @@ const list = async (query: string) => {
 type ErrorBody = { error?: { code: string } }
 
 /** Creates a test-tagged checkout and confirms it server-side with 4242 (the SDK is browser-only). */
-async function paidPayment(listingIds = [LISTING.id]): Promise<string> {
+async function paidPayment(
+  listingIds = [LISTING.id],
+  userListings: Listing[] = [],
+): Promise<string> {
   const res = await checkout(
     new Request(`${ORIGIN}/api/checkout`, {
       method: 'POST',
@@ -61,6 +65,7 @@ async function paidPayment(listingIds = [LISTING.id]): Promise<string> {
         attemptId: newAttemptId(),
         buyerId: 'alex',
         items: listingIds.map((listingId) => ({ listingId, qty: 1 })),
+        userListings,
         shipTo: {
           name: 'Alex Rivera',
           line1: '1 Main St',
@@ -162,6 +167,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     const disputed = await act({
       paymentId: B,
       action: 'dispute',
+      issue: 'notAsDescribed',
       actorId: 'alex',
       reason: '  Coin looks cleaned  ',
     })
@@ -194,10 +200,49 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     const again = await act({
       paymentId: B,
       action: 'dispute',
+      issue: 'notAsDescribed',
       actorId: 'alex',
       reason: 'x',
     })
     expect([again.status, again.body.error?.code]).toEqual([409, 'INVALID_TRANSITION'])
+  })
+
+  it('one ineligible item makes the seller order ineligible for return; a question moves nothing', async () => {
+    // Both Mike's: lst_016 is sold as ineligible for return, lst_024 is not. A return refunds the
+    // whole seller order, so the order as a whole can't be returned. Over $500: stripe_test.
+    const INELIGIBLE = LISTINGS.find((l) => l.id === 'lst_016')!
+    expect([INELIGIBLE.sellerId, INELIGIBLE.noReturns]).toEqual([SELLER, true])
+    const id = await paidPayment([LISTING.id, INELIGIBLE.id])
+    expect((await read(id)).returnable).toBe(false)
+
+    const ret = await act({
+      paymentId: id,
+      action: 'dispute',
+      issue: 'return',
+      actorId: 'alex',
+    })
+    expect([ret.status, ret.body.error?.code]).toEqual([409, 'ISSUE_NOT_ALLOWED'])
+
+    const asked = await act({
+      paymentId: id,
+      action: 'ask',
+      actorId: 'alex',
+      reason: '  Is the rim toned?  ',
+    })
+    expect(asked.status, JSON.stringify(asked.body)).toBe(200)
+    expect(asked.body.question).toBe('Is the rim toned?')
+    expect(asked.body.fulfilment).toBe('unshipped')
+
+    const cancel = await act({
+      paymentId: id,
+      action: 'dispute',
+      issue: 'cancel',
+      actorId: 'alex',
+    })
+    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200)
+    expect([cancel.body.fulfilment, cancel.body.issue]).toEqual(['disputed', 'cancel'])
+    // An order with only returnable items stays returnable.
+    expect((await read(A)).returnable).toBe(true)
   })
 
   it('refunds are full only: A refunds its whole total, and a second refund is 409', async () => {
@@ -257,18 +302,23 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
 })
 
 // One payment for a two-seller cart: each seller's order ships and refunds on its own.
-// lst_024 is Mike's; OTHER is a third seller's, so neither is the buyer's own.
-const OTHER = LISTINGS.find((l) => l.sellerId !== SELLER && l.sellerId !== 'alex')!
+// lst_024 is Mike's. Every seeded listing is Mike's, so the second seller comes from a created
+// (usr_) listing, which checkout accepts from the client. Neither is the buyer's own.
+const OTHER: Listing = {
+  ...LISTINGS.find((l) => l.id === 'lst_005')!,
+  id: 'usr_multiseller_test',
+  sellerId: 'sel_bluesheet',
+}
 
 describe.skipIf(!KEY)('multi-seller payment (live sandbox)', () => {
   it('splits into per-seller orders that ship and refund independently', async () => {
-    const paymentId = await paidPayment([LISTING.id, OTHER.id])
+    const paymentId = await paidPayment([LISTING.id, OTHER.id], [OTHER])
     const whole = breakdown(
       [
         { listingId: LISTING.id, qty: 1 },
         { listingId: OTHER.id, qty: 1 },
       ],
-      LISTINGS,
+      [...LISTINGS, OTHER],
     )
     const hs = await fetch(`${HS}/payments/${paymentId}`, {
       headers: { 'api-key': KEY! },

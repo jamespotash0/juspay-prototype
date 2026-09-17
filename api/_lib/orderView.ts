@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto'
 import { COPY, type DeclineReason } from '../../src/shared/copy.js'
 import { sellerLedger } from '../../src/shared/money.js'
-import { mapStatus } from '../../src/shared/orderState.js'
+import { ISSUES, mapStatus } from '../../src/shared/orderState.js'
 import {
   META,
   type Breakdown,
   type Decline,
   type Fulfilment,
+  type Funding,
   type OrderView,
   type PaymentState,
   type RefundState,
@@ -26,6 +27,7 @@ export interface HsPayment {
     card?: {
       last4?: string | null
       card_network?: string | null
+      card_type?: string | null
       card_exp_month?: string | null
       card_exp_year?: string | null
     } | null
@@ -74,6 +76,16 @@ export const refundPrefix = (paymentId: string, sellerId: string) =>
   createHash('sha256').update(`${paymentId}:${sellerId}`).digest('hex').slice(0, 20) +
   '_'
 
+/** Credit, debit or prepaid: Hyperswitch's payment_method_type, else the card's own card_type. */
+export function fundingOf(
+  methodType: string | null | undefined,
+  cardType: string | null | undefined,
+): Funding | undefined {
+  const t = [methodType, cardType?.toLowerCase()]
+  return FUNDING.find((f) => t.includes(f))
+}
+const FUNDING: Funding[] = ['credit', 'debit', 'prepaid']
+
 const int = (v: string | undefined) => {
   const n = Number(v)
   return Number.isInteger(n) ? n : 0
@@ -115,9 +127,11 @@ export async function toOrderViews(
   }
 
   const card = p.payment_method_data?.card
+  const funding = fundingOf(p.payment_method_type, card?.card_type)
   const paymentMethod = card?.last4
     ? {
         ...(card.card_network ? { network: card.card_network } : {}),
+        ...(funding ? { funding } : {}),
         last4: card.last4,
         ...(card.card_exp_month && card.card_exp_year
           ? { expiry: `${card.card_exp_month}/${card.card_exp_year.slice(-2)}` }
@@ -156,11 +170,13 @@ export async function toOrderViews(
 
     // Metadata stores '' for an unset step; emit only the steps that happened.
     const fulfilledAt = Object.fromEntries(
-      (['shippedAt', 'receivedAt', 'disputedAt'] as const)
+      (['shippedAt', 'receivedAt', 'disputedAt', 'askedAt'] as const)
         .filter((k) => get(META[k]))
         .map((k) => [k, get(META[k])]),
     ) as NonNullable<OrderView['fulfilledAt']>
     const disputeReason = get(META.disputeReason)
+    const issue = ISSUES.find((k) => k === get(META.issue))
+    const question = get(META.question)
     const listingIds = get(META.listingIds)
 
     return {
@@ -180,6 +196,9 @@ export async function toOrderViews(
       ...(paymentMethod ? { paymentMethod } : {}),
       ...(decline ? { decline } : {}),
       ...(disputeReason ? { disputeReason } : {}),
+      ...(issue ? { issue } : {}),
+      returnable: get(META.noReturns) !== '1',
+      ...(question ? { question } : {}),
       ...(Object.keys(fulfilledAt).length ? { fulfilledAt } : {}),
     }
   })

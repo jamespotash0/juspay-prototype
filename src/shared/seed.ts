@@ -395,6 +395,7 @@ export const LISTINGS: Listing[] = [
   {
     id: 'lst_016',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     category: 'coin',
     title: '1963-D Franklin Half Dollar',
     year: 1963,
@@ -410,6 +411,7 @@ export const LISTINGS: Listing[] = [
   {
     id: 'lst_017',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     category: 'coin',
     title: 'Mercury Dime, Date Worn',
     priceCents: 2000,
@@ -609,6 +611,7 @@ export const LISTINGS: Listing[] = [
   {
     id: 'lst_029',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     category: 'card',
     title: '1911 T3 Turkey Red Christy Mathewson',
     year: 1911,
@@ -1106,6 +1109,7 @@ export const LISTINGS: Listing[] = [
   coin({
     id: 'lst_059',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     type: 'morgan',
     title: '1921 Morgan Dollar',
     year: 1921,
@@ -1168,6 +1172,7 @@ export const LISTINGS: Listing[] = [
   coin({
     id: 'lst_063',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     type: 'walker',
     title: '1942 Walking Liberty Half Dollar',
     year: 1942,
@@ -1368,6 +1373,7 @@ export const LISTINGS: Listing[] = [
   {
     id: 'lst_075',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     category: 'card',
     title: '1909-11 T206 Rube Waddell, Portrait',
     year: 1909,
@@ -1399,6 +1405,7 @@ export const LISTINGS: Listing[] = [
   {
     id: 'lst_077',
     sellerId: 'mike',
+    noReturns: true, // raw find, sold as found
     category: 'card',
     title: '1909 T206 Piedmont 150 Sherry Magie Error',
     year: 1909,

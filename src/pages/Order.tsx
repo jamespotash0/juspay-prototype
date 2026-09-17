@@ -1,25 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { clearAttempt } from '../checkout/attempt.ts'
 import { api, cachedOrder } from '../lib/api.ts'
 import { clearCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
-import { navigate, type Params } from '../lib/navigation.ts'
+import { navigate, openCheckout, type Params } from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
-import { latestStatus } from '../shared/orderState.ts'
+import { ISSUES, issueBlock, latestStatus } from '../shared/orderState.ts'
 import { SELLERS } from '../shared/seed.ts'
-import type { OrderAction, OrderView, PaymentState, PersonaId } from '../shared/types.ts'
+import type {
+  IssueKind,
+  OrderAction,
+  OrderView,
+  PaymentState,
+  PersonaId,
+} from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
-import { Card, SectionHeading } from '../ui/Card.tsx'
+import { Card } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
-import { Icon } from '../ui/Icon.tsx'
+import { Icon, type IconName } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
-import { refundLabel } from '../ui/format.ts'
+import { gradeLabel, orderNumber, plural, refundLabel } from '../ui/format.ts'
 import { BreakdownList } from './Checkout.tsx'
 import { PageLayout } from './Layout.tsx'
 import { RefundAction } from './RefundAction.tsx'
@@ -30,7 +36,6 @@ const POLL_FOR_MS = 30000
 
 const TEXT = COPY.order
 const A = COPY.orderActions
-type IssueKind = keyof typeof COPY.orderActions.issues
 
 export default function Order({ params }: { params: Params }) {
   // A bare payment id (the return from checkout) shows every seller's order in that purchase;
@@ -38,7 +43,6 @@ export default function Order({ params }: { params: Params }) {
   const id = params.paymentId
   const [paymentId, onlySeller] = id.split('.')
   const persona = usePersona()
-  const listings = useListings()
   // Render at once from a list the viewer just saw; the read below refreshes it straight away.
   const [orders, setOrders] = useState<OrderView[] | null>(() => {
     const cached = cachedOrder(id)
@@ -140,6 +144,8 @@ export default function Order({ params }: { params: Params }) {
         ? { to: '/sell', label: TEXT.backToSales }
         : { to: '/orders', label: TEXT.backToOrders }
 
+  const itemCount = shown?.reduce((n, o) => n + o.listingIds.length, 0) ?? 0
+
   return (
     <PageLayout
       title={TEXT.title}
@@ -155,25 +161,19 @@ export default function Order({ params }: { params: Params }) {
       }
     >
       <div className="flex flex-col gap-4 sm:gap-5">
-        {/* The order number and date: what the buyer and support quote, so it leads the page. */}
-        <dl className="-mt-2 flex flex-wrap gap-x-8 gap-y-2 sm:-mt-3">
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-xs font-medium tracking-wide text-ink-muted uppercase">
-              {TEXT.number}
-            </dt>
-            <dd className="money text-base font-semibold select-all">{paymentId}</dd>
-          </div>
-          {first && (
-            <div className="flex flex-col gap-0.5">
-              <dt className="text-xs font-medium tracking-wide text-ink-muted uppercase">
-                {TEXT.placed}
-              </dt>
-              <dd className="text-base font-semibold">
-                {placed.format(new Date(first.createdAt))}
-              </dd>
-            </div>
-          )}
-        </dl>
+        {/* The order number is what the buyer and support quote, so it leads the page. */}
+        <div className="-mt-3 flex flex-col gap-0.5 sm:-mt-4">
+          <p className="flex flex-wrap gap-x-2 text-sm text-ink-muted">
+            <span className="money font-semibold text-ink select-all">
+              {orderNumber(paymentId)}
+            </span>
+            {first && <span>· {placed.format(new Date(first.createdAt))}</span>}
+          </p>
+          {/* The full payment id, for support to find it in Hyperswitch. */}
+          <p className="text-xs text-ink-muted">
+            {TEXT.supportRef} <span className="money select-all">{paymentId}</span>
+          </p>
+        </div>
 
         {ambiguous ? (
           <Notice
@@ -194,86 +194,49 @@ export default function Order({ params }: { params: Params }) {
           <StateNotice order={summary} />
         )}
 
-        {shown?.map((order) => {
-          const seller = SELLERS.find((x) => x.id === order.sellerId)
-          return (
-            <section
-              key={order.orderId}
-              aria-label={seller?.handle ?? order.sellerId}
-              className="flex flex-col gap-3"
-            >
-              {/* With several sellers, each order is headed by who ships it. */}
-              {shown.length > 1 && (
-                <h2 className="px-1 text-sm font-semibold text-ink-muted">
-                  {TEXT.fromSeller(seller?.handle ?? order.sellerId)}
-                </h2>
-              )}
-              {(order.state === 'paid' || order.state === 'refunded') && (
-                <Fulfilment
-                  order={order}
-                  persona={persona}
-                  onChange={(next) =>
-                    setOrders((all) =>
-                      all ? all.map((o) => (o.orderId === next.orderId ? next : o)) : all,
-                    )
-                  }
+        {!isSeller && total && first && (
+          <Card as="section" aria-label={TEXT.summary}>
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm text-ink-muted">
+                  {TEXT.itemsFrom(itemCount, shown!.length)}
+                </span>
+                <Money
+                  cents={total.totalCents}
+                  className="text-2xl leading-none font-bold tracking-tight"
                 />
-              )}
-              <Card as="section" aria-labelledby={`items-${order.orderId}`}>
-                <SectionHeading id={`items-${order.orderId}`}>
-                  {TEXT.items}
-                </SectionHeading>
-                <ul className="flex flex-col divide-y divide-rule">
-                  {order.listingIds.map((listingId) => {
-                    const l = listings.find((x) => x.id === listingId)
-                    return (
-                      <li
-                        key={listingId}
-                        className="flex items-center gap-3 py-3 text-sm first:pt-0 last:pb-0 sm:gap-4"
-                      >
-                        {l && (
-                          <img
-                            src={l.imageUrl}
-                            alt=""
-                            className="size-14 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
-                          />
-                        )}
-                        <span className="min-w-0 flex-1 font-medium">
-                          {l?.title ?? listingId}
-                        </span>
-                        {l && <Money cents={l.priceCents} className="font-semibold" />}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </Card>
-              {isSeller && (
-                <Card as="section" aria-labelledby={`sale-${order.orderId}`}>
-                  <SectionHeading id={`sale-${order.orderId}`}>
-                    {TEXT.yourSale}
-                  </SectionHeading>
-                  {/* The seller never sees tax or the buyer's total. */}
-                  <dl className="money flex flex-col divide-y divide-rule text-sm">
-                    <Row label={TEXT.gross} cents={order.ledger.grossCents} />
-                    <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
-                    <Row label={TEXT.net} cents={order.ledger.netCents} bold />
-                  </dl>
-                </Card>
-              )}
-            </section>
-          )
-        })}
-
-        {!isSeller && total && (
-          <Card as="section" aria-labelledby="amounts">
-            <SectionHeading id="amounts">{TEXT.amounts}</SectionHeading>
-            {/* BreakdownList is shared with checkout; drop its own top rule inside the card. */}
-            <div className="[&>dl]:border-t-0 [&>dl]:pt-0">
-              <BreakdownList b={total} />
+              </div>
+              <PaidWith order={first} />
             </div>
-            {first && <PaidWith order={first} />}
+            <details className="group mt-4 border-t border-rule pt-3">
+              <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink">
+                {TEXT.priceDetails}
+                <Icon
+                  name="chevronDown"
+                  className="size-4 transition group-open:rotate-180"
+                />
+              </summary>
+              <div className="mt-3 [&>dl]:border-t-0 [&>dl]:pt-0">
+                <BreakdownList b={total} />
+              </div>
+            </details>
           </Card>
         )}
+
+        {shown?.map((order, i) => (
+          <SellerOrder
+            key={order.orderId}
+            shipment={shown.length > 1 ? [i + 1, shown.length] : null}
+            order={order}
+            persona={persona}
+            isSeller={isSeller}
+            onChange={(next) =>
+              setOrders((all) =>
+                all ? all.map((o) => (o.orderId === next.orderId ? next : o)) : all,
+              )
+            }
+          />
+        ))}
       </div>
     </PageLayout>
   )
@@ -283,6 +246,7 @@ const placed = new Intl.DateTimeFormat('en-US', {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
+const day = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 
 function Row({ label, cents, bold }: { label: string; cents: number; bold?: boolean }) {
   return (
@@ -325,14 +289,8 @@ function StateNotice({ order }: { order: OrderView | null }) {
       return <Notice tone="warning" title={COPY.checkout.processing} body={null} />
     case 'paid':
     case 'refunded':
-      if (order.refund.state === 'succeeded' || order.state === 'refunded')
-        return (
-          <Notice tone="info" title={COPY.postPayment.refundSucceededBuyer} body={null} />
-        )
-      // Once shipped, the timeline below carries the story.
-      return order.fulfilment === 'unshipped' ? (
-        <Notice tone="info" title={COPY.checkout.succeeded} body={COPY.hold} />
-      ) : null
+      // Each seller's progress tracker tells this story.
+      return null
     case 'failed':
       return <Declined order={order} />
     case 'cancelled':
@@ -373,41 +331,128 @@ function Declined({ order }: { order: OrderView }) {
       action={{
         // The cart kept its items; checkout starts a fresh attempt because this one is terminal.
         label: COPY.decline[d?.reason ?? 'generic'].action,
-        onClick: () => navigate('/checkout'),
+        onClick: () => openCheckout(),
       }}
     />
   )
 }
 
-function Fulfilment({
+type Step = { label: string; at?: string; done: boolean; dot?: string; icon?: IconName }
+
+/** Paid → Shipped → Received. A refund request or refund replaces the last step; an unshipped one drops Shipped. */
+function progress(order: OrderView): Step[] {
+  const at = order.fulfilledAt ?? {}
+  const f = order.fulfilment
+  const shipped = !!at.shippedAt || f === 'shipped' || f === 'received'
+  const r = order.refund.state
+  const end: Step =
+    r === 'succeeded' || order.state === 'refunded'
+      ? { label: TEXT.steps.refunded, done: true, dot: 'bg-state-refunded', icon: 'undo' }
+      : r === 'pending'
+        ? { label: TEXT.steps.refunding, done: false }
+        : r === 'failed'
+          ? {
+              label: TEXT.steps.refundFailed,
+              done: true,
+              dot: 'bg-state-failed',
+              icon: 'cross',
+            }
+          : f === 'disputed'
+            ? {
+                label: order.issue
+                  ? A.issues[order.issue].step
+                  : TEXT.steps.refundRequested,
+                at: at.disputedAt,
+                done: true,
+                dot: 'bg-state-disputed',
+                icon: 'flag',
+              }
+            : { label: TEXT.steps.received, at: at.receivedAt, done: f === 'received' }
+  const issue = end.label !== TEXT.steps.received
+  return [
+    { label: TEXT.steps.paid, at: order.createdAt, done: true },
+    ...(shipped || !issue
+      ? [{ label: TEXT.steps.shipped, at: at.shippedAt, done: shipped }]
+      : []),
+    end,
+  ]
+}
+
+function Progress({ order }: { order: OrderView }) {
+  const steps = progress(order)
+  // The furthest step reached is where the order is now.
+  const current = steps.findLastIndex((s) => s.done)
+  return (
+    <ol
+      className="grid"
+      style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+    >
+      {steps.map((s, i) => (
+        <li
+          key={s.label}
+          aria-current={i === current ? 'step' : undefined}
+          className="flex min-w-0 flex-col gap-1.5 text-xs"
+        >
+          <div className="flex items-center">
+            <span
+              className={`grid size-5 shrink-0 place-items-center rounded-full text-paper ${
+                s.done ? (s.dot ?? 'bg-ink') : 'border-2 border-rule-strong bg-paper'
+              }`}
+            >
+              {s.done && <Icon name={s.icon ?? 'check'} className="size-3" />}
+            </span>
+            {i < steps.length - 1 && (
+              <span
+                className={`mx-1.5 h-0.5 flex-1 rounded-full ${steps[i + 1].done ? 'bg-ink' : 'bg-rule'}`}
+              />
+            )}
+          </div>
+          <span
+            className={`pr-2 leading-tight font-semibold ${s.done ? 'text-ink' : 'text-ink-muted'}`}
+          >
+            {s.label}
+          </span>
+          {s.at && s.done && (
+            <span className="text-ink-muted">{day.format(new Date(s.at))}</span>
+          )}
+          <span className="sr-only">{s.done ? TEXT.steps.done : TEXT.steps.notYet}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/** One seller's part of the purchase: who ships it, where it is, what's in it, and what you can do. */
+function SellerOrder({
+  shipment,
   order,
   persona,
+  isSeller,
   onChange,
 }: {
+  /** [n, N] when the purchase has more than one seller. */
+  shipment: [number, number] | null
   order: OrderView
   persona: PersonaId
+  isSeller: boolean
   onChange: (o: OrderView) => void
 }) {
+  const listings = useListings()
+  const seller = SELLERS.find((x) => x.id === order.sellerId)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  // closed → menu of issues → the chosen issue's refund request form
-  const [issue, setIssue] = useState<'closed' | 'menu' | IssueKind>('closed')
+  // The option picked from "Have a problem?", whose form is open.
+  const [issue, setIssue] = useState<IssueKind | null>(null)
   const [details, setDetails] = useState('')
 
   const f = order.fulfilment
+  const settled = order.state === 'paid' || order.state === 'refunded'
   const refunded = order.refund.state === 'succeeded' || order.state === 'refunded'
   const isBuyer = persona === order.buyerId
   const canReceive = isBuyer && order.state === 'paid' && f === 'shipped'
   const canDispute =
     isBuyer && order.state === 'paid' && f !== 'disputed' && order.refund.state === 'none'
-
-  // Offer only the issues that fit where the parcel is.
-  const issueOptions: IssueKind[] =
-    f === 'unshipped'
-      ? ['notShipped']
-      : f === 'shipped'
-        ? ['notArrived', 'wrongItem']
-        : ['wrongItem']
+  const sellerActs = persona === order.sellerId && order.state === 'paid' && !refunded
 
   async function act(action: OrderAction) {
     setBusy(true)
@@ -418,13 +463,13 @@ function Fulfilment({
           paymentId: order.orderId,
           action,
           actorId: persona,
-          // Admin sees what kind of issue it is, then the buyer's own words.
-          ...(action === 'dispute' && issue !== 'closed' && issue !== 'menu'
-            ? { reason: [A.issues[issue], details.trim()].filter(Boolean).join(': ') }
-            : {}),
+          // The kind goes separately, so the server can check it against the order.
+          ...(action === 'dispute' ? { issue: issue!, reason: details } : {}),
+          ...(action === 'ask' ? { reason: details } : {}),
         }),
       )
-      setIssue('closed')
+      setIssue(null)
+      setDetails('')
     } catch {
       setFailed(true)
     } finally {
@@ -432,54 +477,56 @@ function Fulfilment({
     }
   }
 
-  // The latest status only, and when it happened.
   const status = latestStatus(order)
-  const when =
-    order.fulfilledAt?.disputedAt ??
-    order.fulfilledAt?.receivedAt ??
-    order.fulfilledAt?.shippedAt
+  const pad = 'px-5 sm:px-6'
 
   return (
     <Card
       as="section"
-      aria-labelledby={`status-${order.orderId}`}
-      className="flex flex-col gap-4"
+      padding="none"
+      aria-labelledby={`seller-${order.orderId}`}
+      className="flex flex-col"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id={`status-${order.orderId}`} className="text-lg font-bold tracking-tight">
-          {TEXT.status}
-        </h2>
-        <div className="flex items-center gap-3 text-sm">
+      <header className={`flex items-start justify-between gap-4 pt-5 ${pad}`}>
+        <div className="min-w-0">
+          <h2 id={`seller-${order.orderId}`} className="font-bold tracking-tight">
+            {shipment
+              ? TEXT.shipment(shipment[0], shipment[1], seller?.handle ?? order.sellerId)
+              : (seller?.handle ?? order.sellerId)}
+          </h2>
+          <p className="text-xs text-ink-muted">
+            {order.listingIds.length} {plural(order.listingIds.length, 'item')}
+            {seller && ` · ${COPY.common.shipsFrom} ${seller.shipsFrom}`}
+          </p>
+        </div>
+        {settled && (
           <StatusPill
             status={status}
             label={status === order.refund.state ? refundLabel(order) : undefined}
           />
-          {order.refund.refundedCents > 0 && (
-            <Money cents={order.refund.refundedCents} className="font-semibold" />
-          )}
-          {when && !refunded && (
-            <span className="text-ink-muted">
-              {TEXT.updated} {placed.format(new Date(when))}
-            </span>
+        )}
+      </header>
+
+      {settled && (
+        <div className={`flex flex-col gap-3 pt-5 ${pad}`}>
+          <Progress order={order} />
+          {isBuyer && refunded && (
+            <p className="text-xs text-ink-muted">
+              {COPY.postPayment.refundSucceededBuyer}
+            </p>
           )}
         </div>
-      </div>
-
-      {failed && (
-        <Notice tone="danger" title={COPY.postPayment.actionDidNotSave} body={null} />
       )}
 
-      {isBuyer && f === 'disputed' && !refunded && (
-        <Notice tone="info" title={A.refundRequested} body={null} />
-      )}
-
-      {/* The seller answers refund requests, and can refund any paid order of theirs. */}
-      {persona === order.sellerId && order.state === 'paid' && !refunded && (
-        <div className="flex flex-col gap-3">
-          {f === 'disputed' && (
+      {(failed || (sellerActs && f === 'disputed') || (order.question && !refunded)) && (
+        <div className={`flex flex-col gap-3 pt-4 ${pad}`}>
+          {failed && (
+            <Notice tone="danger" title={COPY.postPayment.actionDidNotSave} body={null} />
+          )}
+          {sellerActs && f === 'disputed' && (
             <Notice
               tone="warning"
-              title={A.sellerRequest}
+              title={order.issue ? A.issues[order.issue].step : A.sellerRequest}
               body={
                 <>
                   <p className="font-medium">
@@ -490,90 +537,200 @@ function Fulfilment({
               }
             />
           )}
-          {order.refund.state !== 'pending' && (
-            <div className="flex flex-wrap items-center gap-2">
-              <RefundAction order={order} sellerId={persona} onChange={onChange} />
-            </div>
+          {order.question && !refunded && (
+            <p className="rounded-control bg-well px-3 py-2 text-sm">
+              <span className="block text-xs text-ink-muted">
+                {isBuyer ? A.youAsked : A.buyerAsked}
+              </span>
+              “{order.question}”
+            </p>
           )}
         </div>
       )}
 
-      {(canReceive || canDispute) && issue === 'closed' && (
-        <div className="flex flex-wrap gap-2">
-          {canReceive && (
+      <ul
+        className={`mt-5 flex flex-col divide-y divide-rule border-t border-rule ${pad}`}
+      >
+        {order.listingIds.map((listingId) => {
+          const l = listings.find((x) => x.id === listingId)
+          return (
+            <li key={listingId} className="flex items-center gap-3 py-3 text-sm">
+              {l && (
+                <img
+                  src={l.imageUrl}
+                  alt=""
+                  className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+                />
+              )}
+              <div className="flex min-w-0 flex-1 flex-col">
+                {l ? (
+                  <Link
+                    to={`/listing/${l.id}`}
+                    className="line-clamp-2 leading-snug font-medium hover:underline"
+                  >
+                    {l.title}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{listingId}</span>
+                )}
+                {l && (
+                  <span className="text-xs text-ink-muted">
+                    {gradeLabel(l)}
+                    {l.noReturns && ` · ${COPY.common.noReturns}`}
+                  </span>
+                )}
+              </div>
+              {l && <Money cents={l.priceCents} className="font-semibold" />}
+            </li>
+          )
+        })}
+      </ul>
+
+      {isSeller && (
+        <dl
+          className={`money flex flex-col divide-y divide-rule border-t border-rule py-4 text-sm ${pad}`}
+        >
+          {/* The seller never sees tax or the buyer's total. */}
+          <Row label={TEXT.gross} cents={order.ledger.grossCents} />
+          <Row label={TEXT.commission} cents={-order.ledger.commissionCents} />
+          <Row label={TEXT.net} cents={order.ledger.netCents} bold />
+        </dl>
+      )}
+
+      {((canReceive || canDispute) && !issue) ||
+      (sellerActs && order.refund.state !== 'pending') ? (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 border-t border-rule py-3 ${pad}`}
+        >
+          {canReceive ? (
             <Button onClick={() => act('receive')} disabled={busy}>
               {A.receive}
             </Button>
+          ) : (
+            <span />
           )}
           {canDispute && (
-            <Button variant="secondary" onClick={() => setIssue('menu')} disabled={busy}>
-              {A.haveIssue}
-            </Button>
+            <ProblemMenu
+              order={order}
+              disabled={busy}
+              onPick={(k) => {
+                setIssue(k)
+                setDetails('')
+              }}
+            />
+          )}
+          {/* The seller answers refund requests, and can refund any paid order of theirs. */}
+          {sellerActs && order.refund.state !== 'pending' && (
+            <RefundAction order={order} sellerId={persona} onChange={onChange} />
           )}
         </div>
-      )}
+      ) : null}
 
-      {issue === 'menu' && (
-        <div className="flex flex-col gap-3 rounded-control bg-well p-3 sm:p-4">
-          <p id="issue-menu" className="text-sm font-semibold">
-            {A.whatsWrong}
-          </p>
-          <ul aria-labelledby="issue-menu" className="flex flex-col gap-2">
-            {issueOptions.map((k) => (
-              <li key={k}>
-                <button
-                  type="button"
-                  onClick={() => setIssue(k)}
-                  className="flex w-full items-center justify-between rounded-control border border-rule-strong bg-paper px-3 py-2.5 text-left text-sm font-medium hover:border-ink focus-visible:border-ink"
-                >
-                  {A.issues[k]}
-                  <Icon name="arrowRight" className="size-4 text-ink-muted" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Button
-            variant="quiet"
-            className="h-8 self-start px-0!"
-            onClick={() => setIssue('closed')}
-          >
-            {COPY.common.cancel}
-          </Button>
-        </div>
-      )}
-
-      {issue !== 'closed' && issue !== 'menu' && (
+      {issue && (
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            act('dispute')
+            act(issue === 'question' ? 'ask' : 'dispute')
           }}
-          className="flex flex-col gap-3 rounded-control bg-well p-3 sm:p-4"
+          className={`flex flex-col gap-3 rounded-b-card border-t border-rule bg-well py-4 ${pad}`}
         >
-          <p className="text-sm font-semibold">{A.issues[issue]}</p>
-          <p className="text-sm text-ink-muted">{A.issueHint}</p>
+          <div>
+            <p className="text-sm font-semibold">{A.issues[issue].label}</p>
+            <p className="text-sm text-ink-muted">
+              {A.issues[issue].hint}
+              {issue !== 'question' && ` ${A.refundHint}`}
+            </p>
+          </div>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            {A.details}
+            {issue === 'question' ? A.yourQuestion : A.details}
             <textarea
               value={details}
-              maxLength={200}
+              required={issue === 'question'}
+              maxLength={300}
               rows={3}
               disabled={busy}
               onChange={(e) => setDetails(e.target.value)}
-              className="rounded-control border border-rule-strong bg-paper p-3 text-sm hover:border-ink focus-visible:border-ink"
+              className="rounded-control border border-rule-strong bg-paper p-3 text-sm font-normal hover:border-ink focus-visible:border-ink"
             />
           </label>
           <div className="flex gap-2">
             <Button type="submit" disabled={busy}>
-              {A.requestRefund}
+              {A.issues[issue].submit}
             </Button>
-            <Button variant="quiet" onClick={() => setIssue('menu')} disabled={busy}>
-              {COPY.common.back}
+            <Button variant="quiet" onClick={() => setIssue(null)} disabled={busy}>
+              {COPY.common.cancel}
             </Button>
           </div>
         </form>
       )}
     </Card>
+  )
+}
+
+/** "Have a problem?": every option, every time. One that can't apply yet is greyed out and says why. */
+function ProblemMenu({
+  order,
+  disabled,
+  onPick,
+}: {
+  order: OrderView
+  disabled: boolean
+  onPick: (k: IssueKind) => void
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = ref.current
+      if (!el?.open) return
+      if (
+        e instanceof KeyboardEvent ? e.key === 'Escape' : !el.contains(e.target as Node)
+      )
+        el.open = false
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [])
+
+  return (
+    <details ref={ref} className="group relative">
+      <summary
+        aria-disabled={disabled || undefined}
+        className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-control px-3 text-sm font-medium text-ink-muted hover:bg-well hover:text-ink aria-disabled:pointer-events-none aria-disabled:opacity-50 [&::-webkit-details-marker]:hidden"
+      >
+        <Icon name="flag" className="size-4" />
+        {A.haveIssue}
+        <Icon name="chevronDown" className="size-4 transition group-open:rotate-180" />
+      </summary>
+      <ul className="absolute right-0 z-20 mt-1 w-72 max-w-[calc(100vw-3rem)] rounded-control border border-rule bg-paper p-1.5 shadow-pop">
+        {ISSUES.map((k) => {
+          const blocked = issueBlock(order, k)
+          return (
+            <li key={k}>
+              <button
+                type="button"
+                disabled={!!blocked}
+                onClick={() => {
+                  ref.current!.open = false
+                  onPick(k)
+                }}
+                className="flex w-full flex-col items-start rounded-control px-2.5 py-2 text-left text-sm hover:bg-well disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                <span className={`font-medium ${blocked ? 'text-ink-muted' : ''}`}>
+                  {A.issues[k].label}
+                </span>
+                {blocked && (
+                  <span className="text-xs text-ink-muted">{A.blocked[blocked]}</span>
+                )}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </details>
   )
 }
 
@@ -584,16 +741,13 @@ function PaidWith({ order }: { order: OrderView }) {
     order.paymentMethodType === 'paypal'
       ? TEXT.paypal
       : m?.last4
-        ? TEXT.card(m.network, m.last4)
+        ? TEXT.card(m.network, m.last4, m.funding)
         : null
   if (!label) return null
   return (
-    <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 border-t border-rule pt-3 text-sm">
-      <span className="text-ink-muted">{TEXT.paidWith}</span>
-      <span className="money font-medium">
-        {label}
-        {m?.expiry && <span className="text-ink-muted"> · {TEXT.expires(m.expiry)}</span>}
-      </span>
+    <p className="text-sm">
+      <span className="text-ink-muted">{TEXT.paidWith} </span>
+      <span className="money font-medium">{label}</span>
     </p>
   )
 }

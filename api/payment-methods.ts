@@ -1,14 +1,16 @@
 import { PERSONAS } from '../src/shared/seed.js'
 import type { PaymentMethodsResponse, SavedCard } from '../src/shared/types.js'
 import { hsFetch } from './_lib/hyperswitch.js'
-import { jsonError } from './_lib/orderView.js'
+import { fundingOf, jsonError } from './_lib/orderView.js'
 
 interface HsCustomerMethods {
   customer_payment_methods: {
     payment_method_id: string
     payment_method: string
+    payment_method_type?: string | null
     card?: {
       scheme?: string | null
+      card_type?: string | null
       last4_digits?: string | null
       expiry_month?: string | null
       expiry_year?: string | null
@@ -16,7 +18,7 @@ interface HsCustomerMethods {
   }[]
 }
 
-/** Saved cards only: network, last four and expiry. Never a token or a full number. */
+/** Saved cards only: network, credit/debit, last four and expiry. Never a token or a full number. */
 async function savedCards(customer: string): Promise<SavedCard[] | Response> {
   const res = await hsFetch<HsCustomerMethods>(
     `/customers/${encodeURIComponent(customer)}/payment_methods`,
@@ -26,14 +28,18 @@ async function savedCards(customer: string): Promise<SavedCard[] | Response> {
   if (!res.ok) return jsonError(502, 'UPSTREAM', "We couldn't load your saved cards")
   return res.data.customer_payment_methods
     .filter((m) => m.payment_method === 'card' && m.card?.last4_digits)
-    .map((m) => ({
-      id: m.payment_method_id,
-      ...(m.card!.scheme ? { network: m.card!.scheme } : {}),
-      last4: m.card!.last4_digits!,
-      ...(m.card!.expiry_month && m.card!.expiry_year
-        ? { expiry: `${m.card!.expiry_month}/${m.card!.expiry_year.slice(-2)}` }
-        : {}),
-    }))
+    .map((m) => {
+      const funding = fundingOf(m.payment_method_type, m.card!.card_type)
+      return {
+        id: m.payment_method_id,
+        ...(m.card!.scheme ? { network: m.card!.scheme } : {}),
+        ...(funding ? { funding } : {}),
+        last4: m.card!.last4_digits!,
+        ...(m.card!.expiry_month && m.card!.expiry_year
+          ? { expiry: `${m.card!.expiry_month}/${m.card!.expiry_year.slice(-2)}` }
+          : {}),
+      }
+    })
 }
 
 // ponytail: the customer id comes from the mocked sign-in, like every other endpoint here. Real auth

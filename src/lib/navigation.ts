@@ -13,16 +13,20 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener)
 }
 
-export function navigate(to: string, { replace = false } = {}) {
+export function navigate(to: string, { replace = false, scroll = true } = {}) {
   if (replace) history.replaceState(null, '', to)
   else history.pushState(null, '', to)
-  window.scrollTo(0, 0)
+  if (scroll) window.scrollTo(0, 0)
   notify()
 }
 
 export function usePath(): string {
   return useSyncExternalStore(subscribe, () => location.pathname)
 }
+
+/** Checkout is an overlay on the current page, so sign-in's `next` and the back button keep working. */
+export const openCheckout = () =>
+  navigate(`${location.pathname}?checkout`, { scroll: false })
 
 /** The query string, re-rendering on navigate() and back/forward. Read-only: change it with navigate(). */
 export function useSearchParams(): URLSearchParams {

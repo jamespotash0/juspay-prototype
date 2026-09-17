@@ -14,7 +14,9 @@ import { PERSONAS } from '../shared/seed.ts'
 import type { PersonaId, SaveCardResponse, SavedCard } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
+import { Icon } from '../ui/Icon.tsx'
 import { Notice } from '../ui/Notice.tsx'
+import { Sheet } from '../ui/Sheet.tsx'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.account
@@ -166,6 +168,8 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
   const [removeFailed, setRemoveFailed] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  // The "Add payment method" overlay is open; `adding` is the $0 setup payment inside it once started.
+  const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState<SaveCardResponse | null>(null)
   const [addState, setAddState] = useState<
     'idle' | 'starting' | 'saving' | 'failed' | 'notSaved'
@@ -173,6 +177,7 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
   const paypal = useLinkedPaypal(customer)
 
   async function startAdding() {
+    setOpen(true)
     setAddState('starting')
     try {
       setAdding(await api.saveCard(customer))
@@ -192,8 +197,7 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
         const next = await api.paymentMethods(customer)
         if (next.some((c) => !before.has(c.id))) {
           setCards(next)
-          setAdding(null)
-          setAddState('idle')
+          closeAdding()
           return
         }
       } catch {
@@ -203,6 +207,12 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
     }
     setAdding(null)
     setAddState('notSaved')
+  }
+
+  function closeAdding() {
+    setOpen(false)
+    setAdding(null)
+    setAddState('idle')
   }
 
   useEffect(() => {
@@ -217,7 +227,8 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
   }, [customer, attempt])
 
   async function remove(card: SavedCard) {
-    if (!window.confirm(T.removeConfirm(T.card(card.network, card.last4)))) return
+    if (!window.confirm(T.removeConfirm(T.card(card.network, card.last4, card.funding))))
+      return
     setBusy(card.id)
     setRemoveFailed(false)
     try {
@@ -249,17 +260,19 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
         <p role="status" className="text-sm text-ink-muted">
           {T.methodsLoading}
         </p>
-      ) : cards.length === 0 ? (
+      ) : cards.length === 0 && !paypal ? (
         <p className="text-sm text-ink-muted">{T.noCards}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-rule">
           {cards.map((c) => (
-            <li key={c.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+            <li key={c.id} className="flex items-center gap-3 py-3 first:pt-0">
               <span className="money inline-flex h-7 min-w-11 items-center justify-center rounded-md border border-rule-strong px-1.5 text-[11px] font-bold uppercase">
                 {c.network ?? 'Card'}
               </span>
               <div className="flex min-w-0 flex-1 flex-col text-sm">
-                <span className="money font-medium">{T.card(c.network, c.last4)}</span>
+                <span className="money font-medium">
+                  {T.card(c.network, c.last4, c.funding)}
+                </span>
                 {c.expiry && (
                   <span className="money text-xs text-ink-muted">
                     {T.expires(c.expiry)}
@@ -276,6 +289,26 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
               </Button>
             </li>
           ))}
+          {paypal && (
+            <li className="flex items-center gap-3 py-3 first:pt-0">
+              <span className="inline-flex h-7 min-w-11 items-center justify-center rounded-md border border-rule-strong px-1.5 text-[11px] font-bold">
+                {T.paypal}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col text-sm">
+                <span className="font-medium">{T.paypal}</span>
+                <span className="truncate text-xs text-ink-muted">
+                  {T.paypalLinked(paypal)}
+                </span>
+              </div>
+              <Button
+                variant="quiet"
+                size="sm"
+                onClick={() => linkPaypal(customer, null)}
+              >
+                {T.paypalUnlink}
+              </Button>
+            </li>
+          )}
         </ul>
       )}
       {removeFailed && (
@@ -283,83 +316,83 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
           <Notice tone="danger" title={T.removeFailed} body={null} />
         </div>
       )}
-      <div className="mt-4 flex flex-col gap-3 border-t border-rule pt-4">
-        {adding ? (
-          <>
+
+      {/* The one way in, at the bottom of the list: Hyperswitch lists what can be added. */}
+      <div className="mt-4 border-t border-rule pt-4">
+        <Button variant="secondary" className="w-full sm:w-auto" onClick={startAdding}>
+          <Icon name="plus" className="size-4" />
+          {T.addCard}
+        </Button>
+      </div>
+
+      {open && (
+        <Sheet
+          title={T.addCard}
+          closeLabel={COPY.common.cancel}
+          onClose={closeAdding}
+          locked={addState === 'saving'}
+        >
+          <div className="flex flex-col gap-4 px-5 pb-6 sm:px-6">
             <p className="text-sm text-ink-muted">{T.addCardFact}</p>
-            <Suspense
-              fallback={<p className="text-sm text-ink-muted">{T.methodsLoading}</p>}
-            >
-              <HyperCheckout
-                purpose="save"
-                clientSecret={adding.clientSecret}
-                publishableKey={adding.publishableKey}
-                paymentId={adding.paymentId}
-                returnUrl={`${location.origin}/account`}
-                onSubmitted={confirmSaved}
-                onError={() => setAddState('notSaved')}
+            {addState === 'failed' ? (
+              <Notice
+                tone="danger"
+                title={T.addCardFailed}
+                body={null}
+                action={{ label: COPY.common.tryAgain, onClick: startAdding }}
               />
-            </Suspense>
+            ) : adding ? (
+              <Suspense
+                fallback={<p className="text-sm text-ink-muted">{T.methodsLoading}</p>}
+              >
+                <HyperCheckout
+                  purpose="save"
+                  clientSecret={adding.clientSecret}
+                  publishableKey={adding.publishableKey}
+                  paymentId={adding.paymentId}
+                  returnUrl={`${location.origin}/account`}
+                  onSubmitted={confirmSaved}
+                  onError={() => setAddState('notSaved')}
+                />
+              </Suspense>
+            ) : addState === 'notSaved' ? (
+              <Notice
+                tone="danger"
+                title={T.cardNotSaved}
+                body={null}
+                action={{ label: COPY.common.tryAgain, onClick: startAdding }}
+              />
+            ) : (
+              <p role="status" className="text-sm text-ink-muted">
+                {T.methodsLoading}
+              </p>
+            )}
             {addState === 'saving' && (
               <p role="status" className="text-sm text-ink-muted">
                 {T.cardSaving}
               </p>
             )}
-            <Button
-              variant="quiet"
-              size="sm"
-              className="self-start px-0!"
-              onClick={() => setAdding(null)}
-            >
-              {COPY.common.cancel}
-            </Button>
-          </>
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="self-start"
-            disabled={addState === 'starting'}
-            onClick={startAdding}
-          >
-            {T.addCard}
-          </Button>
-        )}
-        {addState === 'failed' && (
-          <Notice tone="danger" title={T.addCardFailed} body={null} />
-        )}
-        {addState === 'notSaved' && (
-          <Notice tone="danger" title={T.cardNotSaved} body={null} />
-        )}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3 border-t border-rule pt-4">
-        <span className="inline-flex h-7 min-w-11 items-center justify-center rounded-md border border-rule-strong px-1.5 text-[11px] font-bold">
-          {T.paypal}
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col text-sm">
-          <span className="font-medium">{T.paypal}</span>
-          <span className="truncate text-xs text-ink-muted">
-            {paypal ? T.paypalLinked(paypal) : T.paypalNone}
-          </span>
-        </div>
-        {paypal ? (
-          <Button variant="quiet" size="sm" onClick={() => linkPaypal(customer, null)}>
-            {T.paypalUnlink}
-          </Button>
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/account/paypal')}
-          >
-            {T.paypalLink}
-          </Button>
-        )}
-      </div>
-      <p className="mt-4 border-t border-rule pt-3 text-xs text-ink-muted">
-        {T.paypalDemo} {T.otherMethods}
-      </p>
+            {!paypal && (
+              <div className="flex items-center gap-3 border-t border-rule pt-4">
+                <span className="inline-flex h-7 min-w-11 items-center justify-center rounded-md border border-rule-strong px-1.5 text-[11px] font-bold">
+                  {T.paypal}
+                </span>
+                <span className="flex-1 text-sm font-medium">{T.paypal}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate('/account/paypal')}
+                >
+                  {T.paypalLink}
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-ink-muted">
+              {T.paypalDemo} {T.otherMethods}
+            </p>
+          </div>
+        </Sheet>
+      )}
     </Card>
   )
 }

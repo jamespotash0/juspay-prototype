@@ -34,7 +34,9 @@ async function buy(label: string) {
   await startCheckout(page, LISTING)
   const id = await payByCard(page, '4242424242424242')
   logPayment(label, id)
-  await expect(page.getByText(COPY.checkout.succeeded)).toBeVisible({ timeout: 45_000 })
+  await expect(page.locator('[aria-current="step"]').first()).toBeVisible({
+    timeout: 45_000,
+  })
   return id
 }
 
@@ -84,13 +86,13 @@ test('4. Dispute → the seller refunds in full → order refunded, sale reverse
   // Alex disputes with a reason.
   await switchPersona(page, 'alex')
   await page.goto(`/order/${second}`)
-  await page.getByRole('button', { name: COPY.orderActions.haveIssue }).click()
-  await page.getByRole('button', { name: COPY.orderActions.issues.wrongItem }).click()
+  await page.getByText(COPY.orderActions.haveIssue).click()
+  await page.getByRole('button', { name: COPY.orderActions.issues.notAsDescribed.label }).click()
   await page.getByLabel(COPY.orderActions.details).fill(reason)
   const disputed = page.waitForResponse(
     (r) => r.url().includes('/api/order-state') && r.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: COPY.orderActions.requestRefund }).click()
+  await page.getByRole('button', { name: COPY.orderActions.issues.notAsDescribed.submit }).click()
   expect((await disputed).status()).toBe(200)
 
   // Mike sees the request on his sale and refunds it in full himself.

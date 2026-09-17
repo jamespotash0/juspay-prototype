@@ -52,6 +52,8 @@ export interface Listing {
   year?: number
   mintMark?: string
   description: string
+  /** The seller doesn't take this back for a change of mind. "Not as described" still applies. */
+  noReturns?: boolean
   createdAt: string // ISO 8601
 }
 
@@ -131,6 +133,12 @@ export const META = {
   receivedAt: 'receivedAt',
   disputedAt: 'disputedAt',
   disputeReason: 'disputeReason',
+  /** The kind of problem the buyer picked (IssueKind). */
+  issue: 'issue',
+  /** '1' when any item in this seller's order was ineligible for return at purchase. Absent otherwise. */
+  noReturns: 'noReturns',
+  askedAt: 'askedAt',
+  question: 'question',
   /** 'app' for real demo orders, 'test' for automated test runs. Order lists show 'app' only. */
   source: 'source',
 } as const
@@ -166,12 +174,22 @@ export interface OrderView {
   /** Hyperswitch payment_method_type: 'credit', 'debit', 'paypal'… */
   paymentMethodType?: string
   /** What the buyer paid with, safe to show: card network, last four and expiry only. */
-  paymentMethod?: { network?: string; last4?: string; expiry?: string }
+  paymentMethod?: { network?: string; funding?: Funding; last4?: string; expiry?: string }
   decline?: Decline
   /** Present once the buyer has disputed. */
   disputeReason?: string
+  issue?: IssueKind
+  /** False when an item was ineligible for return at purchase. */
+  returnable: boolean
+  /** The buyer's latest question to the seller. */
+  question?: string
   /** ISO timestamps from metadata, each present once that step happened. */
-  fulfilledAt?: { shippedAt?: string; receivedAt?: string; disputedAt?: string }
+  fulfilledAt?: {
+    shippedAt?: string
+    receivedAt?: string
+    disputedAt?: string
+    askedAt?: string
+  }
 }
 
 // ── API contracts ───────────────────────────────────────────────────────────
@@ -201,13 +219,16 @@ export interface CheckoutResponse {
 /** GET /api/payment?id=<orderId> → OrderView. A bare paymentId works only for a single-seller payment. */
 
 /** POST /api/order-state → OrderView */
-export type OrderAction = 'ship' | 'receive' | 'dispute'
+export type OrderAction = 'ship' | 'receive' | 'dispute' | 'ask'
+/** What "Have a problem?" offers. Every kind but `question` asks for a refund. */
+export type IssueKind = 'cancel' | 'notArrived' | 'notAsDescribed' | 'return' | 'question'
 export interface OrderStateRequest {
   /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string
   action: OrderAction
   actorId: PersonaId
-  reason?: string // dispute only
+  reason?: string // dispute: the buyer's own words; ask: the question
+  issue?: IssueKind // dispute only
 }
 
 /** POST /api/refund → OrderView. The order's seller only. Always refunds that order in full — there is no amount. */
@@ -219,9 +240,12 @@ export interface RefundRequest {
 }
 
 /** A card Hyperswitch saved for a buyer at checkout. Safe to show: no token, no full number. */
+export type Funding = 'credit' | 'debit' | 'prepaid'
+
 export interface SavedCard {
   id: string
   network?: string
+  funding?: Funding
   last4: string
   expiry?: string
 }

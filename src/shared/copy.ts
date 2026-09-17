@@ -24,8 +24,6 @@ interface DeclineCopy {
 }
 
 export const COPY = {
-  hold: "The seller isn't paid until they ship. If something's wrong, ask the seller for a refund from the order page.",
-
   empty: {
     noResults: {
       title: 'No listings match',
@@ -72,7 +70,6 @@ export const COPY = {
       reference: 'Reference',
       action: 'Check again',
     },
-    succeeded: "Payment complete. We're holding it until the seller ships.",
   },
 
   decline: {
@@ -117,19 +114,51 @@ export const COPY = {
     ship: 'Mark shipped',
     receive: 'Mark received',
     refund: 'Refund',
-    haveIssue: 'Have an issue?',
-    whatsWrong: "What's wrong?",
+    haveIssue: 'Have a problem?',
+    /** Every option shows every time; a blocked one says why. */
     issues: {
-      notShipped: "It hasn't shipped",
-      notArrived: "It hasn't arrived",
-      wrongItem: "Something's wrong with my item",
+      cancel: {
+        label: 'Cancel and refund',
+        hint: 'The seller cancels before shipping and refunds you in full.',
+        submit: 'Request cancellation',
+        step: 'Cancellation requested',
+      },
+      notArrived: {
+        label: "It hasn't arrived",
+        hint: 'The seller checks tracking, then refunds you if it’s lost.',
+        submit: 'Request refund',
+        step: 'Refund requested',
+      },
+      notAsDescribed: {
+        label: 'Not as described',
+        hint: 'Wrong item, damaged, or not the grade listed. This applies even if the item is ineligible for return.',
+        submit: 'Request refund',
+        step: 'Refund requested',
+      },
+      return: {
+        label: 'Return it',
+        hint: 'Changed your mind? Send it back and the seller refunds you once they have it.',
+        submit: 'Request return',
+        step: 'Return requested',
+      },
+      question: {
+        label: 'Ask the seller',
+        hint: 'A question, not a refund. Nothing about your order changes.',
+        submit: 'Send question',
+        step: '',
+      },
     },
-    issueHint:
-      'Tell the seller what happened. They stay unpaid until they answer your request.',
+    blocked: {
+      alreadyShipped: 'Already shipped',
+      notShipped: 'Not shipped yet',
+      received: 'You marked it received',
+      ineligible: 'Ineligible for return', // COPY.common.noReturns
+    },
     details: 'Details (optional)',
-    requestRefund: 'Request refund',
-    refundRequested:
-      "Refund requested. The seller reviews it and stays unpaid until it's resolved.",
+    yourQuestion: 'Your question',
+    refundHint: 'The seller stays unpaid until they answer.',
+    youAsked: 'You asked the seller',
+    buyerAsked: 'The buyer asked',
     sellerRequest: 'The buyer asked for a refund',
     sellerRequestFact: 'You stay unpaid for this sale until you refund it.',
     noReason: 'The buyer gave no reason.',
@@ -146,6 +175,8 @@ export const COPY = {
   // ── Shared across pages ───────────────────────────────────────────────────
 
   common: {
+    returns: 'Returns accepted',
+    noReturns: 'Ineligible for return',
     tryAgain: 'Try again',
     cancel: 'Cancel',
     back: 'Back',
@@ -200,13 +231,12 @@ export const COPY = {
     methods: 'Payment methods',
     methodsLoading: 'Loading saved cards…',
     methodsFailed: "We couldn't load your saved cards.",
-    noCards:
-      'No saved cards yet. Tick "Save card" when you pay, and the card shows up here.',
-    card: (network: string | undefined, last4: string) =>
-      `${network ?? 'Card'} ending in ${last4}`,
+    noCards: 'No saved payment methods yet.',
+    card: (network: string | undefined, last4: string, funding?: string) =>
+      `${[network ?? 'Card', funding].filter(Boolean).join(' ')} ending in ${last4}`,
     expires: (expiry: string) => `Expires ${expiry}`,
     remove: 'Remove',
-    addCard: 'Add a card',
+    addCard: 'Add Payment Method',
     saveCard: 'Save card',
     addCardFact: 'Nothing is charged. Your card is checked and stored with Hyperswitch.',
     addCardFailed: "We couldn't start adding a card. Nothing was saved.",
@@ -335,6 +365,7 @@ export const COPY = {
       year: 'Year',
       mintMark: 'Mint mark',
       category: 'Category',
+      returns: 'Returns',
     },
     coin: 'Coin',
     card: 'Card',
@@ -380,7 +411,6 @@ export const COPY = {
     title: 'Order',
     number: 'Order number',
     placed: 'Placed',
-    fromSeller: (handle: string) => `Shipped by ${handle}`,
     loading: 'Loading order…',
     backToOrders: 'Back to orders',
     backToSales: 'Back to sales',
@@ -390,22 +420,35 @@ export const COPY = {
     toOrders: 'Your orders',
     paymentFailed: "Payment didn't go through",
     supportRef: 'Support ref',
+    shipment: (n: number, of: number, handle: string) =>
+      `Shipment ${n} of ${of} · from ${handle}`,
     review: 'This payment is being reviewed',
     reviewBody: "Don't pay again. We'll update this order when the review finishes.",
     cancelled: 'This payment was cancelled. Nothing has been charged.',
     other: "This payment needs a look from us. Don't pay again.",
-    items: 'Items',
-    amounts: 'Amounts',
+    summary: 'Order summary',
+    itemsFrom: (items: number, sellers: number) =>
+      `${items} ${items === 1 ? 'item' : 'items'}${sellers > 1 ? ` from ${sellers} sellers` : ''}`,
+    priceDetails: 'Price details',
+    steps: {
+      paid: 'Paid',
+      shipped: 'Shipped',
+      received: 'Received',
+      refundRequested: 'Refund requested',
+      refunding: 'Refunding',
+      refunded: 'Refunded',
+      refundFailed: 'Refund failed',
+      done: 'done',
+      notYet: 'not yet',
+    },
     yourSale: 'Your sale',
     gross: 'Items + shipping',
     commission: 'Commission',
     refunded: 'Refunded to buyer',
     net: 'You receive',
-    status: 'Status',
-    updated: 'Updated',
     paidWith: 'Paid with',
-    card: (network: string | undefined, last4: string) =>
-      `${network ?? 'Card'} ending in ${last4}`,
+    card: (network: string | undefined, last4: string, funding?: string) =>
+      `${[network ?? 'Card', funding].filter(Boolean).join(' ')} ending in ${last4}`,
     expires: (expiry: string) => `expires ${expiry}`,
     paypal: 'PayPal',
     refund: 'Refund',
@@ -491,6 +534,7 @@ export const COPY = {
     mintMark: 'Mint mark',
     mintMarkHint: 'Optional, e.g. CC, S, D',
     graded: 'Graded',
+    returns: 'Accept returns',
     service: 'Service',
     choose: 'Choose',
     grade: 'Grade',

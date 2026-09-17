@@ -9,6 +9,7 @@ const PENDING: OrderView = {
   paymentId: ID,
   state: 'pending',
   fulfilment: 'unshipped',
+  returnable: true,
   refund: { state: 'none', refundedCents: 0 },
   breakdown: {
     itemsCents: 112500,
