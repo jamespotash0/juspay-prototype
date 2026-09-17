@@ -15,8 +15,8 @@ then on through shipping, disputes and refunds.
 > [PLAN.md](PLAN.md) holds the full reasoning, and this file is the summary.
 > Everything under "Not built" is written up with an approach instead.
 >
-> **Live demo:** _URL to be added when this branch merges to `main` (not
-> deployed yet)._
+> **Live demo:** <https://juspay-prototype.vercel.app> (deployed from `main`
+> on Vercel, running against the Hyperswitch sandbox).
 
 ---
 
@@ -333,7 +333,7 @@ is under *Not built*.
 | **Never auto-retry an ambiguous payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
 | **One payment for a multi-seller cart, split per seller on our side** | Collectors buy from several sellers at once and expect to pay once, as on eBay and Etsy. One payment can't end half paid. Each seller's share ships, pays out and refunds on its own, so one seller's dispute never refunds another's sale |
 | **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so order lists page through the last 90 days of payments (at most 2,000) and filter in memory. Measured: 1.3–2.0 s warm, 4.6–6.5 s on a cold first call. A KV index of order ids is the upgrade |
-| **Checkout opens over the page, not as a page** | The buyer keeps the listing or cart in view while giving an address and paying. It's addressed by `?checkout` on the current URL, so sign-in can send the buyer back into it. It's a fixed layer rather than a native `<dialog>`, because the Hyperswitch SDK appends its own full-screen frames to the page and the dialog's top layer would cover them. It can't be closed while a payment is starting or confirming. Shipping and billing (default "same as shipping") are both stored on the Hyperswitch payment; editing them before paying updates the same unconfirmed payment (`POST /payments/{id}`), so the attempt id and amount stay the same and nothing is charged twice. Pay stays disabled until the SDK reports the form complete (a saved card needs its CVC) |
+| **Checkout opens over the page, not as a page** | The buyer keeps the listing or cart in view while giving an address and paying. It's addressed by `?checkout` on the current URL, so sign-in can send the buyer back into it. It's a fixed layer rather than a native `<dialog>`, because the Hyperswitch SDK appends its own full-screen frames to the page and the dialog's top layer would cover them. It can't be closed while a payment is starting or confirming. Shipping and billing (default "same as shipping") are both stored on the Hyperswitch payment; editing them before paying updates the same unconfirmed payment (`POST /payments/{id}`), so the attempt id and amount stay the same and nothing is charged twice. Pay stays disabled until the SDK reports the form complete (a saved card needs its CVC). The account page saves a shipping and a billing address, and checkout pre-fills them and remembers what the buyer used; they're stored in the browser, like the rest of the mock profile |
 | **Returns per listing; "not as described" always open** | See *When something goes wrong*. Collectibles mix as-found raw items with certified slabs, so one blanket return policy would be wrong for one of them |
 | **Show credit or debit on saved cards and receipts** | Read from Hyperswitch (`payment_method_type`, falling back to the card's `card_type`). A buyer's dispute rights and timelines differ between the two, and on a four-figure coin that's worth knowing before choosing which card to pay with |
 | **3DS out of scope for this build** | The dashboard default is untouched, but no challenge flow is built or tested. We're US-only, so it isn't a mandate. It would buy liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
