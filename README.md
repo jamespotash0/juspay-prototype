@@ -225,10 +225,10 @@ stateDiagram-v2
   Refunded --> [*]
 
   note right of Paid
-    seller balance: pending
+    seller: awaiting shipment
   end note
   note right of Shipped
-    seller balance: available,
+    seller payout: pending,
     commission deducted
   end note
   note right of Refunded
@@ -236,13 +236,47 @@ stateDiagram-v2
   end note
 ```
 
-The buyer is charged **item + shipping + sales tax** (a flat 8% on items) as
-one payment. The seller is credited **item + shipping − commission** (5% of
-items) later. The buyer never sees the commission and the seller never sees the
-tax. A cart can span several sellers and is still **one payment**; each
-seller's share is its own order. A refund returns **one seller's order in
-full** (a partial refund of the payment), and that sale's commission and net
-drop to zero.
+The buyer is charged **item + shipping + sales tax** (a flat 8% on items). The
+seller is credited **item + shipping − commission** (5% of items) once they
+ship. The buyer never sees the commission and the seller never sees the tax.
+No payout is actually sent (the sandbox has no payout rail), so shipped money
+shows as **Payout pending**.
+
+### A multi-seller cart: one payment, one order per seller
+
+A buyer who checks out items from two sellers pays **once**, and gets **two
+orders**, one per seller. That's the eBay and Etsy model, and the alternatives
+both break something collectors care about:
+
+| Option | What goes wrong |
+| --- | --- |
+| One payment per seller | Two charges on the statement, two PayPal redirects, and a cart that can end half paid: seller A charged, seller B declined |
+| One order for the whole cart | Sellers ship on different days. One seller's refund request would hold, or refund, the other seller's sale |
+| **One payment, one order per seller** (built) | The buyer pays once; each seller's order ships, pays out and refunds on its own |
+
+**How it maps onto Hyperswitch.** There's no order table, so the split lives
+on the payment:
+
+- The payment's metadata lists `sellers`, and every per-seller value is a flat
+  key prefixed with the seller id: `sel_bluesheet.itemsCents`,
+  `sel_bluesheet.fulfilment`, `sel_bluesheet.shippedAt`. Flat, because
+  Hyperswitch merges metadata shallowly.
+- An order's id is `<paymentId>.<sellerId>`. Order pages, the seller's list
+  and every action address that, never the bare payment.
+- **Tax is rounded per seller**, so the payment total is exactly the sum of its
+  orders, and refunding one order returns exactly what it added. Rounding once
+  on the cart would leave a cent that belongs to nobody.
+- **A refund is a partial refund of the shared payment**, for that one order's
+  total, and only the order's seller can issue it. Its `refund_id` is derived
+  from the payment, the seller and an attempt counter, so a double click can't
+  refund twice, and two sellers refunding the same payment can never exceed
+  what was charged.
+
+**What this costs.** The shared payment is one unit to the card network: a
+chargeback, or a payment that fails after the fact, names every order in it,
+and working out which seller it belongs to is our job (not built; it needs
+webhooks). Real payouts need a marketplace product that sends each seller
+their own share after shipping; see *Seller payouts* below.
 
 ---
 
@@ -300,9 +334,11 @@ drop to zero.
   exist. It's the next step after the 80/20 trial.
 - **Apple and Google Pay.** They add speed, not protection, and Apple Pay
   needs a stable verified domain, which preview deployments don't have.
-- **Seller payouts.** Stripe Connect separate charges and transfers, called
-  when the seller ships. Hyperswitch's split payments only support
-  direct/destination charges, which pay the seller too early.
+- **Seller payouts.** Stripe Connect separate charges and transfers: one
+  charge for the cart, then one transfer per seller order, called when that
+  seller ships. Hyperswitch's split payments only support direct/destination
+  charges, which pay the seller too early and can't wait for each seller's
+  shipment. Until then the seller page shows shipped money as *Payout pending*.
 - **3DS challenges, refunding part of one seller's order, soft declines on demand, and an
   abandoned PayPal payment** (the message exists; the flow isn't tested).
 - **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
@@ -314,6 +350,8 @@ drop to zero.
   is read back before the UI reports success.
 - Order lists take 4.6–6.5 s on a cold first call (see the read-model decision
   above).
+- A chargeback on a multi-seller payment isn't attributed to a seller: there are
+  no webhooks to receive it, and nothing splits it across the orders.
 
 ---
 
