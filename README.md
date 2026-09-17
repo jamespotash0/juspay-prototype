@@ -207,14 +207,14 @@ shows as **Payout pending**.
 ```mermaid
 flowchart TD
   CART["Cart: items from Seller A and Seller B"] --> PAY["One payment, one charge on the statement"]
-  PAY --> OA["Order from Seller A<br/>ships, pays out, refunds on its own"]
-  PAY --> OB["Order from Seller B<br/>ships, pays out, refunds on its own"]
+  PAY --> OA["Shipment from Seller A<br/>ships, pays out, refunds on its own"]
+  PAY --> OB["Shipment from Seller B<br/>ships, pays out, refunds on its own"]
   OA --> NUM["Buyer sees one order number (SLB-…)<br/>with Shipment 1 of 2, Shipment 2 of 2"]
   OB --> NUM
 ```
 
 Paying once matches eBay and Etsy, and a cart can never end half paid. Splitting
-into one order per seller means one seller's refund never touches the other's
+into one shipment per seller means one seller's refund never touches the other's
 sale.
 
 ### Have a problem?
@@ -363,7 +363,7 @@ and "needs the buyer" are never shown as failures.
 | **Capture now, release on shipping** | Individual sellers ship when they reach the post office; an authorisation would expire first |
 | **Seller pays a 5% commission, at release** | Nothing is added to a buyer's total after they've decided on a $1,800 item, and a sale refunded before shipping pays no fee |
 | **Never retry an unclear payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
-| **One payment per cart, one order per seller** | Pay once; each seller ships and refunds independently |
+| **One payment and one order per cart, one shipment per seller** | Pay once; each seller ships and refunds independently |
 | **The seller refunds** | They know the item and answer the buyer |
 | **Returns set per listing; "not as described" always open** | As-found raw items and certified slabs carry different risks |
 | **Show credit or debit** | A buyer's dispute rights differ between them, which matters on a four-figure coin |
