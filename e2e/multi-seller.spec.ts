@@ -23,10 +23,10 @@ test('a two-seller cart checks out as one payment and confirms both orders', asy
   })
   await page.goto('/cart')
   await expect(page.getByRole('button', { name: /^Check out with/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Check out', exact: true }).click()
+  await page.getByRole('button', { name: 'Proceed to Checkout', exact: true }).click()
 
   const created = page.waitForResponse((r) => r.url().includes('/api/checkout'))
-  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await page.getByRole('button', { name: 'Continue to Payment' }).click()
   const body = (await (await created).json()) as {
     paymentId: string
     sellerIds: string[]

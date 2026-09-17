@@ -16,14 +16,14 @@ export async function switchPersona(page: Page, persona: PersonaId) {
 /** Listing page → Buy now → demo sign-in → Continue to payment. Leaves the SDK mounted. */
 export async function startCheckout(page: Page, listingId: string) {
   await page.goto(`/listing/${listingId}`)
-  await page.getByRole('button', { name: 'Buy now' }).click()
+  await page.getByRole('button', { name: 'Buy Now' }).click()
   // The demo sign-in gate shows once per browser session per persona, so only click it if it's there.
   const gate = page.getByRole('button', { name: 'Continue with email' })
-  const next = page.getByRole('button', { name: 'Continue to payment' })
+  const next = page.getByRole('button', { name: 'Continue to Payment' })
   await expect(gate.or(next)).toBeVisible()
   if (await gate.isVisible()) await gate.click()
   const created = page.waitForResponse((r) => r.url().includes('/api/checkout'))
-  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await page.getByRole('button', { name: 'Continue to Payment' }).click()
   const { paymentId } = (await (await created).json()) as { paymentId: string }
   logPayment(`created-for-${listingId}`, paymentId)
   return paymentId
