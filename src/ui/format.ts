@@ -49,3 +49,11 @@ export const refundLabel = ({ refund }: OrderView) =>
       : undefined
 
 export const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many)
+
+/**
+ * The buyer-facing order number for a purchase: 'SLB-' + the first 6 hex of the payment id
+ * (cka_e80c60… → SLB-E80C60). Every seller's order in that purchase shares it.
+ * ponytail: 6 hex digits collide around a few thousand purchases; widen the slice past demo scale.
+ */
+export const orderNumber = (paymentId: string) =>
+  `SLB-${paymentId.replace(/^cka_/, '').slice(0, 6).toUpperCase()}`
