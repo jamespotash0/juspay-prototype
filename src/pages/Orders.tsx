@@ -6,7 +6,6 @@ import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { latestStatus } from '../shared/orderState.ts'
-import { SELLERS } from '../shared/seed.ts'
 import type { OrderView } from '../shared/types.ts'
 import { Card } from '../ui/Card.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
@@ -31,8 +30,6 @@ function readCache(persona: string): OrderView[] | undefined {
     return undefined
   }
 }
-
-const MAX_ITEMS = 3
 
 /** Seller orders grouped back into purchases (one payment each), newest first. */
 function purchases(orders: OrderView[]): OrderView[][] {
@@ -117,87 +114,52 @@ export default function Orders() {
             <ul className="divide-y divide-rule">
               {purchases(orders).map((group) => {
                 const first = group[0]
-                // Latest status per seller order. When every seller is at the same step, say it once.
-                const pill = (o: OrderView) => {
-                  const status = latestStatus(o)
-                  return (
-                    <StatusPill
-                      status={status}
-                      label={status === o.refund.state ? refundLabel(o) : undefined}
-                    />
-                  )
-                }
-                const keyOf = (o: OrderView) =>
-                  `${latestStatus(o)}:${refundLabel(o) ?? ''}`
-                const shared = group.every((o) => keyOf(o) === keyOf(first))
-                const items = group.flatMap((o) =>
-                  o.listingIds.map((id) => ({
-                    order: o,
-                    listing: listings.find((l) => l.id === id),
-                  })),
+                const lead = listings.find((l) => l.id === first.listingIds[0])
+                const count = group.reduce((n, o) => n + o.listingIds.length, 0)
+                // Latest status per seller order, each distinct one once: the order page has the detail.
+                const statuses = new Map(
+                  group.map((o) => {
+                    const status = latestStatus(o)
+                    const label = status === o.refund.state ? refundLabel(o) : undefined
+                    return [`${status}:${label ?? ''}`, { status, label }] as const
+                  }),
                 )
-                const shown = items.slice(0, MAX_ITEMS)
+                const pills = [...statuses].map(([k, v]) => (
+                  <StatusPill key={k} status={v.status} label={v.label} />
+                ))
                 return (
                   <li key={first.paymentId}>
                     <Link
                       to={`/order/${first.orderId}`}
-                      className="group flex flex-col gap-2.5 px-4 py-3.5 hover:bg-well sm:px-5 [li:first-child>&]:rounded-t-card [li:last-child>&]:rounded-b-card"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-well sm:gap-4 sm:px-5 [li:first-child>&]:rounded-t-card [li:last-child>&]:rounded-b-card"
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="money min-w-0 truncate text-xs text-ink-muted">
-                          <span className="font-semibold text-ink">
-                            {orderNumber(first.paymentId)}
-                          </span>{' '}
-                          · {date.format(new Date(first.createdAt))}
-                          {items.length > 1 && <> · {T.itemCount(items.length)}</>}
+                      {lead ? (
+                        <img
+                          src={lead.imageUrl}
+                          alt=""
+                          className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
+                        />
+                      ) : (
+                        <span className="size-12 shrink-0 rounded-control border border-dashed border-rule-strong" />
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <p className="money text-sm font-semibold">
+                          {orderNumber(first.paymentId)}
                         </p>
-                        <div className="flex items-center gap-3">
-                          <Money
-                            cents={group.reduce((n, o) => n + o.breakdown.totalCents, 0)}
-                            className="text-sm font-semibold"
-                          />
+                        <p className="truncate text-xs text-ink-muted">
+                          {date.format(new Date(first.createdAt))} · {T.itemCount(count)}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1.5 sm:hidden">
+                          {pills}
                         </div>
                       </div>
-                      <ul className="flex flex-col gap-2">
-                        {shown.map(({ order, listing }, i) => {
-                          // A seller's status sits on their first item only.
-                          const firstOfSeller =
-                            shown.findIndex((x) => x.order === order) === i
-                          return (
-                            <li
-                              key={`${order.orderId}:${listing?.id ?? i}`}
-                              className="flex items-center gap-3"
-                            >
-                              {listing ? (
-                                <img
-                                  src={listing.imageUrl}
-                                  alt=""
-                                  className="size-12 shrink-0 rounded-control border border-rule bg-paper object-contain p-1"
-                                />
-                              ) : (
-                                <span className="size-12 shrink-0 rounded-control border border-dashed border-rule-strong" />
-                              )}
-                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                <p className="truncate text-sm font-semibold group-hover:underline">
-                                  {listing?.title ?? T.gone}
-                                </p>
-                                <p className="truncate text-xs text-ink-muted">
-                                  {SELLERS.find((x) => x.id === order.sellerId)?.handle ??
-                                    order.sellerId}
-                                </p>
-                              </div>
-                              {(shared ? i === 0 : firstOfSeller) && (
-                                <span className="shrink-0">{pill(order)}</span>
-                              )}
-                            </li>
-                          )
-                        })}
-                        {items.length > MAX_ITEMS && (
-                          <li className="pl-15 text-xs text-ink-muted">
-                            {T.more(items.length - MAX_ITEMS).trim()}
-                          </li>
-                        )}
-                      </ul>
+                      <div className="hidden shrink-0 flex-wrap justify-end gap-1.5 sm:flex">
+                        {pills}
+                      </div>
+                      <Money
+                        cents={group.reduce((n, o) => n + o.breakdown.totalCents, 0)}
+                        className="w-20 shrink-0 text-right text-sm font-semibold sm:w-24"
+                      />
                     </Link>
                   </li>
                 )

@@ -419,7 +419,7 @@ export const COPY = {
     updating: 'Checking for updates…',
     gone: 'Listing no longer available',
     more: (n: number) => ` + ${n} more`,
-    itemCount: (n: number) => `${n} items`,
+    itemCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
   },
 
   sell: {
