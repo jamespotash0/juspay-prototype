@@ -1,6 +1,11 @@
 import { addToCart, useCart } from '../lib/cart.ts'
 import { useListings } from '../lib/listings.ts'
-import { navigate, openCheckout, type Params } from '../lib/navigation.ts'
+import {
+  navigate,
+  openCheckout,
+  useSearchParams,
+  type Params,
+} from '../lib/navigation.ts'
 import { Link } from '../lib/router.tsx'
 import { useSession } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
@@ -25,6 +30,9 @@ export default function Listing({ params }: { params: Params }) {
   const persona = useSession()?.persona
   const sold = useSoldIds().has(params.id)
   const inCart = useCart().some((l) => l.listingId === params.id)
+  // Opened from an order, the back link returns there. Same-site paths only, never '//host'.
+  const from = useSearchParams().get('from') ?? ''
+  const back = /^\/(?!\/)/.test(from) ? from : '/'
 
   if (!listing || !seller)
     return (
@@ -60,11 +68,11 @@ export default function Listing({ params }: { params: Params }) {
       back={
         <div className="mx-auto max-w-2xl">
           <Link
-            to="/"
+            to={back}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
           >
             <Icon name="arrowLeft" className="size-4" />
-            {T.back}
+            {back.startsWith('/order/') ? T.backToOrder : T.back}
           </Link>
         </div>
       }

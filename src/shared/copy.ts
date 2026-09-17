@@ -348,6 +348,7 @@ export const COPY = {
     notFound: "This listing isn't here",
     notFoundFact: 'The link may be wrong, or the listing was created in another browser.',
     back: 'Back to listings',
+    backToOrder: 'Back to order',
     cert: 'Cert',
     buyNow: 'Buy Now',
     addToCart: 'Add to Cart',

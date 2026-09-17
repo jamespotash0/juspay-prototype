@@ -536,7 +536,7 @@ function SellerOrder({
               <div className="flex min-w-0 flex-1 flex-col">
                 {l ? (
                   <Link
-                    to={`/listing/${l.id}`}
+                    to={`/listing/${l.id}?from=${encodeURIComponent(location.pathname)}`}
                     className="line-clamp-2 leading-snug font-medium hover:underline"
                   >
                     {l.title}
