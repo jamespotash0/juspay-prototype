@@ -490,8 +490,10 @@ function Active({ listings }: { listings: Listing[] }) {
 const DAY_MS = 86_400_000
 
 /**
- * What a seller needs at a glance: money waiting on them to ship, what they've sold lately, and
- * refund requests only they can answer. Marking a sale shipped moves money out of the first card.
+ * What a seller needs at a glance: money waiting on them to ship, payouts queued once shipped, what
+ * they've sold lately, and refund requests only they can answer. Marking a sale shipped moves money
+ * from the first card to the second. ponytail: payouts are never sent (no sandbox payout rail), so
+ * shipped money stays "Payout pending"; a real build would move it to Paid out on the payout webhook.
  */
 function SummaryCards({
   orders,
@@ -507,6 +509,7 @@ function SummaryCards({
   const recent = all.filter(
     (o) => o.ledger.balance !== 'reversed' && Date.parse(o.createdAt) >= since,
   )
+  const payouts = all.filter((o) => o.ledger.balance === 'available')
   const requests = all.filter(
     (o) => o.fulfilment === 'disputed' && o.refund.state !== 'succeeded',
   )
@@ -521,10 +524,17 @@ function SummaryCards({
       motion: released ? 'release-out' : '',
     },
     {
+      label: T.payoutCard,
+      cents: sum(payouts, (o) => o.ledger.netCents),
+      note: T.payoutNote(payouts.length),
+      swatch: 'bg-state-paid',
+      motion: released ? 'release-in' : '',
+    },
+    {
       label: T.recentCard,
       cents: sum(recent, (o) => o.ledger.grossCents),
       note: T.recentNote(recent.length),
-      swatch: 'bg-state-paid',
+      swatch: 'bg-ink-muted',
       motion: '',
     },
     {
@@ -538,7 +548,7 @@ function SummaryCards({
   return (
     <section
       aria-label={T.summary}
-      className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-4"
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4"
     >
       {cards.map((c) => (
         // A new key replays the animation for each release.
