@@ -149,7 +149,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'VF-20',
     certNumber: '90412263',
-    description: 'The key-date Morgan with even grey wear and no rim issues.',
+    description:
+      'The 1893-S is the key date of the Morgan series, and this one has the look people want at VF-20: even grey wear with no rim bumps, scratches or signs of cleaning. The PCGS holder is clean apart from a couple of faint case scuffs, and you can check cert 90412263 on the PCGS website. It ships fully insured in a small box with tracking within one business day.',
     createdAt: '2026-08-02T15:10:00Z',
   },
   {
@@ -166,7 +167,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-63',
     certNumber: '6612045-011',
-    description: 'Bright New Orleans strike with a thin band of rim toning.',
+    description:
+      'A nice uncirculated 1884-O Morgan, one of the more affordable New Orleans dates. The strike is full and the luster is bright, with a thin band of golden rim toning on the obverse and a few small marks on the cheek consistent with MS-63. The NGC holder is in good shape, and cert 6612045-011 can be looked up on NGC’s site. I ship in a padded bubble mailer with tracking within two business days.',
     createdAt: '2026-08-11T18:42:00Z',
   },
   {
@@ -183,7 +185,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-66FB',
     certNumber: '90418870',
-    description: 'Full split bands on the reverse and clean white surfaces.',
+    description:
+      'A wartime 1943-D Mercury dime from Denver, graded MS-66FB by PCGS for fully split and rounded bands on the reverse fasces. The surfaces are white and clean with strong cartwheel luster and no toning spots or distracting marks. The holder is crisp with no scratches, and cert 90418870 verifies on PCGS’s website. Ships the next business day in a bubble mailer with the slab wrapped in bubble wrap.',
     createdAt: '2026-08-20T12:05:00Z',
   },
   {
@@ -197,7 +200,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 0,
     imageUrl: '/listings/lst_004.png',
     graded: false,
-    description: 'Raw, lightly circulated, sharp detail in the skirt lines.',
+    description:
+      'Raw 1945-D Walking Liberty half, 90% silver from the last years of the series. It is lightly circulated with wear on Liberty’s head, hand and breast, but the skirt lines are still well defined and there is no cleaning, rim damage or pitting that I can see. The color is a light, even grey. It sits in a new 2x2 cardboard flip and ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-09-01T09:30:00Z',
   },
   {
@@ -214,7 +218,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-64',
     certNumber: '90407719',
-    description: 'Philadelphia common date with good luster and light chatter.',
+    description:
+      'An 1889 Philadelphia Morgan, a common date that makes a solid type coin at MS-64. Luster is good all over, with some light chatter in the fields and a few minor contact marks on the cheek that keep it out of gem territory, but nothing that jumps out at arm’s length. The PCGS holder has light handling scuffs on the back, and cert 90407719 can be verified at pcgs.com. It goes out within two business days in a bubble mailer with tracking.',
     createdAt: '2026-07-14T14:00:00Z',
   },
   {
@@ -230,7 +235,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-64',
     certNumber: '6608312-002',
-    description: 'Satiny low-relief Peace dollar with a clean cheek.',
+    description:
+      'The 1922 Peace dollar is the highest-mintage date in the series and the first year of the low-relief design. This one has soft satiny luster and a clean cheek, with a few small ticks in the right obverse field that fit the MS-64 grade. The NGC slab is clean, and cert 6608312-002 checks out on NGC’s verification page. Packed in bubble wrap inside a padded envelope, shipped with tracking within two business days.',
     createdAt: '2026-07-19T16:25:00Z',
   },
   {
@@ -246,7 +252,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-69',
     certNumber: '6619927-040',
-    description: 'One-ounce bullion eagle, near-flawless and free of milk spots.',
+    description:
+      'A 2004 American Silver Eagle, one troy ounce of fine silver, graded MS-69 by NGC. Under a loupe I could not find any milk spots, and the surfaces are bright with just the tiniest ticks that keep it from a 70. The holder is scratch-free, and cert 6619927-040 can be checked on NGC’s website. Ships in a bubble mailer with tracking, usually the next business day.',
     createdAt: '2026-08-28T10:15:00Z',
   },
   {
@@ -262,7 +269,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'AU-58',
     certNumber: '90401156',
-    description: 'First-year high relief with a touch of wear on the hair curls.',
+    description:
+      'The 1921 high relief Peace dollar was struck only in the last days of that year, which makes it a one-year design that most Peace sets need. This AU-58 still shows plenty of luster,, with only a touch of rub on the hair curls and the high points of the eagle. The PCGS holder is in good condition, and cert 90401156 verifies at pcgs.com. I pack it in a small box with padding and ship with tracking within two business days.',
     createdAt: '2026-06-30T20:45:00Z',
   },
   {
@@ -279,7 +287,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-62',
     certNumber: '90415502',
-    description: 'Typical soft San Francisco strike, fully original surfaces.',
+    description:
+      'A 1940-S Walker with the typical San Francisco strike, a little soft on Liberty’s hand and the eagle’s leg feathers. The surfaces are fully original with satiny luster, some light marks in the obverse field and no toning to speak of, in line with MS-62. The PCGS holder is clean, and you can verify cert 90415502 on PCGS’s site. It will ship within three business days in a padded bubble mailer with tracking.',
     createdAt: '2026-08-05T11:20:00Z',
   },
   {
@@ -296,7 +305,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'XF-45',
     certNumber: '6603348-007',
-    description: 'Type 1 with a partial date and honest, even circulation.',
+    description:
+      'A 1917-S Type 1 Standing Liberty quarter, the short-lived first design with Liberty’s bare breast, from San Francisco. It has honest, even circulation at XF-45, with light wear on the knee and shield and a date that is slightly soft, as these usually are. The NGC holder has a small scuff on the back only, and cert 6603348-007 can be looked up on NGC’s site. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-08-14T13:55:00Z',
   },
   {
@@ -313,7 +323,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'VF-30',
     certNumber: '90409934',
-    description: 'The first-year Lincoln key in chocolate brown, no cleaning.',
+    description:
+      'The 1909-S VDB is the key to the Lincoln cent series and the one most people chase first. This VF-30 has smooth chocolate-brown surfaces with no cleaning or spots, clear VDB initials on the reverse and a sharp S mint mark. Wear is even on the cheek and wheat stalks. The PCGS holder is clean, and cert 90409934 can be verified on the PCGS website. Insured and shipped in a small box with tracking the next business day.',
     createdAt: '2026-07-08T17:30:00Z',
   },
   {
@@ -326,7 +337,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 0,
     imageUrl: '/listings/lst_012.jpg',
     graded: false,
-    description: 'Raw circulated cent with full LIBERTY on the headband.',
+    description:
+      'An ungraded 1888 Indian Head cent with honest circulation and a full LIBERTY on the headband, which is the first thing to look for on these. The color is an even medium brown with a couple of tiny marks on the reverse, and I see no cleaning or corrosion. It is sold raw in a 2x2 flip, so judge the photos for yourself. Ships in a plain envelope with a cardboard stiffener and tracking within two business days.',
     createdAt: '2026-09-04T08:10:00Z',
   },
   {
@@ -342,7 +354,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-64',
     certNumber: '6615520-019',
-    description: 'Full date and a well-struck horn on the bison.',
+    description:
+      'A 1935 Philadelphia Buffalo nickel in MS-64, with a full date and a well-struck horn on the bison, which a lot of 1930s nickels lack. The luster is frosty with a faint golden tone near the rims and only a few small marks on Liberty’s cheek. The NGC slab is clean and cert 6615520-019 is verifiable on NGC’s site. It ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-08-22T19:00:00Z',
   },
   {
@@ -358,7 +371,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-65',
     certNumber: '90403381',
-    description: 'Gem no-motto twenty with rich orange-gold luster.',
+    description:
+      'The 1908 No Motto Saint-Gaudens double eagle comes from the short period before IN GOD WE TRUST was added,. This MS-65 has rich orange-gold luster, a clean Liberty and only a few tiny marks in the fields. The PCGS holder is in excellent shape, and you can verify cert 90403381 at pcgs.com. Because of its value it ships fully insured in a box with signature required, within one business day.',
     createdAt: '2026-06-18T15:40:00Z',
   },
   {
@@ -374,7 +388,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'AU-55',
     certNumber: '6600417-001',
-    description: 'Wire-rim high relief with light rub on Liberty’s knee.',
+    description:
+      'The 1907 High Relief double eagle was struck with multiple blows per coin and is widely considered one of the finest US designs. This is the wire rim variety, and at AU-55 it shows light rub on Liberty’s knee, breast and the eagle’s wing, with plenty of luster left in the recesses. The NGC holder is clean, and cert 6600417-001 can be checked on NGC’s site. It ships insured in a box with signature required, usually the next business day.',
     createdAt: '2026-07-01T12:00:00Z',
   },
   {
@@ -388,7 +403,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 400,
     imageUrl: '/listings/lst_016.png',
     graded: false,
-    description: 'Raw uncirculated-looking Franklin from a family roll.',
+    description:
+      'A raw 1963-D Franklin half, 90% silver, pulled from a family roll that had been set aside since the sixties. It looks uncirculated to me, with bright luster and some scattered bag marks on the cheek and bell, but it has not been graded, so please judge from the photos. The bell lines are partly complete. Stored in a 2x2 flip and shipped in a padded mailer with tracking within two business days.',
     createdAt: '2026-09-10T21:15:00Z',
   },
   {
@@ -400,7 +416,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 400,
     imageUrl: '/listings/lst_017.jpg',
     graded: false,
-    description: 'Raw 90% silver dime with a worn date, sold as-is.',
+    description:
+      'A Mercury dime with the date worn off, so it is sold as-is as 90% silver and nothing more. Heavy wear all over, though the outline of Liberty and the fasces on the reverse are still visible and there are no holes or bends. This is a good filler or melt-value piece for a starter set. It comes in a paper envelope and ships in a stamped letter mailer with a cardboard stiffener, no tracking, within three business days.',
     createdAt: '2026-09-12T10:00:00Z',
   },
 
@@ -419,7 +436,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81204417',
     description:
-      'Bright green background with even wear and no creases through the portrait.',
+      'A 1909-11 T206 Ty Cobb with the green background portrait, one of the four Cobb poses in the set and a centerpiece card for any tobacco collection. At PSA 3 it shows even wear and rounded corners, but the green is bright and there are no creases through the portrait. The PSA holder is clean, and cert 81204417 can be verified on PSA’s website. Ships insured in a box with signature required, within one business day.',
     createdAt: '2026-07-22T14:30:00Z',
   },
   {
@@ -436,7 +453,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81204582',
     description:
-      'Rich yellow background and a clean face, corners rounded as you would expect.',
+      'Walter Johnson’s T206 portrait card, a key Hall of Famer from the set, graded PSA 3. The yellow background is rich and his face is clean, with the corners rounded as you would expect at this grade and a little edge wear on the right side. No creases I can find. The holder has a few light scuffs on the back, and cert 81204582 checks out on PSA’s site. Packed between cardboard in a small box and shipped with tracking within two business days.',
     createdAt: '2026-08-03T16:05:00Z',
   },
   {
@@ -452,7 +469,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 4',
     certNumber: '81205139',
-    description: 'Strong red background with a sharp image and only light corner wear.',
+    description:
+      'A T206 Joe Tinker portrait, the shortstop from the Cubs’ famous double-play combination. This PSA 4 has a strong red background and a sharp image, with light corner wear and edges that are cleaner than usual for the grade. Centering is a bit high but the card presents well. The PSA slab is clean, and you can verify cert 81205139 at psa.com. Ships within two business days in a padded mailer with the slab in a bubble sleeve and tracking.',
     createdAt: '2026-08-25T09:50:00Z',
   },
   {
@@ -468,7 +486,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81205260',
-    description: 'Honest low-grade Hall of Famer with good colour for the grade.',
+    description:
+      'A T206 Roger Bresnahan portrait, a Hall of Fame catcher, in an honest PSA 2. The colors are still good for the grade, but it has rounded corners, general edge wear and a light wrinkle near the bottom border. The image itself is clear and the name line is readable. The holder has a small scratch on the front edge, and cert 81205260 can be checked on PSA’s website. Ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-09-08T18:20:00Z',
   },
   {
@@ -485,7 +504,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 2',
     certNumber: '81205711',
     description:
-      'Deep blue background that pops, soft corners and no creases through the image.',
+      'A T206 Tris Speaker, one of the tougher Hall of Famers in the set, graded PSA 2. The deep blue background really pops, but the corners are soft and the edges have wear all the way around. There are no creases through the image, which is unusual at this grade. The holder is in good shape and cert 81205711 can be verified at psa.com. I ship it in a small box with tracking, typically the next business day.',
     createdAt: '2026-07-27T20:10:00Z',
   },
   {
@@ -501,7 +520,8 @@ export const LISTINGS: Listing[] = [
     service: 'CGC',
     grade: 'CGC 2',
     certNumber: '4210330187',
-    description: 'Cubs infielder with a vivid green background in a CGC holder.',
+    description:
+      'A T206 Johnny Evers portrait, the Cubs second baseman, graded CGC 2. The green background is still vivid and the portrait is clear, while the corners are rounded and there is a light crease in the upper left that you can see at an angle. The CGC holder is clean, and cert 4210330187 can be looked up on CGC’s website. Ships in a padded bubble mailer with tracking within two business days.',
     createdAt: '2026-08-17T13:35:00Z',
   },
   {
@@ -518,7 +538,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81206094',
     description:
-      'Warm yellow background with a nicely centred portrait and even edge wear.',
+      'A T206 Nap Lajoie portrait graded PSA 3, one of the better-looking Cleveland cards in the set. The yellow background is warm, the portrait is nicely centered, and edge wear is even on all four sides with typical corner rounding. Nothing is creased through the image. The PSA holder has minor scuffing on the back, and cert 81206094 can be verified on PSA’s site. Ships in a sturdy box with tracking within two business days.',
     createdAt: '2026-08-29T15:15:00Z',
   },
   {
@@ -535,7 +555,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81206338',
     description:
-      'The large cabinet Cobb with a glowing sunset sky and a clean nameplate.',
+      'The 1911 T3 Turkey Red Ty Cobb is one of the large cabinet cards that came as a mail-in premium,. This PSA 3 has a glowing sunset sky and a clean nameplate, with rounded corners and some light wear along the frame edges. The oversized PSA holder is intact with a few surface scuffs, and cert 81206338 can be checked at psa.com. Because of the size it ships insured in a box with signature required, within one business day.',
     createdAt: '2026-06-25T19:25:00Z',
   },
   {
@@ -551,7 +571,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81206475',
-    description: 'Olive background with a well-registered portrait and rounded corners.',
+    description:
+      'A T206 Chief Bender portrait, the Athletics pitcher and Hall of Famer, graded PSA 2. The olive background is even and the portrait is well registered, while the corners are rounded and the edges show a fair amount of wear. There is a faint crease through the bottom border but none across his face. The holder is clean, and cert 81206475 can be verified on PSA’s website. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-08-08T11:40:00Z',
   },
   {
@@ -567,7 +588,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81206623',
-    description: 'Bold red background, sharp focus, typical corner wear for the grade.',
+    description:
+      'John McGraw’s T206 portrait from his years managing the Giants, graded PSA 3. The red background is bold, focus is sharp, and the corner wear is typical for the grade, with a little extra softness at the lower right. Centering is close to even left to right. The PSA holder is in good condition, and cert 81206623 can be checked on PSA’s site. I ship within two business days in a bubble mailer with the slab sandwiched in cardboard.',
     createdAt: '2026-08-19T17:55:00Z',
   },
   {
@@ -580,7 +602,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 400,
     imageUrl: '/listings/lst_028.jpg',
     graded: false,
-    description: 'Raw card with a sharp portrait, soft corners and toning on the edges.',
+    description:
+      'An ungraded 1912 T207 Brown Background Zack Wheat, from the less common follow-up set to T206. The portrait is sharp, but the corners are soft and there is toning along the edges, plus a small surface mark on the back. No creases that I can see under a light. It is stored in a penny sleeve and top loader and ships in a team bag inside a bubble mailer with tracking within two business days.',
     createdAt: '2026-09-06T12:45:00Z',
   },
   {
@@ -596,7 +619,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 4',
     certNumber: '81206958',
-    description: 'Big, colourful cabinet card with a clean frame and pale blue sky.',
+    description:
+      'A 1911 T3 Turkey Red Christy Mathewson, one of the most popular cabinet cards in the set. This PSA 4 has big, bright colors with a clean frame and a pale blue sky, and the wear is limited to light corner rounding and a couple of small edge nicks. The large PSA holder has light scuffs on the back but no cracks, and cert 81206958 can be verified at psa.com. Ships insured in a box with tracking within one business day.',
     createdAt: '2026-09-13T16:00:00Z',
   },
   {
@@ -612,7 +636,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81207102',
-    description: 'Green diamond design with most of the gold border intact.',
+    description:
+      'A 1911 T205 Gold Border Ty Cobb, the one with the green diamond design, graded PSA 2. Most of the gold border is intact, which is uncommon since those borders chip easily, but the corners are rounded and there is a light crease on the back. The portrait itself is clean. The PSA holder is clean and cert 81207102 verifies on PSA’s website. It ships insured in a padded box with signature required, within two business days.',
     createdAt: '2026-07-11T10:30:00Z',
   },
   // ── More coins ───────────────────────────────────────────────────────────
@@ -628,7 +653,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-65',
     certNumber: '45433012',
-    description: 'First-year 90% silver Kennedy with frosty, even luster.',
+    description:
+      'A first-year 1964 Kennedy half, struck in 90% silver the year after the assassination and saved in huge numbers. This MS-65 has frosty, even luster and a clean portrait, with only a few small ticks in the fields. The PCGS holder is in good shape, and cert 45433012 can be verified at pcgs.com. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-05-25T13:00:00Z',
   }),
   coin({
@@ -643,7 +669,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'PF-67',
     certNumber: '6628140-003',
-    description: 'Mirror fields and a clean portrait, no haze.',
+    description:
+      'A 1964 Kennedy proof half, the first year of the design, graded PF-67 by NGC. The fields are deep mirrors and the portrait is clean with a light frost, and there is no haze or spotting that I can see. A couple of tiny hairlines show under magnification only. The NGC holder is scratch-free, and cert 6628140-003 can be checked on NGC’s site. It ships the next business day in a bubble mailer with tracking.',
     createdAt: '2026-05-18T11:05:00Z',
   }),
   coin({
@@ -658,7 +685,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'VF-35',
     certNumber: '6655642-004',
-    description: 'Full LIBERTY on the headband with honest grey wear.',
+    description:
+      'An 1899 Barber quarter in VF-35 with all seven letters of LIBERTY on the headband, which is the key detail for this grade. The wear is even and grey with no cleaning, scratches or rim problems. The eagle’s wing feathers are still partly defined on the reverse. The NGC slab has light holder scuffs, and cert 6655642-004 can be verified at ngccoin.com. It ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-06-27T18:00:00Z',
   }),
   coin({
@@ -674,7 +702,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'VG-10',
     certNumber: '49682180',
-    description: 'Key-date first-year Denver quarter, readable mint mark.',
+    description:
+      'The 1932-D is one of the two keys of the Washington quarter series, both from the first year of the design. At VG-10 this one has a readable D mint mark on the reverse, full rims and even wear with a natural grey color. It has not been cleaned. The PCGS holder is clean, and cert 49682180 can be checked on the PCGS website. Packed in a small padded box and shipped with tracking within two business days.',
     createdAt: '2026-06-04T12:45:00Z',
   }),
   coin({
@@ -690,7 +719,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'F-12',
     certNumber: '6670868-008',
-    description: 'The other 1932 key, even wear and no rim dings.',
+    description:
+      'The 1932-S is the other key date in the Washington quarter series, and this F-12 shows even wear with no rim dings or scratches. The S mint mark is clear and the date is fully readable. The surfaces have an original medium grey tone. The NGC holder is in good condition, and cert 6670868-008 verifies on NGC’s site. It ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-06-16T09:20:00Z',
   }),
   coin({
@@ -705,7 +735,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-64FBL',
     certNumber: '46247794',
-    description: 'Full bell lines across the lower reverse.',
+    description:
+      'A 1958 Franklin half graded MS-64FBL, meaning the lower bell lines are fully complete, which is not easy to find on this date. The luster is bright with a touch of light golden toning at the rims, and there are a few small marks on the cheek. The PCGS holder is clean, and cert 46247794 can be verified at pcgs.com. I ship within two business days in a bubble mailer with tracking.',
     createdAt: '2026-05-16T17:20:00Z',
   }),
   coin({
@@ -721,7 +752,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-66',
     certNumber: '48328453',
-    description: 'Last-year silver quarter with bright, untoned surfaces.',
+    description:
+      'A 1964-D Washington quarter from the last year of 90% silver quarters, graded MS-66 by PCGS. The surfaces are bright and untoned, the strike is sharp on the eagle’s breast feathers, and there are only a few tiny ticks. The holder is clean with no scuffs, and cert 48328453 checks out on PCGS’s website. Ships in a padded envelope with tracking within one business day.',
     createdAt: '2026-08-28T17:50:00Z',
   }),
   coin({
@@ -737,7 +769,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-66',
     certNumber: '46066345',
-    description: 'Wartime silver nickel with the large P over Monticello.',
+    description:
+      'A 1942-P wartime Jefferson nickel, part of the 35% silver issue where the mint mark was moved to a large P above Monticello. This MS-66 has satiny luster with some light even toning and good detail in the steps. No spots or dark areas. The PCGS holder is clean, and cert 46066345 can be looked up at pcgs.com. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-07-02T09:30:00Z',
   }),
   coin({
@@ -753,7 +786,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-64',
     certNumber: '6664895-057',
-    description: 'Scarce early Denver nickel with good step detail.',
+    description:
+      'The 1939-D is one of the scarcer early Jefferson nickels, with a much lower mintage than the Philadelphia issue that year. This MS-64 has good step detail on Monticello, soft golden luster and a few small marks on the portrait. The NGC holder has a light scuff on the reverse side only, and cert 6664895-057 can be verified on NGC’s site. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-07-13T17:05:00Z',
   }),
   coin({
@@ -768,7 +802,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-70',
     certNumber: '6667100-027',
-    description: 'Type 2 reverse, flawless under magnification.',
+    description:
+      'A 2021 American Silver Eagle with the Type 2 reverse, the new eagle design introduced partway through that year. NGC graded it MS-70, and under a loupe I could not find any spots or marks. The holder is scratch-free, and cert 6667100-027 can be checked on NGC’s website. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-08T15:45:00Z',
   }),
   coin({
@@ -783,7 +818,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-63',
     certNumber: '40657788',
-    description: 'The famous no-cents variety with satin luster.',
+    description:
+      'The 1883 No Cents Liberty nickel only carried a V on the reverse with no word CENTS, which let some people gold-plate them and pass them off as five-dollar coins. This one is an MS-63 with satin luster and a decent strike, with a few light marks on the cheek. The PCGS holder is clean, and cert 40657788 verifies at pcgs.com. Ships within two business days in a padded mailer with tracking.',
     createdAt: '2026-07-20T13:40:00Z',
   }),
   coin({
@@ -798,7 +834,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'AU-55',
     certNumber: '6665100-038',
-    description: 'Light rub on the high points, most luster intact.',
+    description:
+      'A 1900 Liberty Head nickel graded AU-55 by NGC. There is light rub on Liberty’s hair and the wreath, but most of the original luster is still there and the color is a pleasant light grey. No marks that stand out and no signs of cleaning. The holder is in good shape, and cert 6665100-038 can be verified on NGC’s site. Ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-05-24T12:50:00Z',
   }),
   coin({
@@ -814,7 +851,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'AU-50',
     certNumber: '41090518',
-    description: 'New Orleans seated dollar with original grey-gold toning.',
+    description:
+      'An 1860-O Seated Liberty dollar, one of the few New Orleans issues of the series and a good date for a pre-Civil War type coin. At AU-50 it has light wear on Liberty’s knee and breast and original grey-gold toning with some luster in the protected areas. The PCGS holder is clean, and cert 41090518 can be checked at pcgs.com. It ships insured in a small box with tracking within one business day.',
     createdAt: '2026-08-23T12:45:00Z',
   }),
   coin({
@@ -829,7 +867,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'VF-30',
     certNumber: '6602957-030',
-    description: 'Even circulation and a full shield outline.',
+    description:
+      'An 1872 Seated Liberty dollar in VF-30, with even circulation and a full outline to the shield. LIBERTY on the shield is mostly readable, the color is a natural grey, and there are no rim dings or signs of cleaning. The NGC holder has a couple of faint scuffs, and cert 6602957-030 can be verified on NGC’s site. Packed in a padded box and shipped with tracking within two business days.',
     createdAt: '2026-05-30T15:00:00Z',
   }),
   coin({
@@ -844,7 +883,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-62',
     certNumber: '43660918',
-    description: 'Ten-dollar gold with a few marks on the headdress.',
+    description:
+      'A 1911 Indian Head eagle, the ten-dollar gold coin designed by Saint-Gaudens with Liberty in a feathered headdress. This MS-62 has good luster and a solid strike, with a few marks on the headdress and cheek that account for the grade. The color is an even yellow-gold. The PCGS holder is clean, and cert 43660918 verifies at pcgs.com. It ships insured in a box with signature required, within one business day.',
     createdAt: '2026-08-09T21:50:00Z',
   }),
   coin({
@@ -859,7 +899,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-64',
     certNumber: '6621805-029',
-    description: 'Last-year eagle with thick, satiny luster.',
+    description:
+      'The 1932 is the most available date in the Indian Head eagle series, which makes it the usual choice for a type coin. This MS-64 has thick, satiny luster, a well-struck headdress and only a few small marks in the fields. The NGC holder is in excellent condition, and cert 6621805-029 can be verified on NGC’s website. Shipped insured in a small box with signature required, within two business days.',
     createdAt: '2026-06-05T21:45:00Z',
   }),
   coin({
@@ -874,7 +915,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-63',
     certNumber: '49231152',
-    description: 'Common-date twenty, clean fields for the grade.',
+    description:
+      'A 1904 Liberty Head double eagle, the common date in the series and a straightforward way to own a twenty-dollar gold piece. For MS-63 the fields are fairly clean, with bright luster and a handful of small contact marks on Liberty’s cheek. The PCGS holder is clean, and cert 49231152 can be checked on PCGS’s site. Ships insured in a box with signature required within one business day.',
     createdAt: '2026-08-06T11:15:00Z',
   }),
   coin({
@@ -890,7 +932,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'AU-58',
     certNumber: '6623097-010',
-    description: 'San Francisco twenty with slight friction on the cheek.',
+    description:
+      'A 1900-S Liberty Head double eagle from San Francisco in AU-58. There is slight friction on the cheek and hair, but the luster is close to full and the color is a warm orange-gold. A few small marks in the left obverse field. The NGC holder has a light scuff on the label edge, and cert 6623097-010 can be looked up on NGC’s site. It ships insured in a box with signature required, within two business days.',
     createdAt: '2026-05-04T15:15:00Z',
   }),
   coin({
@@ -905,7 +948,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'XF-40',
     certNumber: '44408156',
-    description: 'Sharp wreath detail and a partial LIBERTY.',
+    description:
+      'An 1899 Barber dime in XF-40 with sharp wreath detail on the reverse and a partial LIBERTY on the headband, which is standard for this grade. The toning is a light, even grey with no spots or scratches, and the rims are full. The PCGS holder is clean, and cert 44408156 can be verified at pcgs.com. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-08-03T17:40:00Z',
   }),
   coin({
@@ -921,7 +965,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'G-4',
     certNumber: '6690504-055',
-    description: 'The Mercury key, full rims and a clear D.',
+    description:
+      'The 1916-D is the key date of the Mercury dime series and the first year of the design, with a very small Denver mintage. This G-4 has full rims, a clear D on the reverse and a readable date, with the heavy wear you expect at this grade. No cleaning or damage. The NGC holder is clean, and cert 6690504-055 checks out on NGC’s site. It ships in a small box with tracking the next business day.',
     createdAt: '2026-05-14T15:45:00Z',
   }),
   coin({
@@ -936,7 +981,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-62BN',
     certNumber: '46678500',
-    description: 'Civil War two-cent piece with chocolate surfaces.',
+    description:
+      'An 1865 two-cent piece, a Civil War-era coin from the series that first carried IN GOD WE TRUST. This MS-62BN has smooth chocolate-brown surfaces with some faint red in the protected areas and a few small marks. The motto is fully struck. The PCGS holder is clean, and cert 46678500 can be checked at pcgs.com. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-08-11T08:20:00Z',
   }),
   coin({
@@ -952,7 +998,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'XF-45',
     certNumber: '6627363-029',
-    description: 'Trade dollar with no chopmarks and light wear.',
+    description:
+      'An 1874-S Trade dollar, made for commerce in Asia, and this one has no chopmarks, which a lot of them picked up overseas. At XF-45 there is light wear on Liberty’s knee and head with some luster left around the lettering and original silver-grey toning. The NGC holder is in good shape, and cert 6627363-029 can be verified on NGC’s website. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-05-14T09:00:00Z',
   }),
   coin({
@@ -968,7 +1015,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'F-15',
     certNumber: '49509051',
-    description: 'Low-mintage Carson City trade dollar, never cleaned.',
+    description:
+      'An 1878-CC Trade dollar, a low-mintage Carson City issue from the final year trade dollars were struck for circulation. This F-15 has even wear, a clear CC mint mark and natural grey surfaces that have never been cleaned. The PCGS holder is clean, and cert 49509051 can be checked at pcgs.com. Ships insured in a box with signature required, within one business day.',
     createdAt: '2026-05-07T09:20:00Z',
   }),
   coin({
@@ -984,7 +1032,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'PR-69DCAM',
     certNumber: '46312081',
-    description: 'Deep cameo proof from the original blue pack.',
+    description:
+      'A 1971-S silver proof Eisenhower dollar, one of the 40% silver collector pieces originally sold in the blue pack. PCGS graded it PR-69DCAM, and the contrast between the frosted devices and mirror fields is strong. I see no haze, spots or hairlines. The holder is clean, and cert 46312081 can be verified on the PCGS website. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-08-02T15:05:00Z',
   }),
   coin({
@@ -999,7 +1048,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-64',
     certNumber: '41935310',
-    description: 'Bright common-date Saint with booming luster.',
+    description:
+      'A 1924 Saint-Gaudens double eagle, the most common date of the series and a popular gold type coin. This MS-64 has booming luster and a bright yellow-gold color, with a few light marks on Liberty’s legs and in the fields. The PCGS holder is clean, and cert 41935310 can be looked up on PCGS’s site. Ships fully insured in a box with signature required within one business day.',
     createdAt: '2026-05-22T10:05:00Z',
   }),
   coin({
@@ -1015,7 +1065,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-65',
     certNumber: '45748475',
-    description: 'Gem San Francisco Morgan with a clean cheek.',
+    description:
+      'An 1881-S Morgan, one of the best-struck San Francisco dates and a classic choice for a gem Morgan. This MS-65 has a clean cheek, frosty luster and only a few tiny marks in the fields, with no toning. The PCGS holder has one light scuff on the back, and cert 45748475 can be verified at pcgs.com. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-06-11T16:00:00Z',
   }),
   coin({
@@ -1031,7 +1082,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-62',
     certNumber: '6669239-024',
-    description: 'First-year Carson City Morgan, scattered bag marks.',
+    description:
+      'An 1878-CC Morgan dollar from the first year of Carson City Morgan production. At MS-62 it has scattered bag marks on the cheek and in the fields, but the luster is good and the strike is solid on the hair above the ear. The CC mint mark is sharp. The NGC holder is clean, and cert 6669239-024 can be checked on NGC’s site. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-05-07T20:30:00Z',
   }),
   coin({
@@ -1047,7 +1099,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-64',
     certNumber: '41526903',
-    description: 'Frosty New Orleans Morgan from the 1962 vault release.',
+    description:
+      'A 1904-O Morgan dollar, a date that was scarce until bags came out of Treasury storage in the early 1960s. This MS-64 has frosty luster and a clean look, with some minor marks on the cheek and a slightly soft strike on the hair. The PCGS holder is in good shape, and cert 41526903 verifies at pcgs.com. It ships in a padded mailer with tracking within one business day.',
     createdAt: '2026-06-12T13:20:00Z',
   }),
   coin({
@@ -1059,7 +1112,8 @@ export const LISTINGS: Listing[] = [
     priceCents: 4200,
     shippingCents: 400,
     graded: false,
-    description: 'Raw circulated last-year Morgan, found in a coin jar.',
+    description:
+      'An ungraded 1921 Morgan dollar, the final year of the series, found in an old coin jar. It is circulated with wear on the hair and eagle’s breast, a few scattered marks and grey toning, but no holes, cleaning or rim damage. A good 90% silver starter coin. It comes in a 2x2 flip and ships in a padded bubble mailer with tracking within two business days.',
     createdAt: '2026-09-14T16:40:00Z',
   }),
   coin({
@@ -1074,7 +1128,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-65',
     certNumber: '43742018',
-    description: 'Gem common-date Peace dollar with satin luster.',
+    description:
+      'A 1923 Peace dollar, a common date, graded MS-65 by PCGS. The satin luster is even across both sides and the cheek is clean, with only a few small ticks in the fields. The strike is good for the date. The holder is clean, and cert 43742018 can be verified at pcgs.com. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-19T20:20:00Z',
   }),
   coin({
@@ -1089,7 +1144,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'VF-35',
     certNumber: '6696976-052',
-    description: 'The low-mintage Peace key with even wear.',
+    description:
+      'The 1928 Philadelphia Peace dollar has the lowest mintage of the series, which makes it the key date for most collectors. This VF-35 has even wear on the hair and eagle, natural grey toning and no cleaning or rim issues. The NGC holder is clean with a slight scuff on the back, and cert 6696976-052 can be verified on NGC’s website. It ships insured in a small box with tracking within one business day.',
     createdAt: '2026-09-04T13:00:00Z',
   }),
   coin({
@@ -1105,7 +1161,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-65',
     certNumber: '40468706',
-    description: 'Low-mintage Denver Walker with a strong strike.',
+    description:
+      'The 1938-D is the lowest-mintage Walking Liberty half of the later years, and this MS-65 has a strong strike with good detail on Liberty’s hand and head. Luster is bright and satiny, with a few tiny marks that do not distract. The PCGS holder is in excellent shape, and cert 40468706 can be checked at pcgs.com. Ships within two business days in a padded box with tracking.',
     createdAt: '2026-07-28T15:40:00Z',
   }),
   coin({
@@ -1117,7 +1174,8 @@ export const LISTINGS: Listing[] = [
     priceCents: 2500,
     shippingCents: 400,
     graded: false,
-    description: 'Raw wartime silver half with light circulation.',
+    description:
+      'A raw 1942 Walking Liberty half dollar in 90% silver from the war years. It has light circulation with wear on Liberty’s head and hand, some minor contact marks and a light grey tone, and it has never been cleaned as far as I can tell. It is not graded. It is stored in a 2x2 flip and ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-08-02T09:20:00Z',
   }),
   coin({
@@ -1132,7 +1190,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'MS-67FB',
     certNumber: '41713912',
-    description: 'Superb gem with fully separated bands.',
+    description:
+      'A 1945 Philadelphia Mercury dime graded MS-67FB, which is a much bigger deal than it sounds, since this date is known for weak strikes and full split bands are hard to find. The surfaces are brilliant white with strong luster and essentially no marks. The PCGS holder is clean, and cert 41713912 verifies at pcgs.com. It ships in a small box with tracking the next business day.',
     createdAt: '2026-09-01T17:00:00Z',
   }),
   coin({
@@ -1148,7 +1207,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'AU-53',
     certNumber: '6685587-023',
-    description: 'Full date and most of the head detail.',
+    description:
+      'A 1928-S Standing Liberty quarter in AU-53, with a full date and most of the head detail, which is often weak on this series. There is light wear on the knee and shield, with some luster left in the protected areas and light even toning. The NGC holder is clean, and cert 6685587-023 can be looked up on NGC’s site. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-05-31T14:20:00Z',
   }),
   coin({
@@ -1163,7 +1223,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'VF-35BN',
     certNumber: '48020058',
-    description: 'The famous doubled date and legend, clearly visible.',
+    description:
+      'The 1955 Doubled Die Obverse is the most famous error in the Lincoln cent series, with strong doubling visible on the date and the legends without magnification. This VF-35BN has even brown color, no cleaning or corrosion and light wear on the cheek. The PCGS holder is in good shape, and cert 48020058 can be verified at pcgs.com. It ships insured in a small box with tracking within one business day.',
     createdAt: '2026-05-23T20:45:00Z',
   }),
   coin({
@@ -1179,7 +1240,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'VG-8BN',
     certNumber: '6652610-048',
-    description: 'Key-date Denver cent, no cleaning or corrosion.',
+    description:
+      'The 1914-D is one of the key dates of the Lincoln wheat cent series. This VG-8BN has a readable date and mint mark, even brown surfaces and no cleaning, corrosion or rim damage. The wheat lines are worn but the stalks are fully outlined. The NGC holder is clean, and cert 6652610-048 can be verified on NGC’s site. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-06-13T10:00:00Z',
   }),
   coin({
@@ -1194,7 +1256,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'F-12BN',
     certNumber: '42535887',
-    description: 'The Indian cent key with a full rim and four diamonds.',
+    description:
+      'The 1877 is the key date of the Indian Head cent series, and this F-12BN has a full rim and all four diamonds visible on the ribbon. The color is a smooth medium brown with no cleaning or spots, and LIBERTY is partly visible on the headband. The PCGS holder has a couple of minor scuffs, and cert 42535887 can be checked at pcgs.com. It ships insured in a small box with tracking within one business day.',
     createdAt: '2026-06-07T17:50:00Z',
   }),
   coin({
@@ -1210,7 +1273,8 @@ export const LISTINGS: Listing[] = [
     service: 'PCGS',
     grade: 'XF-45',
     certNumber: '45878862',
-    description: 'Missing front leg variety, a textbook example.',
+    description:
+      'A 1937-D 3-Legged Buffalo nickel, the well-known variety where the bison’s front leg was polished off the die. At XF-45 it is a textbook example, with the missing leg easy to see, the diagnostic line of raised dots under the belly and a clear D. The surfaces are light grey with no cleaning. The PCGS holder is clean, and cert 45878862 verifies at pcgs.com. Ships insured in a padded box with tracking within two business days.',
     createdAt: '2026-05-04T20:05:00Z',
   }),
   coin({
@@ -1226,7 +1290,8 @@ export const LISTINGS: Listing[] = [
     service: 'NGC',
     grade: 'MS-66',
     certNumber: '6698237-060',
-    description: 'Last-year Buffalo with bright, lustrous surfaces.',
+    description:
+      'A 1938-D Buffalo nickel from the last year of the design, graded MS-66 by NGC. The surfaces are bright and lustrous with a light golden tint, and the strike is good on the bison’s head and horn. No spots or distracting marks. The NGC holder is clean, and cert 6698237-060 can be checked on NGC’s site. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-19T21:20:00Z',
   }),
 
@@ -1245,7 +1310,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 2',
     certNumber: '81207346',
     description:
-      'Yellow-orange background and a crisp image, light creasing at the corners.',
+      'A T206 Christy Mathewson portrait, one of the most wanted pitchers in the set, graded PSA 2. The yellow-orange background is bright and the image is crisp, but there is light creasing at the corners and general edge wear consistent with the grade. The face is clean. The PSA holder has light scuffing on the back, and cert 81207346 can be verified on PSA’s website. It ships in a sturdy box with tracking within two business days.',
     createdAt: '2026-07-23T12:45:00Z',
   },
   {
@@ -1261,7 +1326,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81207481',
-    description: 'Cabinet card with a warm orange sky and strong colour throughout.',
+    description:
+      'A 1911 T3 Turkey Red Nap Lajoie cabinet card graded PSA 3. The warm orange sky and strong color hold up well, with rounded corners and some edge wear around the frame, plus a faint wrinkle on the back. The large PSA holder is in good shape, and cert 81207481 can be checked at psa.com. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-08-26T18:45:00Z',
   },
   {
@@ -1278,7 +1344,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 5(MC)',
     certNumber: '15385994',
-    description: 'The most famous card in the hobby. Even color, qualified for miscut.',
+    description:
+      'The T206 Honus Wagner with the Sweet Caporal back is the most famous card in the hobby. This one is graded PSA 5 with the MC qualifier for a miscut, so the image sits off-center, but the color is even and the surfaces are clean. The PSA holder is intact, and you can confirm cert 15385994 on PSA’s website before buying. It ships fully insured in a box with signature required, within one business day.',
     createdAt: '2026-08-30T17:00:00Z',
   },
   {
@@ -1295,7 +1362,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 2',
     certNumber: '81207735',
     description:
-      'Soft grey background with the glove visible, corners worn but no paper loss.',
+      'A T206 Cy Young in the Glove Shows pose, graded PSA 2. The soft grey background has the glove clearly visible, and while the corners are worn and the edges are rough, there is no paper loss. A light crease crosses the lower corner. The PSA holder is clean, and cert 81207735 can be verified at psa.com. Ships in a padded mailer with the slab sandwiched in cardboard and tracking, within two business days.',
     createdAt: '2026-06-14T10:50:00Z',
   },
   {
@@ -1309,7 +1376,7 @@ export const LISTINGS: Listing[] = [
     imageUrl: '/listings/lst_075.jpg',
     graded: false,
     description:
-      'Raw card with a strong blue background, rounded corners and a light crease.',
+      'An ungraded T206 Rube Waddell portrait with a strong blue background. It has rounded corners, a light crease across the upper third and some edge wear, but the image is clean and the back is fully readable. I have not had it graded, so please look closely at the scans. It is kept in a penny sleeve and top loader and ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-05-31T16:00:00Z',
   },
   {
@@ -1325,7 +1392,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81208016',
-    description: 'Orange sky behind the batting pose with good centring.',
+    description:
+      'A T206 Sam Crawford in the batting pose graded PSA 3. The orange sky behind him is bright, centering is good, and the wear is mostly in the corners with a small nick on the bottom edge. No creases visible through the holder. The PSA slab is clean, and cert 81208016 can be verified on PSA’s website. It ships within two business days in a padded mailer with tracking.',
     createdAt: '2026-05-28T16:00:00Z',
   },
   {
@@ -1342,7 +1410,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 8',
     certNumber: '09025517',
-    description: 'The misspelled "Magie" error, pulled early from the print run.',
+    description:
+      'The 1909 T206 Sherry Magie error, where his name was misspelled “Magie” instead of Magee and corrected early in the print run, so relatively few made it out. This one has the Piedmont 150 back and is graded PSA 8, with sharp corners, strong color and clean edges. The PSA holder is in good shape, and cert 09025517 can be verified on PSA’s site. It ships fully insured in a box with signature required, within one business day.',
     createdAt: '2026-09-07T15:00:00Z',
   },
   {
@@ -1358,7 +1427,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81208244',
-    description: 'Bright yellow background with the bold CHICAGO jersey lettering.',
+    description:
+      'A T206 Ed Walsh graded PSA 3, the White Sox spitball pitcher and Hall of Famer. The yellow background is bright with the bold CHICAGO jersey lettering, and the card has rounded corners and some light surface wear. Centering is slightly to the left. The PSA holder has a few faint scratches, and cert 81208244 can be checked at psa.com. Ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-09-09T11:30:00Z',
   },
   {
@@ -1375,7 +1445,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81208390',
     description:
-      'Clean yellow background and a sharp portrait, slight tilt left to right.',
+      'A T206 Addie Joss portrait, a Hall of Fame pitcher whose career was cut short, graded PSA 3. The yellow background is clean and the portrait is sharp, with a slight tilt to the image from left to right and typical corner rounding. There are no creases. The PSA holder is clean, and cert 81208390 can be verified on PSA’s site. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-07-03T19:30:00Z',
   },
   {
@@ -1392,7 +1462,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 1.5',
     certNumber: '81208517',
     description:
-      'Eye-appealing low grade with full colour and a crease that stays off the face.',
+      'A T206 Walter Johnson in the Hands at Chest pose, graded PSA 1.5. It has good eye appeal for a low grade, with full color and a crease that stays off his face, but the corners are heavily rounded and there is some paper wear on the back. The PSA holder is in good condition, and cert 81208517 can be checked at psa.com. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-01T14:50:00Z',
   },
   {
@@ -1408,7 +1478,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81208763',
-    description: 'Vivid red background with even borders and light corner rounding.',
+    description:
+      'A T206 Frank Chance portrait with the red background, the Cubs player-manager and a Hall of Famer. This PSA 3 has a vivid red background with fairly even borders and light corner rounding, plus a small wrinkle visible on the back. The PSA holder is clean, and cert 81208763 can be verified at psa.com. It ships in a sturdy box with tracking within one business day.',
     createdAt: '2026-06-24T18:30:00Z',
   },
   {
@@ -1424,7 +1495,8 @@ export const LISTINGS: Listing[] = [
     service: 'CGC',
     grade: 'CGC 2',
     certNumber: '4210331542',
-    description: 'Red background Cubs portrait in a CGC holder, soft corners.',
+    description:
+      'A T206 Mordecai Three Finger Brown portrait with the red background, graded CGC 2. The Cubs portrait is clear and the color holds up, but the corners are soft and there is edge wear and a light crease through the lower border. The CGC holder is clean, and cert 4210331542 can be looked up on CGC’s website. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-06-06T12:15:00Z',
   },
   {
@@ -1437,7 +1509,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 400,
     imageUrl: '/listings/lst_083.jpg',
     graded: false,
-    description: 'Raw stamp with bright colour and a clean Piedmont banner.',
+    description:
+      'An ungraded 1914 T330-2 Piedmont Art Stamps Eddie Collins, a small stamp issue that is much less common than the big tobacco cards. The color is bright and the Piedmont banner is clean, with some minor toning at the edges and a slightly uneven cut. It is kept in a penny sleeve and a small top loader and ships in a team bag inside a padded mailer with tracking within two business days.',
     createdAt: '2026-08-28T11:05:00Z',
   },
   {
@@ -1454,7 +1527,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 3',
     certNumber: '81209085',
     description:
-      'Red and blue diamond design with bright colour and some gold border chipping.',
+      'A 1911 T205 Gold Border Tris Speaker graded PSA 3. The red and blue diamond design has bright color, but the gold border shows some chipping, which is very common on T205s. The corners are rounded and there are no creases. The PSA holder is clean, and cert 81209085 can be verified on PSA’s website. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-11T19:45:00Z',
   },
   {
@@ -1470,7 +1543,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81209214',
-    description: 'Maroon background portrait with good eye appeal for the grade.',
+    description:
+      'A T206 Eddie Collins portrait with the maroon background, graded PSA 2. The eye appeal is good for the grade with a clear face, while the corners are rounded and there is a light crease across the upper right. The edges show normal wear. The PSA slab is clean, and cert 81209214 can be checked at psa.com. It ships in a padded mailer with the slab between cardboard, tracking included, within three business days.',
     createdAt: '2026-07-21T09:40:00Z',
   },
   {
@@ -1487,7 +1561,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 2',
     certNumber: '81209457',
     description:
-      'Bare-hand design with the red and green diamond, edges show normal wear.',
+      'A 1911 T205 Gold Border Cy Young in the bare-hand design, graded PSA 2. The red and green diamond design is still colorful, but the edges show normal wear, the gold border is chipped in places, and there is a faint crease on the left side. The PSA holder has a few light scuffs, and cert 81209457 can be verified at psa.com. It ships in a small box with tracking within two business days.',
     createdAt: '2026-05-05T14:40:00Z',
   },
   {
@@ -1503,7 +1577,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 1',
     certNumber: '81209603',
-    description: 'The red portrait Cobb with full colour, creased but complete.',
+    description:
+      'The T206 Ty Cobb red background portrait is one of the most recognizable cards of the era. This PSA 1 is creased and worn, but it is complete with no paper loss, and the red background and portrait still have full color. The PSA holder is clean, and cert 81209603 can be verified on PSA’s website. It ships insured in a box with signature required, within one business day.',
     createdAt: '2026-06-28T09:05:00Z',
   },
   {
@@ -1519,7 +1594,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81209871',
-    description: 'Olive background with the NEW YORK jersey clearly printed.',
+    description:
+      'A T206 Jack Chesbro, the New York pitcher who won 41 games in 1904, graded PSA 3. The olive background is even and the NEW YORK jersey lettering is clearly printed, with rounded corners and light edge wear. Centering is a little high. The PSA holder is clean, and cert 81209871 can be checked at psa.com. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-03T21:45:00Z',
   },
   {
@@ -1535,7 +1611,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81210028',
-    description: 'Blue sky action pose with good centring and light corner wear.',
+    description:
+      'A T206 Frank Baker in the action pose with a blue sky, graded PSA 3. Centering is good, the colors are strong, and the wear is limited to light corner rounding and a small surface scuff near the bottom. No creases that I can find. The PSA holder is in good shape, and cert 81210028 can be verified at psa.com. It ships within two business days in a padded mailer with tracking.',
     createdAt: '2026-09-04T19:40:00Z',
   },
   {
@@ -1551,7 +1628,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81210346',
-    description: 'Scarce Honest Long Cut issue with a bright teal sky.',
+    description:
+      'A 1912 T227 Series of Champions Rube Marquard, a scarce issue from Honest Long Cut and Miners Extra tobacco. This PSA 2 has a bright teal sky, with rounded corners, edge wear and a faint crease that runs across the lower portion. The PSA holder is clean, and cert 81210346 can be verified on PSA’s site. It ships in a sturdy box with tracking within one business day.',
     createdAt: '2026-08-17T09:30:00Z',
   },
   {
@@ -1567,7 +1645,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 2',
     certNumber: '81210592',
-    description: 'Cabinet card with a cloudy blue sky and a clean nameplate.',
+    description:
+      'A 1911 T3 Turkey Red Chief Bender cabinet card graded PSA 2. The cloudy blue sky and clean nameplate still look good, while the corners are rounded, the frame has edge wear and there is a light crease on the right side. The large PSA holder has some light scuffs, and cert 81210592 can be checked at psa.com. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-06-26T09:30:00Z',
   },
   {
@@ -1584,7 +1663,7 @@ export const LISTINGS: Listing[] = [
     grade: 'PSA 1',
     certNumber: '81210737',
     description:
-      'Blue sky batting pose with strong colour and a crease across the lower half.',
+      'A T206 Willie Keeler in the batting pose, graded PSA 1. The blue sky and colors are still strong, but there is a crease across the lower half and heavy corner wear, which is why it grades low. The image of Keeler is clean. The PSA holder is intact, and cert 81210737 can be verified on PSA’s website. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-07-08T17:15:00Z',
   },
   {
@@ -1600,7 +1679,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81210864',
-    description: 'Batting pose with a pale blue sky, sharp for this scarce issue.',
+    description:
+      'A 1912 T227 Series of Champions Home Run Baker, one of the scarcer tobacco issues of the period. This PSA 3 shows the batting pose against a pale blue sky and is fairly sharp for the issue, with typical corner rounding and a little edge wear. The PSA holder is clean, and cert 81210864 can be checked at psa.com. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-06-11T12:00:00Z',
   },
   {
@@ -1616,7 +1696,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 4',
     certNumber: '81211019',
-    description: 'Orange background with the famous grin and nice even borders.',
+    description:
+      'A T206 Hughie Jennings in the Both Hands Showing pose, with his well-known grin, graded PSA 4. The orange background is bright, the borders are nicely even, and the wear is limited to light corner rounding. No creases or stains. The PSA holder is in excellent condition, and cert 81211019 can be verified at psa.com. Ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-09-13T20:20:00Z',
   },
   {
@@ -1629,7 +1710,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 500,
     imageUrl: '/listings/lst_095.jpg',
     graded: false,
-    description: 'Raw card with a deep blue background and rounded corners.',
+    description:
+      'An ungraded T206 Hal Chase portrait with the blue background. The deep blue is still vivid, but the corners are rounded, the edges are worn and there is a small wrinkle near the top border. The back is clean and readable. I have not submitted it for grading, so I’m describing it as honestly as I can. It is in a penny sleeve and top loader and ships in a bubble mailer with tracking within three business days.',
     createdAt: '2026-07-14T15:15:00Z',
   },
   {
@@ -1645,7 +1727,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81211347',
-    description: 'Orange sky and grandstand behind the pitching pose, clean frame.',
+    description:
+      'A 1911 T3 Turkey Red Ed Walsh cabinet card graded PSA 3. The orange sky and grandstand behind the pitching pose are colorful and the frame is clean, with rounded corners and light wear along the edges. The large PSA holder is clean, and cert 81211347 can be verified on PSA’s website. It ships in a padded box with tracking within one business day.',
     createdAt: '2026-05-04T08:20:00Z',
   },
   {
@@ -1661,7 +1744,8 @@ export const LISTINGS: Listing[] = [
     service: 'CGC',
     grade: 'CGC 3',
     certNumber: '4210332876',
-    description: 'Orange background portrait in a CGC holder with light corner wear.',
+    description:
+      'A T206 Rube Marquard portrait with the orange background, graded CGC 3. The portrait is sharp and the color is solid, with light corner wear and minor edge roughness at the top. There are no creases I can see. The CGC holder is clean, and cert 4210332876 can be looked up on CGC’s website. Ships in a padded mailer with tracking within two business days.',
     createdAt: '2026-08-19T18:50:00Z',
   },
   {
@@ -1677,7 +1761,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 3',
     certNumber: '81211590',
-    description: 'Blue diamond design with good colour and minor border chipping.',
+    description:
+      'A 1911 T205 Gold Border Frank Baker graded PSA 3. The blue diamond design has good color and the portrait is clear, with minor chipping to the gold border and rounded corners. The back is clean. The PSA holder has light scuffs, and cert 81211590 can be checked at psa.com. It ships in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-28T13:20:00Z',
   },
   {
@@ -1690,7 +1775,8 @@ export const LISTINGS: Listing[] = [
     shippingCents: 400,
     imageUrl: '/listings/lst_099.jpg',
     graded: false,
-    description: 'Raw card with a bright orange background and soft corners.',
+    description:
+      'An ungraded T206 Miller Huggins portrait, the future Yankees manager, with a bright orange background. The corners are soft, the edges show normal wear and there is light toning on the back, but I see no creases. It has not been graded, so the scans are the best guide. Kept in a penny sleeve and top loader and shipped in a bubble mailer with tracking within two business days.',
     createdAt: '2026-06-05T14:40:00Z',
   },
   {
@@ -1706,7 +1792,8 @@ export const LISTINGS: Listing[] = [
     service: 'PSA',
     grade: 'PSA 1',
     certNumber: '81211816',
-    description: 'Dark cap Mathewson with good colour, creased and with worn corners.',
+    description:
+      'A T206 Christy Mathewson in the Dark Cap pose, graded PSA 1. The color is good, but the card is creased and has worn corners and edges, which is what drives the grade. The face and name line are clean. The PSA holder is intact, and cert 81211816 can be verified at psa.com. It ships in a padded box with tracking within two business days.',
     createdAt: '2026-07-05T14:15:00Z',
   },
 ]
