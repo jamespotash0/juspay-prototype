@@ -4,24 +4,84 @@ A peer-to-peer marketplace for US coins and trading cards. It takes a buyer
 from browsing to a **real, completed payment in the Hyperswitch sandbox**, then
 on through shipping, problems, returns and refunds.
 
-**Live demo:** <https://juspay-prototype.vercel.app>. See [Try it](#try-it)
-for how to sign in and what to click.
+**Live demo:** <https://juspay-prototype.vercel.app>. [Try it](#try-it), right below,
+says how to sign in and what to click.
 
 [PLAN.md](PLAN.md) holds the full reasoning and sign-off log.
 
 ## Contents
 
-1. [The marketplace](#the-marketplace)
-2. [What payments have to get right](#what-payments-have-to-get-right)
-3. [How it's built](#how-its-built)
-4. [Product flows](#product-flows)
-5. [Hyperswitch: what we enabled and how routing works](#hyperswitch-what-we-enabled-and-how-routing-works)
-6. [What happens in Hyperswitch when you act](#what-happens-in-hyperswitch-when-you-act)
-7. [Payment outcomes](#payment-outcomes)
-8. [Payment choices and why](#payment-choices-and-why)
-9. [Edge cases we handle](#edge-cases-we-handle)
-10. [Out of scope, with the approach](#out-of-scope-with-the-approach)
-11. [Try it](#try-it)
+1. [Try it](#try-it)
+2. [The marketplace](#the-marketplace)
+3. [What payments have to get right](#what-payments-have-to-get-right)
+4. [How it's built](#how-its-built)
+5. [Product flows](#product-flows)
+6. [Hyperswitch: what we enabled and how routing works](#hyperswitch-what-we-enabled-and-how-routing-works)
+7. [What happens in Hyperswitch when you act](#what-happens-in-hyperswitch-when-you-act)
+8. [Payment outcomes](#payment-outcomes)
+9. [Payment choices and why](#payment-choices-and-why)
+10. [Edge cases we handle](#edge-cases-we-handle)
+11. [Out of scope, with the approach](#out-of-scope-with-the-approach)
+
+---
+
+## Try it
+
+Everything runs on the live site: **<https://juspay-prototype.vercel.app>**.
+Nothing to install, and every payment is a real payment in the Hyperswitch
+sandbox, so no real money moves.
+
+### 1. Sign in
+
+Sign-in is a demo: no real account is created, and nothing is sent to Google,
+Apple or anyone else.
+
+1. Click **Sign in** in the top right (or just press **Buy Now** on any listing;
+   you'll be asked to sign in and brought straight back).
+2. Pick any option:
+   - **Continue with Google** or **Continue with Apple** → choose **Alex Rivera**
+     or **Mike Chen** → **Continue**.
+   - **Continue with email** → type `alex@example.com` or `mike@example.com`.
+3. To switch accounts later, open the account menu (your initials, top right) →
+   **Account** → **Demo account**, or sign out and sign in again.
+
+| Account | Use it for |
+| --- | --- |
+| **Alex Rivera** (`alex@example.com`) | Buyer flow: buying, orders, problems and refunds, saved cards |
+| **Mike Chen** (`mike@example.com`) | Seller flow: every listing is Mike's, so he ships, sees payouts and refunds |
+
+### 2. Buy something (as Alex)
+
+1. Open any listing and press **Buy Now**. Checkout opens over the page.
+2. The address is pre-filled. Press **Continue to Payment**.
+3. Pay with a test card from the table below, or with **PayPal**.
+4. You land on the order page, which shows the real payment status.
+
+### 3. Follow the order through
+
+1. **As Mike:** **Sell** → find the sale → **Mark shipped**. His payout moves to
+   *Payout pending*.
+2. **As Alex:** **Orders** → open the order → **Mark received**, or
+   **Have a problem?** to cancel, report it not arriving or not as described,
+   return it, or ask the seller.
+3. **As Mike:** open the order → **Refund buyer**. The refund is a real
+   Hyperswitch refund, and Alex's tracker ends at *Refunded*.
+
+### Test cards
+
+Any future expiry date and any CVC.
+
+| To see | Use |
+| --- | --- |
+| A successful payment | `4242 4242 4242 4242` |
+| A declined payment | `4000 0000 0000 0002` |
+| A lost or stolen card | `4000 0000 0000 9987` |
+| Insufficient funds (only when routed to fauxpay, which is random under $500) | `4000 0000 0000 9995` |
+| Routing to the primary processor | Any card order of $500 or more |
+| PayPal | The PayPal button → approve on the simulated PayPal page |
+
+**Start over:** **Account** → **Reset demo** clears the cart, created listings
+and sign-in in your browser. Payments already made stay in the sandbox.
 
 ---
 
@@ -360,63 +420,3 @@ and "needs the buyer" are never shown as failures.
 | **Smarter routing** | Approval-rate-based routing once each processor has about 25 real payments |
 | **Apple Pay and Google Pay** | Faster checkout; Apple Pay needs a stable verified domain |
 | **Smaller gaps** | Refunding part of one seller's order; releasing the payout on carrier-confirmed delivery rather than on "marked shipped"; automatically refunding a second buyer if two pay for the same item at once |
-
----
-
-## Try it
-
-Everything runs on the live site: **<https://juspay-prototype.vercel.app>**.
-Nothing to install, and every payment is a real payment in the Hyperswitch
-sandbox, so no real money moves.
-
-### 1. Sign in
-
-Sign-in is a demo: no real account is created, and nothing is sent to Google,
-Apple or anyone else.
-
-1. Click **Sign in** in the top right (or just press **Buy Now** on any listing;
-   you'll be asked to sign in and brought straight back).
-2. Pick any option:
-   - **Continue with Google** or **Continue with Apple** → choose **Alex Rivera**
-     or **Mike Chen** → **Continue**.
-   - **Continue with email** → type `alex@example.com` or `mike@example.com`.
-3. To switch accounts later, open the account menu (your initials, top right) →
-   **Account** → **Demo account**, or sign out and sign in again.
-
-| Account | Use it for |
-| --- | --- |
-| **Alex Rivera** (`alex@example.com`) | Buyer flow: buying, orders, problems and refunds, saved cards |
-| **Mike Chen** (`mike@example.com`) | Seller flow: every listing is Mike's, so he ships, sees payouts and refunds |
-
-### 2. Buy something (as Alex)
-
-1. Open any listing and press **Buy Now**. Checkout opens over the page.
-2. The address is pre-filled. Press **Continue to Payment**.
-3. Pay with a test card from the table below, or with **PayPal**.
-4. You land on the order page, which shows the real payment status.
-
-### 3. Follow the order through
-
-1. **As Mike:** **Sell** → find the sale → **Mark shipped**. His payout moves to
-   *Payout pending*.
-2. **As Alex:** **Orders** → open the order → **Mark received**, or
-   **Have a problem?** to cancel, report it not arriving or not as described,
-   return it, or ask the seller.
-3. **As Mike:** open the order → **Refund buyer**. The refund is a real
-   Hyperswitch refund, and Alex's tracker ends at *Refunded*.
-
-### Test cards
-
-Any future expiry date and any CVC.
-
-| To see | Use |
-| --- | --- |
-| A successful payment | `4242 4242 4242 4242` |
-| A declined payment | `4000 0000 0000 0002` |
-| A lost or stolen card | `4000 0000 0000 9987` |
-| Insufficient funds (only when routed to fauxpay, which is random under $500) | `4000 0000 0000 9995` |
-| Routing to the primary processor | Any card order of $500 or more |
-| PayPal | The PayPal button → approve on the simulated PayPal page |
-
-**Start over:** **Account** → **Reset demo** clears the cart, created listings
-and sign-in in your browser. Payments already made stay in the sandbox.
