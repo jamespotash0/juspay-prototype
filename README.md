@@ -352,15 +352,15 @@ and "needs the buyer" are never shown as failures.
 | **Affirm (pay later)** | Fits collectors buying a $6,000 slab. Enable it on a processor in Hyperswitch, show it above about $500 |
 | **ACH bank debit** | Much cheaper on large orders, but reversible for 60 days. Offer only to repeat buyers, and hold the payout until it clears |
 | **Limiting PayPal on gold coins** | Not covered by PayPal buyer protection but still charged back to us. Restrict payment methods per order when the payment is created |
-| **Real seller payouts** | One charge per cart, then one transfer per seller when they ship (Stripe Connect) |
+| **Real sales tax** | Today tax is a flat 8% on items, rounded per seller. US marketplace facilitator laws make the marketplace, not the seller, responsible for collecting and remitting sales tax in almost every state that has one. The rate depends on where the item ships, shipping is taxable in some states and not others, and many states exempt bullion and some coins. *Approach:* at Continue to payment, send the ship-to address and each seller's items (with a product tax code per category: coin, bullion, card) to a tax service such as Stripe Tax or Avalara; use its figure in the server-calculated total; recalculate when the address changes; refund the tax with the order; file and remit per state from the tax service's reports |
+| **Real seller payouts** | One charge per cart, then one transfer per seller when they ship (Stripe Connect). Verify sellers (KYC) before their first payout |
 | **Admin as the backup when a seller doesn't act** | Sellers refund their own orders today. If a seller ignores a refund request, never ships, or the buyer and seller can't agree, an admin steps in: a queue of refund requests past a response deadline, the ability to refund the order in full on the seller's behalf, and the seller's payout reversed. An early admin view (all transactions, a disputes filter) exists in the code but is hidden until this is designed |
 | **Webhooks and bank disputes** | Receive disputes and refund updates, freeze that seller's payout, and close any in-app request so the buyer isn't refunded twice |
-| **Return shipping and a return window** | "Returning" and "Returned" steps with tracking, refund after the item is back, 14–30 day window |
-| **Two-way messages and email** | A thread per order, and an email on every order action |
+| **Refund a return only once the item is back** | Today a return request can be refunded straight away. Hold the refund until the seller confirms the item arrived back, and only accept return requests within a 14–30 day window after delivery |
 | **3DS challenges** | Request 3DS above a value threshold, where liability shift pays for the friction |
 | **Smarter routing** | Approval-rate-based routing once each processor has about 25 real payments |
 | **Apple Pay and Google Pay** | Faster checkout; Apple Pay needs a stable verified domain |
-| **Also** | Partial refunds within one seller's order, two buyers racing for one item, carrier-confirmed release, authenticity checks, seller verification, per-state sales tax, real authentication |
+| **Also** | Partial refunds within one seller's order; releasing the payout on carrier-confirmed delivery rather than on "marked shipped"; automatically refunding a second buyer if two pay for the same item at once |
 
 ---
 
