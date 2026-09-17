@@ -17,6 +17,10 @@ interface Props {
   onError(message: string): void
   /** true just before confirmPayment; false if it returns without leaving the page (e.g. a validation error). */
   onSubmittingChange?: (submitting: boolean) => void
+  /** 'save': a $0 payment on the account page that only stores a card. No wallets, no saved-card list. */
+  purpose?: 'pay' | 'save'
+  /** Where a redirect comes back to. Defaults to this payment's order page. */
+  returnUrl?: string
 }
 
 // HyperLoader.js may only be added once per page, so one promise per key.
@@ -48,6 +52,8 @@ function PayForm({
   onSubmitted,
   onError,
   onSubmittingChange,
+  purpose = 'pay',
+  returnUrl = `${location.origin}/order/${paymentId}`,
 }: Props) {
   const hyper = useHyper()
   const [busy, setBusy] = useState(false)
@@ -57,16 +63,25 @@ function PayForm({
     () => (
       <UnifiedCheckout
         id="unified-checkout"
-        options={{
-          // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
-          wallets: { walletReturnUrl: `${location.origin}/order/${paymentId}` },
-          // "Save card" checkbox (unticked by default) and this buyer's saved cards. Consent is the tick.
-          displaySavedPaymentMethodsCheckbox: true,
-          displaySavedPaymentMethods: true,
-        }}
+        options={
+          purpose === 'save'
+            ? {
+                // Only a new card: saving is the whole point, so no wallets and no saved-card list.
+                wallets: { walletReturnUrl: returnUrl, payPal: 'never' },
+                displaySavedPaymentMethodsCheckbox: false,
+                displaySavedPaymentMethods: false,
+              }
+            : {
+                // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
+                wallets: { walletReturnUrl: returnUrl },
+                // "Save card" checkbox (unticked by default) and this buyer's saved cards. Consent is the tick.
+                displaySavedPaymentMethodsCheckbox: true,
+                displaySavedPaymentMethods: true,
+              }
+        }
       />
     ),
-    [paymentId],
+    [purpose, returnUrl],
   )
 
   async function submit(e: FormEvent) {
@@ -77,7 +92,7 @@ function PayForm({
     try {
       // Redirects (PayPal) leave the page and come back to return_url, the same order page.
       const result = await hyper.confirmPayment({
-        confirmParams: { return_url: `${location.origin}/order/${paymentId}` },
+        confirmParams: { return_url: returnUrl },
         redirect: 'if_required',
       })
       if (result?.error?.type === 'validation_error') {
@@ -99,6 +114,8 @@ function PayForm({
       <Button type="submit" disabled={busy} className="mt-4 w-full">
         {busy ? (
           COPY.checkout.submitting
+        ) : purpose === 'save' ? (
+          COPY.account.saveCard
         ) : totalCents === undefined ? (
           'Pay'
         ) : (

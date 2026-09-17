@@ -1,17 +1,26 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
 import { navigate } from '../lib/navigation.ts'
-import { setDisplayName, useDisplayName } from '../lib/profile.ts'
+import {
+  linkPaypal,
+  setDisplayName,
+  useDisplayName,
+  useLinkedPaypal,
+} from '../lib/profile.ts'
+import { resetDemo } from '../lib/reset.ts'
 import { signIn, signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
-import type { PersonaId, SavedCard } from '../shared/types.ts'
+import type { PersonaId, SaveCardResponse, SavedCard } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { Card, SectionHeading } from '../ui/Card.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.account
+
+// The SDK is only needed once someone adds a card.
+const HyperCheckout = lazy(() => import('../checkout/HyperCheckout.tsx'))
 
 const input =
   'h-10 w-full rounded-control border border-rule-strong bg-paper px-3 text-sm hover:border-ink focus-visible:border-ink'
@@ -71,6 +80,20 @@ export default function Account() {
               </option>
             ))}
           </select>
+        </Card>
+
+        <Card as="section" aria-labelledby="reset">
+          <SectionHeading id="reset">{T.reset}</SectionHeading>
+          <p className="mb-3 text-sm text-ink-muted">{T.resetFact}</p>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(COPY.shell.resetConfirm)) resetDemo()
+            }}
+          >
+            {T.reset}
+          </Button>
         </Card>
       </div>
     </PageLayout>
@@ -143,6 +166,44 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
   const [removeFailed, setRemoveFailed] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [adding, setAdding] = useState<SaveCardResponse | null>(null)
+  const [addState, setAddState] = useState<
+    'idle' | 'starting' | 'saving' | 'failed' | 'notSaved'
+  >('idle')
+  const paypal = useLinkedPaypal(customer)
+
+  async function startAdding() {
+    setAddState('starting')
+    try {
+      setAdding(await api.saveCard(customer))
+      setAddState('idle')
+    } catch {
+      setAddState('failed')
+    }
+  }
+
+  // The SDK doesn't report the outcome; the saved-card list is the truth. It can lag the confirm by a
+  // moment, so look a few times before saying it didn't save.
+  async function confirmSaved() {
+    setAddState('saving')
+    const before = new Set(cards?.map((c) => c.id))
+    for (let i = 0; i < 5; i++) {
+      try {
+        const next = await api.paymentMethods(customer)
+        if (next.some((c) => !before.has(c.id))) {
+          setCards(next)
+          setAdding(null)
+          setAddState('idle')
+          return
+        }
+      } catch {
+        // try again below
+      }
+      await new Promise((r) => setTimeout(r, 1500))
+    }
+    setAdding(null)
+    setAddState('notSaved')
+  }
 
   useEffect(() => {
     let live = true
@@ -222,8 +283,82 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
           <Notice tone="danger" title={T.removeFailed} body={null} />
         </div>
       )}
+      <div className="mt-4 flex flex-col gap-3 border-t border-rule pt-4">
+        {adding ? (
+          <>
+            <p className="text-sm text-ink-muted">{T.addCardFact}</p>
+            <Suspense
+              fallback={<p className="text-sm text-ink-muted">{T.methodsLoading}</p>}
+            >
+              <HyperCheckout
+                purpose="save"
+                clientSecret={adding.clientSecret}
+                publishableKey={adding.publishableKey}
+                paymentId={adding.paymentId}
+                returnUrl={`${location.origin}/account`}
+                onSubmitted={confirmSaved}
+                onError={() => setAddState('notSaved')}
+              />
+            </Suspense>
+            {addState === 'saving' && (
+              <p role="status" className="text-sm text-ink-muted">
+                {T.cardSaving}
+              </p>
+            )}
+            <Button
+              variant="quiet"
+              size="sm"
+              className="self-start px-0!"
+              onClick={() => setAdding(null)}
+            >
+              {COPY.common.cancel}
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="self-start"
+            disabled={addState === 'starting'}
+            onClick={startAdding}
+          >
+            {T.addCard}
+          </Button>
+        )}
+        {addState === 'failed' && (
+          <Notice tone="danger" title={T.addCardFailed} body={null} />
+        )}
+        {addState === 'notSaved' && (
+          <Notice tone="danger" title={T.cardNotSaved} body={null} />
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3 border-t border-rule pt-4">
+        <span className="inline-flex h-7 min-w-11 items-center justify-center rounded-md border border-rule-strong px-1.5 text-[11px] font-bold">
+          {T.paypal}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col text-sm">
+          <span className="font-medium">{T.paypal}</span>
+          <span className="truncate text-xs text-ink-muted">
+            {paypal ? T.paypalLinked(paypal) : T.paypalNone}
+          </span>
+        </div>
+        {paypal ? (
+          <Button variant="quiet" size="sm" onClick={() => linkPaypal(customer, null)}>
+            {T.paypalUnlink}
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/account/paypal')}
+          >
+            {T.paypalLink}
+          </Button>
+        )}
+      </div>
       <p className="mt-4 border-t border-rule pt-3 text-xs text-ink-muted">
-        {T.otherMethods}
+        {T.paypalDemo} {T.otherMethods}
       </p>
     </Card>
   )

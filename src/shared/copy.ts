@@ -177,13 +177,10 @@ export const COPY = {
       mike: { short: 'Collector', long: 'Collector: buys and sells' },
       admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
     },
-    reset: 'Reset demo',
     resetConfirm:
       'Reset the demo? This clears your cart, created listings and sign-in in this browser.',
     footer:
       'Slabbed is a demo. Listings, sellers and accounts are synthetic; payments run in the Hyperswitch sandbox.',
-    resetBody:
-      "Clears this browser's cart, created listings, sold markers and sign-in. Real sandbox orders are never touched.",
   },
 
   account: {
@@ -203,10 +200,27 @@ export const COPY = {
       `${network ?? 'Card'} ending in ${last4}`,
     expires: (expiry: string) => `Expires ${expiry}`,
     remove: 'Remove',
+    addCard: 'Add a card',
+    saveCard: 'Save card',
+    addCardFact: 'Nothing is charged. Your card is checked and stored with Hyperswitch.',
+    addCardFailed: "We couldn't start adding a card. Nothing was saved.",
+    cardSaving: 'Saving your card…',
+    cardNotSaved: "That card wasn't saved. Try again or use another card.",
     removeConfirm: (label: string) => `Remove ${label} from your account?`,
     removeFailed: "That card wasn't removed. Try again.",
-    otherMethods:
-      'Bank accounts and PayPal can be used at checkout but aren’t saved to your account yet. Only cards are stored, with Hyperswitch, never by Slabbed.',
+    otherMethods: 'Bank accounts aren’t saved yet. Cards are stored with Hyperswitch, never by Slabbed.',
+    paypal: 'PayPal',
+    paypalLinked: (email: string) => `Linked as ${email}`,
+    paypalNone: 'Not linked',
+    paypalLink: 'Link PayPal',
+    paypalUnlink: 'Unlink',
+    paypalDemo: 'Demo link: nothing is sent to PayPal. At checkout, PayPal still signs in through Hyperswitch.',
+    paypalTitle: 'Link PayPal (demo)',
+    paypalChoose: 'Choose the PayPal account to link',
+    paypalConsent: 'Slabbed will see this PayPal email address. You can unlink it any time.',
+    reset: 'Reset demo',
+    resetFact:
+      "Clears this browser's cart, created listings, sold markers, saved name, linked PayPal and sign-in. Real sandbox orders and saved cards are never touched.",
     demo: 'Demo account',
     demoFact: 'Switch to another demo person to see the marketplace from their side.',
   },

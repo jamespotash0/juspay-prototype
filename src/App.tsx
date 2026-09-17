@@ -3,6 +3,7 @@ import { navigate, type Params } from './lib/navigation.ts'
 import { Router, type Route } from './lib/router.tsx'
 import { useSession } from './lib/session.ts'
 import Account from './pages/Account.tsx'
+import AccountPaypal from './pages/AccountPaypal.tsx'
 import Admin from './pages/Admin.tsx'
 import AdminPayment from './pages/AdminPayment.tsx'
 import Cart from './pages/Cart.tsx'
@@ -43,6 +44,7 @@ const routes: Route[] = [
   { path: '/order/:paymentId', component: signedIn(Order) },
   { path: '/orders', component: signedIn(Orders) },
   { path: '/account', component: signedIn(Account) },
+  { path: '/account/paypal', component: signedIn(AccountPaypal) },
   { path: '/sell', component: signedIn(Sell) },
   { path: '/sell/new', component: signedIn(SellNew) },
   { path: '/admin', component: signedIn(Admin) },

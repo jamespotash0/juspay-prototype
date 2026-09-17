@@ -6,6 +6,7 @@ import type {
   OrderView,
   OrdersResponse,
   PaymentMethodsResponse,
+  SaveCardResponse,
   PersonaId,
   RefundRequest,
 } from '../shared/types.ts'
@@ -72,6 +73,8 @@ export const api = {
           'all' in filter ? { all: '1' } : (filter as Record<string, string>),
         ),
     ).then((r) => (r.orders.forEach(remember), r)),
+  saveCard: (customer: PersonaId) =>
+    post<SaveCardResponse>('/api/save-card', { customer }),
   paymentMethods: (customer: PersonaId) =>
     call<PaymentMethodsResponse>(
       `/api/payment-methods?customer=${encodeURIComponent(customer)}`,

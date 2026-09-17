@@ -226,6 +226,13 @@ export interface SavedCard {
   expiry?: string
 }
 
+/** POST /api/save-card — a $0 payment for the SDK to save a card through. */
+export interface SaveCardResponse {
+  paymentId: string
+  clientSecret: string
+  publishableKey: string
+}
+
 /** GET /api/payment-methods?customer=<id>, and DELETE …&id=<id> */
 export interface PaymentMethodsResponse {
   methods: SavedCard[]

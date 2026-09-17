@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
 import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
-import { resetDemo } from '../lib/reset.ts'
 import { useDisplayName } from '../lib/profile.ts'
 import { useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
@@ -60,7 +59,6 @@ export function PageLayout({
           const here = path + (params.size ? `?${params}` : '')
           navigate(`/signin?next=${encodeURIComponent(here)}`)
         }}
-        onReset={resetDemo}
         links={links}
         cartCount={cart.reduce((n, l) => n + l.qty, 0)}
         onNavigate={navigate}

@@ -15,8 +15,6 @@ interface TopBarProps {
   /** True on the account page itself. */
   accountCurrent?: boolean
   onSignIn: () => void
-  /** Clears this browser's demo state. The bar asks for confirmation first. */
-  onReset: () => void
   links: NavLink[]
   cartCount: number
   cartHref?: string
@@ -30,14 +28,13 @@ const S = COPY.shell
 const PILL =
   'inline-flex h-8 shrink-0 items-center rounded-full border border-rule-strong bg-paper text-sm font-medium text-ink transition-colors hover:border-ink'
 
-// Desktop: one row — wordmark, links, account, cart, reset. Search lives on the catalogue.
-// Below sm: row 1 wordmark · links · cart · reset; row 2 account. Nothing is hidden.
+// Desktop: one row — wordmark, links, then account and the cart at the far right.
+// Below sm: row 1 wordmark · links · cart; row 2 account. Nothing is hidden.
 export function TopBar({
   account,
   accountHref = '/account',
   accountCurrent,
   onSignIn,
-  onReset,
   links,
   cartCount,
   cartHref = '/cart',
@@ -123,29 +120,6 @@ export function TopBar({
             {cartCount}
           </span>
         </a>
-
-        {/* Reset demo: an icon with a hover and focus tooltip, confirmed before it runs. */}
-        <span className="group relative order-4 inline-flex sm:order-none">
-          <button
-            type="button"
-            aria-label={S.reset}
-            aria-describedby="topbar-reset-tip"
-            onClick={() => {
-              if (window.confirm(S.resetConfirm)) onReset()
-            }}
-            className={`${PILL} size-8 justify-center text-ink-muted hover:text-ink`}
-          >
-            <Icon name="refresh" className="size-4" />
-          </button>
-          <span
-            id="topbar-reset-tip"
-            role="tooltip"
-            className="pointer-events-none invisible absolute top-full right-0 z-20 mt-2 w-64 rounded-control bg-primary px-3 py-2 text-xs leading-relaxed text-primary-ink opacity-0 shadow-pop transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
-          >
-            <span className="block font-semibold">{S.reset}</span>
-            {S.resetBody}
-          </span>
-        </span>
       </div>
     </header>
   )
