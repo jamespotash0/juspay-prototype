@@ -9,7 +9,7 @@ import { markSold } from '../lib/sold.ts'
 import type { DeclineReason } from '../shared/copy.ts'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
-import { ISSUES, issueBlock, latestStatus } from '../shared/orderState.ts'
+import { ISSUES, issueBlock } from '../shared/orderState.ts'
 import { SELLERS } from '../shared/seed.ts'
 import type {
   IssueKind,
@@ -24,8 +24,7 @@ import { EmptyState } from '../ui/EmptyState.tsx'
 import { Icon, type IconName } from '../ui/Icon.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
-import { StatusPill } from '../ui/StatusPill.tsx'
-import { gradeLabel, orderNumber, plural, refundLabel } from '../ui/format.ts'
+import { gradeLabel, orderNumber, plural } from '../ui/format.ts'
 import { BreakdownList } from './Checkout.tsx'
 import { PageLayout } from './Layout.tsx'
 import { RefundAction } from './RefundAction.tsx'
@@ -148,7 +147,8 @@ export default function Order({ params }: { params: Params }) {
 
   return (
     <PageLayout
-      title={TEXT.title}
+      // The order number is what the buyer and support quote, so it is the heading.
+      title={TEXT.heading(orderNumber(paymentId))}
       width="narrow"
       back={
         <Link
@@ -161,18 +161,18 @@ export default function Order({ params }: { params: Params }) {
       }
     >
       <div className="flex flex-col gap-4 sm:gap-5">
-        {/* The order number is what the buyer and support quote, so it leads the page. */}
         <div className="-mt-3 flex flex-col gap-0.5 sm:-mt-4">
-          <p className="flex flex-wrap gap-x-2 text-sm text-ink-muted">
-            <span className="money font-semibold text-ink select-all">
-              {orderNumber(paymentId)}
-            </span>
-            {first && <span>· {placed.format(new Date(first.createdAt))}</span>}
-          </p>
-          {/* The full payment id, for support to find it in Hyperswitch. */}
-          <p className="text-xs text-ink-muted">
-            {TEXT.supportRef} <span className="money select-all">{paymentId}</span>
-          </p>
+          {first && (
+            <p className="text-sm text-ink-muted">
+              {TEXT.placed} {placed.format(new Date(first.createdAt))}
+            </p>
+          )}
+          {/* The full payment id finds it in Hyperswitch; only the admin needs it. */}
+          {persona === 'admin' && (
+            <p className="text-xs text-ink-muted">
+              {TEXT.supportRef} <span className="money select-all">{paymentId}</span>
+            </p>
+          )}
         </div>
 
         {ambiguous ? (
@@ -477,7 +477,6 @@ function SellerOrder({
     }
   }
 
-  const status = latestStatus(order)
   const pad = 'px-5 sm:px-6'
 
   return (
@@ -499,12 +498,6 @@ function SellerOrder({
             {seller && ` · ${COPY.common.shipsFrom} ${seller.shipsFrom}`}
           </p>
         </div>
-        {settled && (
-          <StatusPill
-            status={status}
-            label={status === order.refund.state ? refundLabel(order) : undefined}
-          />
-        )}
       </header>
 
       {settled && (

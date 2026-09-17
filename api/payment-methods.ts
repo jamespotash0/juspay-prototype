@@ -8,6 +8,7 @@ interface HsCustomerMethods {
     payment_method_id: string
     payment_method: string
     payment_method_type?: string | null
+    default_payment_method_set?: boolean
     card?: {
       scheme?: string | null
       card_type?: string | null
@@ -38,6 +39,7 @@ async function savedCards(customer: string): Promise<SavedCard[] | Response> {
         ...(m.card!.expiry_month && m.card!.expiry_year
           ? { expiry: `${m.card!.expiry_month}/${m.card!.expiry_year.slice(-2)}` }
           : {}),
+        ...(m.default_payment_method_set ? { isDefault: true } : {}),
       }
     })
 }
@@ -82,5 +84,40 @@ export async function DELETE(request: Request): Promise<Response> {
     } satisfies PaymentMethodsResponse)
   } catch {
     return jsonError(500, 'INTERNAL', 'Something went wrong removing the card')
+  }
+}
+
+/**
+ * POST /api/payment-methods { customer, id } → makes that card the customer's default in Hyperswitch.
+ * Verified on the sandbox 2026-09-16: POST /customers/{id}/payment_methods/{pm}/default; setting the
+ * current default again answers 400 IR_16, which is treated as done.
+ */
+export async function POST(request: Request): Promise<Response> {
+  try {
+    const body = (await request.json().catch(() => null)) as {
+      customer?: string
+      id?: string
+    } | null
+    const customer = collector(body?.customer ?? null)
+    const id = body?.id
+    if (!customer || typeof id !== 'string')
+      return jsonError(400, 'BAD_REQUEST', 'Pass customer and id')
+    // Only a card this customer owns.
+    const before = await savedCards(customer)
+    if (before instanceof Response) return before
+    if (!before.some((m) => m.id === id))
+      return jsonError(404, 'NOT_FOUND', 'That card is not saved on this account')
+    const set = await hsFetch(
+      `/customers/${encodeURIComponent(customer)}/payment_methods/${encodeURIComponent(id)}/default`,
+      { method: 'POST' },
+    )
+    if (!set.ok && set.hsCode !== 'IR_16')
+      return jsonError(502, 'UPSTREAM', "We couldn't change your default card")
+    const after = await savedCards(customer)
+    return after instanceof Response
+      ? after
+      : Response.json({ methods: after } satisfies PaymentMethodsResponse)
+  } catch {
+    return jsonError(500, 'INTERNAL', 'Something went wrong changing your default card')
   }
 }

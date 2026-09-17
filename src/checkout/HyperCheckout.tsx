@@ -23,6 +23,22 @@ interface Props {
   returnUrl?: string
 }
 
+// Matches the site: near-black primary, hairline borders, the same radius and type.
+const APPEARANCE = {
+  theme: 'default',
+  variables: {
+    colorPrimary: '#121418',
+    colorText: '#121418',
+    colorTextSecondary: '#5d6270',
+    colorBackground: '#ffffff',
+    colorDanger: '#b3261e',
+    fontFamily: 'Archivo, system-ui, sans-serif',
+    fontSizeBase: '15px',
+    borderRadius: '10px',
+    spacingUnit: '10px',
+  },
+}
+
 // HyperLoader.js may only be added once per page, so one promise per key.
 const loaders = new Map<string, Promise<HyperInstance>>()
 function hyperFor(key: string) {
@@ -36,7 +52,7 @@ export default function HyperCheckout(props: Props) {
   // which tears down and rebuilds the card iframes. A fresh object each render meant clicking Pay
   // (which sets state) wiped the card fields before confirm. Keep it stable per client secret.
   const options = useMemo(
-    () => ({ clientSecret: props.clientSecret }),
+    () => ({ clientSecret: props.clientSecret, appearance: APPEARANCE }),
     [props.clientSecret],
   )
   return (
@@ -57,12 +73,16 @@ function PayForm({
 }: Props) {
   const hyper = useHyper()
   const [busy, setBusy] = useState(false)
+  // The SDK's change event says whether the selected method is ready to pay: a saved card needs its
+  // CVC, and "New payment methods" with nothing filled in isn't a method yet. Pay waits for it.
+  const [complete, setComplete] = useState(false)
   // react-hyper-js calls elements.create() on every render of UnifiedCheckout, which restarts the
   // SDK iframes. Build the element once per payment so submit-time state changes can't reset it.
   const element = useMemo(
     () => (
       <UnifiedCheckout
         id="unified-checkout"
+        onChange={(e) => setComplete(!!e?.complete)}
         options={
           purpose === 'save'
             ? {
@@ -111,7 +131,7 @@ function PayForm({
   return (
     <form onSubmit={submit}>
       {element}
-      <Button type="submit" disabled={busy} className="mt-4 w-full">
+      <Button type="submit" disabled={busy || !complete} className="mt-4 w-full">
         {busy ? (
           COPY.checkout.submitting
         ) : purpose === 'save' ? (

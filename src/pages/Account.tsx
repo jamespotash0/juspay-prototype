@@ -226,6 +226,18 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
     }
   }, [customer, attempt])
 
+  async function makeDefault(card: SavedCard) {
+    setBusy(card.id)
+    setRemoveFailed(false)
+    try {
+      setCards(await api.setDefaultPaymentMethod(customer, card.id))
+    } catch {
+      setRemoveFailed(true)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function remove(card: SavedCard) {
     if (!window.confirm(T.removeConfirm(T.card(card.network, card.last4, card.funding))))
       return
@@ -270,8 +282,13 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
                 {c.network ?? 'Card'}
               </span>
               <div className="flex min-w-0 flex-1 flex-col text-sm">
-                <span className="money font-medium">
+                <span className="money flex flex-wrap items-center gap-2 font-medium">
                   {T.card(c.network, c.last4, c.funding)}
+                  {c.isDefault && (
+                    <span className="rounded-full bg-bone px-2 py-0.5 text-[11px] font-semibold text-ink">
+                      {T.defaultBadge}
+                    </span>
+                  )}
                 </span>
                 {c.expiry && (
                   <span className="money text-xs text-ink-muted">
@@ -279,6 +296,16 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
                   </span>
                 )}
               </div>
+              {!c.isDefault && (
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  disabled={busy === c.id}
+                  onClick={() => makeDefault(c)}
+                >
+                  {T.makeDefault}
+                </Button>
+              )}
               <Button
                 variant="quiet"
                 size="sm"

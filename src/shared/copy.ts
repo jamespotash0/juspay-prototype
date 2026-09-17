@@ -236,6 +236,8 @@ export const COPY = {
       `${[network ?? 'Card', funding].filter(Boolean).join(' ')} ending in ${last4}`,
     expires: (expiry: string) => `Expires ${expiry}`,
     remove: 'Remove',
+    defaultBadge: 'Default',
+    makeDefault: 'Make default',
     addCard: 'Add Payment Method',
     saveCard: 'Save card',
     addCardFact: 'Nothing is charged. Your card is checked and stored with Hyperswitch.',
@@ -243,7 +245,7 @@ export const COPY = {
     cardSaving: 'Saving your card…',
     cardNotSaved: "That card wasn't saved. Try again or use another card.",
     removeConfirm: (label: string) => `Remove ${label} from your account?`,
-    removeFailed: "That card wasn't removed. Try again.",
+    removeFailed: "That didn't save. Try again.",
     otherMethods:
       'Bank accounts aren’t saved yet. Cards are stored with Hyperswitch, never by Slabbed.',
     paypal: 'PayPal',
@@ -397,6 +399,11 @@ export const COPY = {
     shipTo: 'Ship to',
     fields: { name: 'Name', line1: 'Address', city: 'City', state: 'State', zip: 'ZIP' },
     continue: 'Continue to Payment',
+    billing: 'Billing address',
+    sameAsShipping: 'Same as shipping address',
+    edit: 'Edit',
+    savedHint: (card: string) =>
+      `Your default card, ${card}, is selected below. Enter its CVC to pay, or choose New payment methods for another card or PayPal. Change your default in Account.`,
     starting: 'Starting…',
     payment: 'Payment',
     summary: 'Summary',
@@ -409,6 +416,7 @@ export const COPY = {
 
   order: {
     title: 'Order',
+    heading: (number: string) => `Order #: ${number}`,
     number: 'Order number',
     placed: 'Placed',
     loading: 'Loading order…',

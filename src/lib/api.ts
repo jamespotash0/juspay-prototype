@@ -79,6 +79,10 @@ export const api = {
     call<PaymentMethodsResponse>(
       `/api/payment-methods?customer=${encodeURIComponent(customer)}`,
     ).then((r) => r.methods),
+  setDefaultPaymentMethod: (customer: PersonaId, id: string) =>
+    post<PaymentMethodsResponse>('/api/payment-methods', { customer, id }).then(
+      (r) => r.methods,
+    ),
   removePaymentMethod: (customer: PersonaId, id: string) =>
     call<PaymentMethodsResponse>(
       `/api/payment-methods?${new URLSearchParams({ customer, id })}`,

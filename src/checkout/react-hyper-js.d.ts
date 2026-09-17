@@ -13,7 +13,12 @@ declare module '@juspay-tech/react-hyper-js' {
     children?: ReactNode
   }>
 
-  export const UnifiedCheckout: ComponentType<{ id?: string; options?: object }>
+  export const UnifiedCheckout: ComponentType<{
+    id?: string
+    options?: object
+    /** Fires on every change; `complete` is true once the selected method can be paid with. */
+    onChange?: (event: { elementType?: string; complete?: boolean; empty?: boolean }) => void
+  }>
 
   export function useHyper(): {
     confirmPayment(

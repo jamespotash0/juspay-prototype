@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import HyperCheckout from '../checkout/HyperCheckout.tsx'
 import { attemptFor, clearAttempt } from '../checkout/attempt.ts'
 import { ApiRequestError, api } from '../lib/api.ts'
@@ -10,7 +10,7 @@ import { usePersona } from '../lib/session.ts'
 import { useSoldIds } from '../lib/sold.ts'
 import { COPY } from '../shared/copy.ts'
 import { breakdown } from '../shared/money.ts'
-import type { Breakdown, CheckoutResponse, ShipTo } from '../shared/types.ts'
+import type { Breakdown, CheckoutResponse, SavedCard, ShipTo } from '../shared/types.ts'
 import { Button } from '../ui/Button.tsx'
 import { EmptyState } from '../ui/EmptyState.tsx'
 import { Icon } from '../ui/Icon.tsx'
@@ -39,6 +39,15 @@ export default function Checkout() {
     state: 'TX',
     zip: '78701',
   })
+  const [billingSame, setBillingSame] = useState(true)
+  const [billTo, setBillTo] = useState<ShipTo>({
+    name: displayName,
+    line1: '',
+    city: '',
+    state: '',
+    zip: '',
+  })
+  const [saved, setSaved] = useState<SavedCard[]>([])
   const [session, setSession] = useState<CheckoutResponse | null>(null)
   const [busy, setBusy] = useState(false)
   // True while the SDK is confirming: the address can't change under a live payment.
@@ -46,6 +55,19 @@ export default function Checkout() {
   const [message, setMessage] = useState('')
 
   const close = () => navigate(location.pathname, { replace: true, scroll: false })
+
+  // Only to say, in plain words, which saved card the payment form has pre-selected.
+  useEffect(() => {
+    let live = true
+    api
+      .paymentMethods(persona)
+      .then((m) => live && setSaved(m))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [persona])
+  const defaultCard = saved.find((c) => c.isDefault) ?? saved[0]
 
   if (lines.length === 0)
     return (
@@ -79,6 +101,7 @@ export default function Checkout() {
           items: lines,
           userListings: userListings(),
           shipTo,
+          ...(billingSame ? {} : { billTo }),
         }),
       )
     } catch (err) {
@@ -97,18 +120,31 @@ export default function Checkout() {
     }
   }
 
-  const field = (k: keyof ShipTo, label: string, className = '') => (
-    <label className={`flex flex-col gap-1 text-sm font-medium ${className}`}>
-      {label}
-      <input
-        required
-        className={input}
-        value={shipTo[k]}
-        disabled={!!session || busy || paying}
-        onChange={(e) => setShipTo({ ...shipTo, [k]: e.target.value })}
-      />
-    </label>
-  )
+  const addressFields = (value: ShipTo, set: (a: ShipTo) => void, legend: string) => {
+    const field = (k: keyof ShipTo, label: string, className = '') => (
+      <label className={`flex flex-col gap-1 text-sm font-medium ${className}`}>
+        {label}
+        <input
+          required
+          className={input}
+          value={value[k]}
+          disabled={busy || paying}
+          onChange={(e) => set({ ...value, [k]: e.target.value })}
+        />
+      </label>
+    )
+    return (
+      <fieldset className="grid grid-cols-6 gap-3" disabled={busy}>
+        <legend className="sr-only">{legend}</legend>
+        {field('name', TEXT.fields.name, 'col-span-6')}
+        {field('line1', TEXT.fields.line1, 'col-span-6')}
+        {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
+        {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
+        {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
+      </fieldset>
+    )
+  }
+  const oneLine = (a: ShipTo) => `${a.name}, ${a.line1}, ${a.city}, ${a.state} ${a.zip}`
 
   // Before the intent exists this is the same calculation the server runs; once it exists, the server's.
   const shown: Breakdown = session?.breakdown ?? breakdown(lines, listings)
@@ -182,20 +218,47 @@ export default function Checkout() {
       <section className={step}>
         {stepTitle(1, TEXT.shipTo, !!session)}
         {session ? (
-          // The address is on the payment now; changing it means a new payment.
-          <p className="pl-8.5 text-sm text-ink-muted">
-            {shipTo.name}, {shipTo.line1}, {shipTo.city}, {shipTo.state} {shipTo.zip}
-          </p>
+          // The addresses are on the payment. Editing reopens the form; continuing again updates the
+          // same payment (the amount doesn't depend on the address), so nothing is charged twice.
+          <div className="flex items-start justify-between gap-4 pl-8.5 text-sm">
+            <dl className="flex min-w-0 flex-col gap-1.5 text-ink-muted">
+              <div>
+                <dt className="sr-only">{TEXT.shipTo}</dt>
+                <dd>{oneLine(shipTo)}</dd>
+              </div>
+              <div>
+                <dt className="inline font-medium text-ink">{TEXT.billing}: </dt>
+                <dd className="inline">
+                  {billingSame ? TEXT.sameAsShipping : oneLine(billTo)}
+                </dd>
+              </div>
+            </dl>
+            <Button
+              variant="quiet"
+              size="sm"
+              disabled={paying}
+              onClick={() => setSession(null)}
+            >
+              {TEXT.edit}
+            </Button>
+          </div>
         ) : (
           <form onSubmit={start} className="flex flex-col gap-4">
-            <fieldset className="grid grid-cols-6 gap-3" disabled={busy}>
-              <legend className="sr-only">{TEXT.shipTo}</legend>
-              {field('name', TEXT.fields.name, 'col-span-6')}
-              {field('line1', TEXT.fields.line1, 'col-span-6')}
-              {field('city', TEXT.fields.city, 'col-span-6 sm:col-span-3')}
-              {field('state', TEXT.fields.state, 'col-span-2 sm:col-span-1')}
-              {field('zip', TEXT.fields.zip, 'col-span-4 sm:col-span-2')}
-            </fieldset>
+            {addressFields(shipTo, setShipTo, TEXT.shipTo)}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-sm font-semibold">{TEXT.billing}</h4>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={billingSame}
+                  disabled={busy}
+                  onChange={(e) => setBillingSame(e.target.checked)}
+                  className="size-4 accent-[var(--color-primary)]"
+                />
+                {TEXT.sameAsShipping}
+              </label>
+              {!billingSame && addressFields(billTo, setBillTo, TEXT.billing)}
+            </div>
             <Button type="submit" disabled={busy} className="h-11">
               {busy ? TEXT.starting : TEXT.continue}
             </Button>
@@ -206,6 +269,17 @@ export default function Checkout() {
       <section className={step} aria-labelledby="pay">
         <div id="pay">{stepTitle(2, TEXT.payment)}</div>
         {message && <Notice tone="danger" title={message} body={null} />}
+        {session && defaultCard && (
+          <p className="text-sm text-ink-muted">
+            {TEXT.savedHint(
+              COPY.account.card(
+                defaultCard.network,
+                defaultCard.last4,
+                defaultCard.funding,
+              ),
+            )}
+          </p>
+        )}
         {session && (
           <HyperCheckout
             clientSecret={session.clientSecret}

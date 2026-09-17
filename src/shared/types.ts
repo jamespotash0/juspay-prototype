@@ -206,6 +206,8 @@ export interface CheckoutRequest {
   /** Only for 'usr_…' listings: their price is trusted from the client (demo simplification). */
   userListings?: Listing[]
   shipTo: ShipTo
+  /** Billing address. Omitted when it's the same as shipping. */
+  billTo?: ShipTo
 }
 export interface CheckoutResponse {
   paymentId: string
@@ -248,6 +250,8 @@ export interface SavedCard {
   funding?: Funding
   last4: string
   expiry?: string
+  /** Hyperswitch's default for this customer: the SDK lists it first and pre-selects it. */
+  isDefault?: boolean
 }
 
 /** POST /api/save-card — a $0 payment for the SDK to save a card through. */
