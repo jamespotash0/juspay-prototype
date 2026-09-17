@@ -179,8 +179,8 @@ export const COPY = {
     switchAccount: 'Switch demo account',
     /** What each demo account stands in for, shown wherever you pick one. */
     personaRole: {
-      alex: { short: 'Collector', long: 'Collector: buys and sells' },
-      mike: { short: 'Collector', long: 'Collector: buys and sells' },
+      alex: { short: 'Buyer & seller', long: 'Buys and sells on Slabbed' },
+      mike: { short: 'Buyer & seller', long: 'Buys and sells on Slabbed' },
       admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
     },
     resetConfirm:
@@ -322,7 +322,7 @@ export const COPY = {
     viewInCart: 'View in Cart',
     own: 'This is your listing.',
     ownLink: 'See it on your seller page',
-    adminCantBuy: "Admins can't buy. Switch to a collector to buy this.",
+    adminCantBuy: "Admins can't buy. Switch to Alex or Mike to buy this.",
     details: 'Details',
     seller: 'Seller',
     rating: 'rating',
@@ -351,7 +351,7 @@ export const COPY = {
     total: 'Total',
     summary: 'Order summary',
     own: "Your listing — it isn't included at checkout.",
-    admin: "Admins can't buy. Switch to a collector to check out.",
+    admin: "Admins can't buy. Switch to Alex or Mike to check out.",
     checkOut: 'Proceed to Checkout',
     nothingToBuy: 'Nothing in your cart can be bought right now.',
   },
@@ -423,7 +423,7 @@ export const COPY = {
 
   sell: {
     title: 'Selling',
-    adminOnly: 'Selling is for collector accounts',
+    adminOnly: 'Selling is for buyer and seller accounts',
     adminFact: 'Switch to Alex or Mike to list items and ship sales.',
     listings: 'Active listings',
     newListing: 'Create a listing',
@@ -470,7 +470,7 @@ export const COPY = {
 
   sellNew: {
     title: 'Create a listing',
-    adminOnly: 'Listings are created by collector accounts',
+    adminOnly: 'Listings are created by buyer and seller accounts',
     adminFact: 'Switch to Alex or Mike to list an item.',
     publish: 'Publish listing',
     fixErrors: 'Check the highlighted fields.',
