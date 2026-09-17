@@ -1,0 +1,131 @@
+{
+  "title": "Choose the visual world for Slabbed",
+  "question": "Layout stays catalogue → listing → cart → checkout. The roll assigned The Binder Page. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Binder Page",
+      "kicker": "THE ROLL",
+      "lineage": "nine-pocket collector binder sheets and index tabs",
+      "thesis": "Browsing is flipping through a collector's binder: every listing sits in its own clear pocket.",
+      "palette": ["#1c2230", "#eef2f6", "#ffcf3a", "#ff5a4e", "#2f6bff"],
+      "materials": ["clear vinyl pockets with a glint", "padded binder cover", "coloured index tabs"],
+      "viewport": "Top bar as the binder spine with coloured index tabs; the catalogue grid as a pocket sheet on a navy cover; pagination as a page turn.",
+      "risk": "Sheen and page turns turn gimmicky if they ever slow scanning of grades and prices.",
+      "raised": [
+        {"from": "challenger-phosphor-terminal", "raise": "Keyboard-first: / focuses search, ← and → turn binder pages."},
+        {"from": "challenger-emission-rail", "raise": "State reads by form, not only colour: each payment state keeps its own glyph plus a progress rail on the order page."},
+        {"from": "challenger-elbow-console", "raise": "Every press answers instantly: pockets and buttons swap state on press with no easing wait."},
+        {"from": "challenger-alphabet-storm", "raise": "Price is the loudest type on every tile, one confident display grotesk."},
+        {"from": "challenger-zoo-map", "raise": "One motion grammar: every move 0.4s with a small overshoot, nothing else."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "The Card-Show Case",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "dealer glass cases at a coin and card show",
+      "thesis": "Every listing laid on velvet in a lit dealer's case, with its price tag on a string.",
+      "palette": ["#141317", "#c9d3da", "#f2e2b8", "#d7263d"],
+      "materials": ["black velvet trays", "glass case edge with overhead spotlight", "manila string price tags"],
+      "viewport": "Catalogue rows read as lit glass cases; tiles sit on velvet with a hanging tag for price; hovering moves the spotlight onto that slab.",
+      "risk": "Dark premium ground is where many runs land, and hanging tags can crowd the spec strip."
+    },
+    {
+      "id": "challenger-drop-tag",
+      "label": "Drop Tag",
+      "verdict": "competitive",
+      "lineage": "industrial streetwear: quoted labels, zip-tie tags, hazard stripes",
+      "thesis": "Listings announced like a streetwear drop: literal quoted labels, orange zip-tie price tags.",
+      "palette": ["#fafafa", "#0b0b0b", "#ff5a1f", "#d9d9d9"],
+      "materials": ["white cotton ground", "black nylon bars", "safety-orange zip ties", "45° hazard stripes"],
+      "viewport": "Filters as square caps label plates (\"COINS\" \"CARDS\"); tiles carry an orange zip-tie price tag; sold items take a hazard stripe.",
+      "case": "Card and sneaker collecting share drop culture, so it lands with the audience; loses narrowly on trust, since hazard stripes near money can read as alarm.",
+      "risk": "The quote-mark joke tires fast and stripes near payment states can look like errors.",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar.webp"
+    },
+    {
+      "id": "challenger-phosphor-terminal",
+      "label": "Phosphor Terminal",
+      "verdict": "declined",
+      "lineage": "green-phosphor terminal transcripts",
+      "thesis": "The marketplace as a typed transcript on glass.",
+      "palette": ["#050805", "#33ff66", "#1a7f36"],
+      "materials": ["curved glass", "scanline glow"],
+      "viewport": "One scrolling transcript of listings.",
+      "risk": "Collectors don't browse slabs as text; photos lose.",
+      "case": "Loses both axes: no collector identification, and photos of the item are the product.",
+      "kept": "Keyboard-first operation.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-phosphor-terminal-midnight-hero.webp"
+    },
+    {
+      "id": "challenger-emission-rail",
+      "label": "Emission Line Rail",
+      "verdict": "declined",
+      "lineage": "spectrogram glass plates",
+      "thesis": "Everything hangs off one calibrated rail; state is line form.",
+      "palette": ["#2a2b2e", "#e8e4da", "#ffd500"],
+      "materials": ["charcoal continuum", "hairline emission lines"],
+      "viewport": "Destinations as ticks on one rail.",
+      "risk": "Abstract; hides the grid shoppers expect.",
+      "case": "Loses both axes: foreign to collectors and obscures browsing.",
+      "kept": "State carried by form, not hue alone.",
+      "hero": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail-hero.webp"
+    },
+    {
+      "id": "challenger-zoo-map",
+      "label": "Garden Guide Map",
+      "verdict": "declined",
+      "lineage": "zoo and gardens guide maps",
+      "thesis": "Flat colour lobes and capsule controls.",
+      "palette": ["#8ed462", "#f5f1e4", "#ff705d", "#2ba0ff"],
+      "materials": ["flat unmodulated colour", "capsule labels"],
+      "viewport": "One swelling colour lobe per screen.",
+      "risk": "Playful but says nothing about coins or cards.",
+      "case": "Loses both axes: fun without collector identity, lobes fight a dense grid.",
+      "kept": "One motion grammar with a small overshoot.",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "challenger-elbow-console",
+      "label": "Elbow Panel Console",
+      "verdict": "declined",
+      "lineage": "starship wall panels",
+      "thesis": "Pastel pill blocks on black, elbows as the grid.",
+      "palette": ["#000000", "#cc99ff", "#ffaa77", "#ffcc33"],
+      "materials": ["flat pastel blocks", "pill elbows"],
+      "viewport": "Colour banks instead of pages.",
+      "risk": "A fan costume on a payments product.",
+      "case": "Loses both axes: borrowed fandom, confusing money states.",
+      "kept": "Instant press feedback.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-elbow-panel-console-hero.webp"
+    },
+    {
+      "id": "challenger-alphabet-storm",
+      "label": "Alphabet Storm",
+      "verdict": "declined",
+      "lineage": "surreal typographic weather",
+      "thesis": "Letters behave as matter and weather.",
+      "palette": ["#ffffff", "#0a0a0a", "#c0c4c8"],
+      "materials": ["monumental grotesk", "particle letters"],
+      "viewport": "Words forming and breaking across the page.",
+      "risk": "Unreadable prices mid-transformation.",
+      "case": "Loses both axes: motion on money text harms clarity.",
+      "kept": "One confident display grotesk carrying the loudest number.",
+      "hero": "https://impeccable.style/worlds/cards/dream-surreal-impossible-worlds-alphabet-storm-hero.webp"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "eBay / Mercari / Depop, executed at full craft: white ground, photo-first grid, one blue accent.",
+    "palette": ["#ffffff", "#111827", "#2563eb"],
+    "materials": ["clean grid", "product photography"],
+    "viewport": "The arrangement a visitor expects, polished, with hover and add-to-cart feedback.",
+    "risk": "Indistinguishable from the competition by design."
+  },
+  "steer": true
+}
