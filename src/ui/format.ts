@@ -2,7 +2,7 @@
 
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS, SELLERS } from '../shared/seed.ts'
-import type { Listing, OrderView } from '../shared/types.ts'
+import type { Listing, OrderView, ShipTo } from '../shared/types.ts'
 
 /** "PCGS MS-65", without doubling a service the grade already names ("PSA 9"). */
 export function gradeLabel(l: Listing): string {
@@ -49,3 +49,14 @@ export const refundLabel = ({ refund }: OrderView) =>
       : undefined
 
 export const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many)
+
+/**
+ * The buyer-facing order number for a purchase: 'SLB-' + the first 6 hex of the payment id
+ * (cka_e80c60… → SLB-E80C60). Every seller's order in that purchase shares it.
+ * ponytail: 6 hex digits collide around a few thousand purchases; widen the slice past demo scale.
+ */
+export const orderNumber = (paymentId: string) =>
+  `SLB-${paymentId.replace(/^cka_/, '').slice(0, 6).toUpperCase()}`
+
+export const oneLineAddress = (a: ShipTo) =>
+  `${a.name}, ${a.line1}, ${a.city}, ${a.state} ${a.zip}`

@@ -68,8 +68,8 @@ Ten screens. Top bar on every one: wordmark, search, **role switcher**, cart.
 | --- | --- | --- | --- | --- |
 | 1 | `/` | Buyer | Search, filter chips, listing grid — each tile shows photo, price, title, and a grade · cert · seller strip that stays visible | Open listing |
 | 2 | `/listing/:id` | Buyer | Photos, price, grade · cert, seller, the hold promise beside the buy control | **Buy now** / Add to cart. Your own listing shows no buy button |
-| 3 | `/cart` | Buyer | Items grouped by seller, subtotal per group | Check out one seller group |
-| 4 | `/checkout/:seller` | Buyer | Sign-in gate (mocked Google / Apple / email) → ship-to → summary with tax → Hyperswitch SDK | **Pay** |
+| 3 | `/cart` | Buyer | Items grouped by seller, subtotal per seller, one cart total at the bottom | **Check out** (whole cart) |
+| 4 | `/checkout` | Buyer | Sign-in gate (mocked Google / Apple / email) → ship-to → summary with tax → Hyperswitch SDK | **Pay** |
 | 5 | `/order/:paymentId` | Buyer | Status, amounts, fulfilment timeline. **Also the confirmation page** | **Mark received** / **Dispute** |
 | 6 | `/orders` | Buyer | Past orders with status | Open order |
 | 7 | `/sell` | Seller | Your listings · your sales · balance (gross → commission → net) | **Mark shipped** |

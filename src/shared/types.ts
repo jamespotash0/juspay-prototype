@@ -52,6 +52,8 @@ export interface Listing {
   year?: number
   mintMark?: string
   description: string
+  /** The seller doesn't take this back for a change of mind. "Not as described" still applies. */
+  noReturns?: boolean
   createdAt: string // ISO 8601
 }
 
@@ -85,7 +87,7 @@ export interface SellerLedger {
   commissionCents: Cents
   /** gross − commission. While 'pending': the expected net. When 'reversed': 0. */
   netCents: Cents
-  /** Refunds are full only: 0, or the buyer's whole total once refunded. */
+  /** Refunds are full per seller: 0, or this seller's share of the buyer's total once refunded. */
   refundedCents: Cents
   balance: 'pending' | 'available' | 'reversed'
 }
@@ -111,8 +113,15 @@ export type Fulfilment = 'unshipped' | 'shipped' | 'received' | 'disputed'
 
 export type RefundState = 'none' | 'pending' | 'succeeded' | 'failed'
 
-/** Flat metadata keys written onto every payment. The merge is shallow — never nest. */
+/**
+ * Flat metadata keys written onto every payment. The merge is shallow — never nest.
+ * One payment covers the whole cart: `sellers` lists the seller ids, and every per-seller key is
+ * written as `<sellerId>.<key>` (e.g. `sel_bluesheet.fulfilment`). Payments made before the
+ * multi-seller cart have no `sellers` key and a single unprefixed set, with `sellerId`.
+ */
 export const META = {
+  sellers: 'sellers', // comma-joined seller ids
+  /** Legacy single-seller payments only. */
   sellerId: 'sellerId',
   buyerId: 'buyerId',
   listingIds: 'listingIds', // comma-joined
@@ -124,6 +133,12 @@ export const META = {
   receivedAt: 'receivedAt',
   disputedAt: 'disputedAt',
   disputeReason: 'disputeReason',
+  /** The kind of problem the buyer picked (IssueKind). */
+  issue: 'issue',
+  /** '1' when any item in this seller's order was ineligible for return at purchase. Absent otherwise. */
+  noReturns: 'noReturns',
+  askedAt: 'askedAt',
+  question: 'question',
   /** 'app' for real demo orders, 'test' for automated test runs. Order lists show 'app' only. */
   source: 'source',
 } as const
@@ -138,8 +153,13 @@ export interface Decline {
   retriable: boolean
 }
 
-/** The one read shape every screen renders from. Built server-side only. */
+/**
+ * The one read shape every screen renders from. Built server-side only.
+ * An order is one seller's share of a payment: a three-seller cart is one payment and three orders.
+ */
 export interface OrderView {
+  /** `<paymentId>.<sellerId>`. Addresses this seller's order in URLs and API calls. */
+  orderId: string
   paymentId: string
   state: PaymentState
   fulfilment: Fulfilment
@@ -153,11 +173,23 @@ export interface OrderView {
   connector?: string
   /** Hyperswitch payment_method_type: 'credit', 'debit', 'paypal'… */
   paymentMethodType?: string
+  /** What the buyer paid with, safe to show: card network, last four and expiry only. */
+  paymentMethod?: { network?: string; funding?: Funding; last4?: string; expiry?: string }
   decline?: Decline
   /** Present once the buyer has disputed. */
   disputeReason?: string
+  issue?: IssueKind
+  /** False when an item was ineligible for return at purchase. */
+  returnable: boolean
+  /** The buyer's latest question to the seller. */
+  question?: string
   /** ISO timestamps from metadata, each present once that step happened. */
-  fulfilledAt?: { shippedAt?: string; receivedAt?: string; disputedAt?: string }
+  fulfilledAt?: {
+    shippedAt?: string
+    receivedAt?: string
+    disputedAt?: string
+    askedAt?: string
+  }
 }
 
 // ── API contracts ───────────────────────────────────────────────────────────
@@ -166,7 +198,7 @@ export interface ApiError {
   error: { code: string; message: string }
 }
 
-/** POST /api/checkout — creates one intent for one seller group. No amount inbound. */
+/** POST /api/checkout — one intent for the whole cart, any number of sellers. No amount inbound. */
 export interface CheckoutRequest {
   attemptId: string // becomes Hyperswitch payment_id, ≤30 chars
   buyerId: PersonaId
@@ -174,34 +206,67 @@ export interface CheckoutRequest {
   /** Only for 'usr_…' listings: their price is trusted from the client (demo simplification). */
   userListings?: Listing[]
   shipTo: ShipTo
+  /** Billing address. Omitted when it's the same as shipping. */
+  billTo?: ShipTo
 }
 export interface CheckoutResponse {
   paymentId: string
   clientSecret: string
   publishableKey: string
-  sellerId: string
+  sellerIds: string[]
+  /** The whole cart: the sum of each seller's breakdown. */
   breakdown: Breakdown
 }
 
-/** GET /api/payment?id=… → OrderView */
+/** GET /api/payment?id=<orderId> → OrderView. A bare paymentId works only for a single-seller payment. */
 
 /** POST /api/order-state → OrderView */
-export type OrderAction = 'ship' | 'receive' | 'dispute'
+export type OrderAction = 'ship' | 'receive' | 'dispute' | 'ask'
+/** What "Have a problem?" offers. Every kind but `question` asks for a refund. */
+export type IssueKind = 'cancel' | 'notArrived' | 'notAsDescribed' | 'return' | 'question'
 export interface OrderStateRequest {
+  /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string
   action: OrderAction
   actorId: PersonaId
-  reason?: string // dispute only
+  reason?: string // dispute: the buyer's own words; ask: the question
+  issue?: IssueKind // dispute only
 }
 
-/** POST /api/refund → OrderView. Admin only. Always a FULL refund — there is no amount. */
+/** POST /api/refund → OrderView. The order's seller only. Always refunds that order in full — there is no amount. */
 export interface RefundRequest {
+  /** An orderId; a bare paymentId only for a single-seller payment. */
   paymentId: string
   actorId: PersonaId
   reason?: string
 }
 
-/** GET /api/orders?buyer=<id> | ?seller=<id> | ?all=1 */
+/** A card Hyperswitch saved for a buyer at checkout. Safe to show: no token, no full number. */
+export type Funding = 'credit' | 'debit' | 'prepaid'
+
+export interface SavedCard {
+  id: string
+  network?: string
+  funding?: Funding
+  last4: string
+  expiry?: string
+  /** Hyperswitch's default for this customer: the SDK lists it first and pre-selects it. */
+  isDefault?: boolean
+}
+
+/** POST /api/save-card — a $0 payment for the SDK to save a card through. */
+export interface SaveCardResponse {
+  paymentId: string
+  clientSecret: string
+  publishableKey: string
+}
+
+/** GET /api/payment-methods?customer=<id>, and DELETE …&id=<id> */
+export interface PaymentMethodsResponse {
+  methods: SavedCard[]
+}
+
+/** GET /api/orders?buyer=<id> | ?seller=<id> | ?all=1 | ?payment=<paymentId> (every order in one purchase) */
 export interface OrdersResponse {
   orders: OrderView[]
 }

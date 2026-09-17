@@ -5,9 +5,11 @@ import { GET as orders } from '../../api/orders.ts'
 import { GET as payment } from '../../api/payment.ts'
 import { POST as refund } from '../../api/refund.ts'
 import { newAttemptId } from '../../src/shared/attempt.ts'
+import { breakdown } from '../../src/shared/money.ts'
 import { LISTINGS } from '../../src/shared/seed.ts'
 import type {
   CheckoutResponse,
+  Listing,
   OrderStateRequest,
   OrderView,
   PersonaId,
@@ -51,7 +53,10 @@ const list = async (query: string) => {
 type ErrorBody = { error?: { code: string } }
 
 /** Creates a test-tagged checkout and confirms it server-side with 4242 (the SDK is browser-only). */
-async function paidPayment(): Promise<string> {
+async function paidPayment(
+  listingIds = [LISTING.id],
+  userListings: Listing[] = [],
+): Promise<string> {
   const res = await checkout(
     new Request(`${ORIGIN}/api/checkout`, {
       method: 'POST',
@@ -59,7 +64,8 @@ async function paidPayment(): Promise<string> {
       body: JSON.stringify({
         attemptId: newAttemptId(),
         buyerId: 'alex',
-        items: [{ listingId: LISTING.id, qty: 1 }],
+        items: listingIds.map((listingId) => ({ listingId, qty: 1 })),
+        userListings,
         shipTo: {
           name: 'Alex Rivera',
           line1: '1 Main St',
@@ -111,17 +117,9 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
       409,
       'INVALID_TRANSITION',
     ])
-    const dispute = await act({
-      paymentId: A,
-      action: 'dispute',
-      actorId: 'alex',
-      reason: 'x',
-    })
-    expect([dispute.status, dispute.body.error?.code]).toEqual([
-      409,
-      'INVALID_TRANSITION',
-    ])
-    expect((await refundReq({ paymentId: A, actorId: 'mike' })).status).toBe(403)
+    // A dispute before shipping is allowed (a seller who never ships); the multi-seller test covers it.
+    // Only the order's seller refunds: not the buyer, not the admin.
+    expect((await refundReq({ paymentId: A, actorId: 'admin' })).status).toBe(403)
     expect((await refundReq({ paymentId: A, actorId: 'alex' })).status).toBe(403)
     expect((await read(A)).fulfilment).toBe('unshipped')
   })
@@ -143,8 +141,8 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     expect(ship.body.fulfilment).toBe('shipped')
     const hs = await fetch(`${HS}/payments/${A}`, { headers: { 'api-key': KEY! } })
     const meta = ((await hs.json()) as { metadata: Record<string, string> }).metadata
-    expect(meta.fulfilment).toBe('shipped')
-    expect(meta.shippedAt).not.toBe('')
+    expect(meta[`${SELLER}.fulfilment`]).toBe('shipped')
+    expect(meta[`${SELLER}.shippedAt`]).not.toBe('')
   })
 
   it('lifecycle A: shipped → balance available → received', async () => {
@@ -169,6 +167,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     const disputed = await act({
       paymentId: B,
       action: 'dispute',
+      issue: 'notAsDescribed',
       actorId: 'alex',
       reason: '  Coin looks cleaned  ',
     })
@@ -176,7 +175,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     expect(disputed.body.fulfilment).toBe('disputed')
     const hs = await fetch(`${HS}/payments/${B}`, { headers: { 'api-key': KEY! } })
     const meta = ((await hs.json()) as { metadata: Record<string, string> }).metadata
-    expect(meta.disputeReason).toBe('Coin looks cleaned')
+    expect(meta[`${SELLER}.disputeReason`]).toBe('Coin looks cleaned')
     expect(disputed.body.disputeReason).toBe('Coin looks cleaned')
     expect(Object.keys(disputed.body.fulfilledAt ?? {}).sort()).toEqual([
       'disputedAt',
@@ -184,7 +183,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     ])
     expect(Date.parse(disputed.body.fulfilledAt!.disputedAt!)).not.toBeNaN()
 
-    const refunded = await refundReq({ paymentId: B, actorId: 'admin' })
+    const refunded = await refundReq({ paymentId: B, actorId: SELLER })
     expect(refunded.status, JSON.stringify(refunded.body)).toBe(200)
     expect(refunded.body.refund).toEqual({
       state: 'succeeded',
@@ -201,14 +200,53 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     const again = await act({
       paymentId: B,
       action: 'dispute',
+      issue: 'notAsDescribed',
       actorId: 'alex',
       reason: 'x',
     })
     expect([again.status, again.body.error?.code]).toEqual([409, 'INVALID_TRANSITION'])
   })
 
+  it('one ineligible item makes the seller order ineligible for return; a question moves nothing', async () => {
+    // Both Mike's: lst_016 is sold as ineligible for return, lst_024 is not. A return refunds the
+    // whole seller order, so the order as a whole can't be returned. Over $500: stripe_test.
+    const INELIGIBLE = LISTINGS.find((l) => l.id === 'lst_016')!
+    expect([INELIGIBLE.sellerId, INELIGIBLE.noReturns]).toEqual([SELLER, true])
+    const id = await paidPayment([LISTING.id, INELIGIBLE.id])
+    expect((await read(id)).returnable).toBe(false)
+
+    const ret = await act({
+      paymentId: id,
+      action: 'dispute',
+      issue: 'return',
+      actorId: 'alex',
+    })
+    expect([ret.status, ret.body.error?.code]).toEqual([409, 'ISSUE_NOT_ALLOWED'])
+
+    const asked = await act({
+      paymentId: id,
+      action: 'ask',
+      actorId: 'alex',
+      reason: '  Is the rim toned?  ',
+    })
+    expect(asked.status, JSON.stringify(asked.body)).toBe(200)
+    expect(asked.body.question).toBe('Is the rim toned?')
+    expect(asked.body.fulfilment).toBe('unshipped')
+
+    const cancel = await act({
+      paymentId: id,
+      action: 'dispute',
+      issue: 'cancel',
+      actorId: 'alex',
+    })
+    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200)
+    expect([cancel.body.fulfilment, cancel.body.issue]).toEqual(['disputed', 'cancel'])
+    // An order with only returnable items stays returnable.
+    expect((await read(A)).returnable).toBe(true)
+  })
+
   it('refunds are full only: A refunds its whole total, and a second refund is 409', async () => {
-    const r = await refundReq({ paymentId: A, actorId: 'admin' })
+    const r = await refundReq({ paymentId: A, actorId: SELLER })
     expect(r.status, JSON.stringify(r.body)).toBe(200)
     expect(r.body.refund).toEqual({
       state: 'succeeded',
@@ -222,7 +260,7 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     expect(r.body.fulfilledAt?.receivedAt).toBeDefined()
     expect(r.body.disputeReason).toBeUndefined()
 
-    const again = await refundReq({ paymentId: A, actorId: 'admin' })
+    const again = await refundReq({ paymentId: A, actorId: SELLER })
     expect([again.status, again.body.error?.code]).toEqual([409, 'ALREADY_REFUNDED'])
   })
 
@@ -261,4 +299,71 @@ describe.skipIf(!KEY)('post-payment (live sandbox)', () => {
     },
     120_000,
   )
+})
+
+// One payment for a two-seller cart: each seller's order ships and refunds on its own.
+// lst_024 is Mike's. Every seeded listing is Mike's, so the second seller comes from a created
+// (usr_) listing, which checkout accepts from the client. Neither is the buyer's own.
+const OTHER: Listing = {
+  ...LISTINGS.find((l) => l.id === 'lst_005')!,
+  id: 'usr_multiseller_test',
+  sellerId: 'sel_bluesheet',
+}
+
+describe.skipIf(!KEY)('multi-seller payment (live sandbox)', () => {
+  it('splits into per-seller orders that ship and refund independently', async () => {
+    const paymentId = await paidPayment([LISTING.id, OTHER.id], [OTHER])
+    const whole = breakdown(
+      [
+        { listingId: LISTING.id, qty: 1 },
+        { listingId: OTHER.id, qty: 1 },
+      ],
+      [...LISTINGS, OTHER],
+    )
+    const hs = await fetch(`${HS}/payments/${paymentId}`, {
+      headers: { 'api-key': KEY! },
+    })
+    expect(((await hs.json()) as { amount: number }).amount).toBe(whole.totalCents)
+
+    const views = await list(`payment=${paymentId}`)
+    expect(views.map((v) => v.sellerId)).toEqual([SELLER, OTHER.sellerId])
+    expect(views.reduce((n, v) => n + v.breakdown.totalCents, 0)).toBe(whole.totalCents)
+    const [mine, theirs] = views
+    expect(mine.orderId).toBe(`${paymentId}.${SELLER}`)
+
+    // A bare payment id is ambiguous once there are two sellers.
+    expect((await act({ paymentId, action: 'ship', actorId: SELLER })).status).toBe(400)
+    // Mike can't ship the other seller's order.
+    expect(
+      (await act({ paymentId: theirs.orderId, action: 'ship', actorId: SELLER })).status,
+    ).toBe(403)
+
+    const shipped = await act({
+      paymentId: mine.orderId,
+      action: 'ship',
+      actorId: SELLER,
+    })
+    expect(shipped.status, JSON.stringify(shipped.body)).toBe(200)
+    expect(shipped.body.fulfilment).toBe('shipped')
+    expect((await read(theirs.orderId)).fulfilment).toBe('unshipped')
+
+    // Mike can't refund the other seller's order; that seller can.
+    expect((await refundReq({ paymentId: theirs.orderId, actorId: SELLER })).status).toBe(
+      403,
+    )
+    const refunded = await refundReq({
+      paymentId: theirs.orderId,
+      actorId: OTHER.sellerId as PersonaId,
+    })
+    expect(refunded.status, JSON.stringify(refunded.body)).toBe(200)
+    expect(refunded.body.refund).toEqual({
+      state: 'succeeded',
+      refundedCents: theirs.breakdown.totalCents,
+    })
+    const after = await read(mine.orderId)
+    expect(after.refund.state).toBe('none')
+    expect(after.ledger.balance).toBe('available')
+
+    console.log(`[QA-3] multi-seller payment ${paymentId}`)
+  }, 60_000)
 })

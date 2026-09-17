@@ -6,9 +6,12 @@ then on through shipping, disputes and refunds.
 
 > **Status:** payment path and marketplace screens built; sandbox configured
 > and verified on 2026-09-16. **Proven in a real browser against the live
-> sandbox:** 11 Playwright tests pass: card payment, hard decline, PayPal,
+> sandbox:** Playwright tests covered card payment, hard decline, PayPal,
 > ship → receive, dispute → full refund, the ambiguous "don't pay again" state,
-> and the reviewer security checks.
+> and the reviewer security checks. The e2e suite hasn't been re-run since the
+> latest checkout and account changes, and `account.spec` and
+> `multi-seller.spec` still assert older copy ("Visa ending in 4242"); the
+> server-side sandbox suite (22 tests) passes.
 > [PLAN.md](PLAN.md) holds the full reasoning, and this file is the summary.
 > Everything under "Not built" is written up with an approach instead.
 >
@@ -68,7 +71,7 @@ flowchart LR
     CO["POST /api/checkout<br/>prices the order, creates the payment"]
     PAY["GET /api/payment<br/>authoritative status read"]
     OS["POST /api/order-state<br/>shipped / received / disputed"]
-    REF["POST /api/refund<br/>admin, full refund only"]
+    REF["POST /api/refund<br/>the seller refunds their order"]
     ORD["GET /api/orders"]
   end
 
@@ -219,16 +222,17 @@ stateDiagram-v2
   Paid --> Shipped: seller marks shipped
   Shipped --> Received: buyer marks received
   Received --> [*]
-  Shipped --> Disputed: buyer disputes
-  Received --> Disputed: buyer disputes
-  Disputed --> Refunded: admin refunds in full (real Hyperswitch refund)
+  Paid --> Disputed: buyer asks to cancel
+  Shipped --> Disputed: hasn't arrived / not as described / return
+  Received --> Disputed: not as described / return
+  Disputed --> Refunded: seller refunds in full (real Hyperswitch refund)
   Refunded --> [*]
 
   note right of Paid
-    seller balance: pending
+    seller: awaiting shipment
   end note
   note right of Shipped
-    seller balance: available,
+    seller payout: pending,
     commission deducted
   end note
   note right of Refunded
@@ -236,11 +240,85 @@ stateDiagram-v2
   end note
 ```
 
-The buyer is charged **item + shipping + sales tax** (a flat 8% on items) as
-one payment. The seller is credited **item + shipping − commission** (5% of
-items) later. The buyer never sees the commission and the seller never sees the
-tax. Refunds are **full only**: the whole payment goes back, and the sale's
-commission and net drop to zero.
+The buyer is charged **item + shipping + sales tax** (a flat 8% on items). The
+seller is credited **item + shipping − commission** (5% of items) once they
+ship. The buyer never sees the commission and the seller never sees the tax.
+No payout is actually sent (the sandbox has no payout rail), so shipped money
+shows as **Payout pending**.
+
+### A multi-seller cart: one payment, one order per seller
+
+A buyer who checks out items from two sellers pays **once**, and gets **two
+orders**, one per seller. That's the eBay and Etsy model, and the alternatives
+both break something collectors care about:
+
+| Option | What goes wrong |
+| --- | --- |
+| One payment per seller | Two charges on the statement, two PayPal redirects, and a cart that can end half paid: seller A charged, seller B declined |
+| One order for the whole cart | Sellers ship on different days. One seller's refund request would hold, or refund, the other seller's sale |
+| **One payment, one order per seller** (built) | The buyer pays once; each seller's order ships, pays out and refunds on its own |
+
+**How it maps onto Hyperswitch.** There's no order table, so the split lives
+on the payment:
+
+- The payment's metadata lists `sellers`, and every per-seller value is a flat
+  key prefixed with the seller id: `sel_bluesheet.itemsCents`,
+  `sel_bluesheet.fulfilment`, `sel_bluesheet.shippedAt`. Flat, because
+  Hyperswitch merges metadata shallowly.
+- An order's id is `<paymentId>.<sellerId>`. Order pages, the seller's list
+  and every action address that, never the bare payment.
+- **Tax is rounded per seller**, so the payment total is exactly the sum of its
+  orders, and refunding one order returns exactly what it added. Rounding once
+  on the cart would leave a cent that belongs to nobody.
+- **A refund is a partial refund of the shared payment**, for that one order's
+  total, and only the order's seller can issue it. Its `refund_id` is derived
+  from the payment, the seller and an attempt counter, so a double click can't
+  refund twice, and two sellers refunding the same payment can never exceed
+  what was charged.
+
+**What this costs.** The shared payment is one unit to the card network: a
+chargeback, or a payment that fails after the fact, names every order in it,
+and working out which seller it belongs to is our job (not built; it needs
+webhooks). Real payouts need a marketplace product that sends each seller
+their own share after shipping; see *Seller payouts* below.
+
+### When something goes wrong: problems, returns and questions
+
+The buyer's order page has one **Have a problem?** menu per seller order. It
+lists every option every time, and greys out the ones that can't apply yet
+with the reason, so a buyer never wonders whether an option exists:
+
+| Option | Open when | Asks for a refund |
+| --- | --- | --- |
+| Cancel and refund | Not shipped yet | Yes |
+| It hasn't arrived | Shipped, not marked received | Yes |
+| Not as described | Shipped or received, **even if ineligible for return** | Yes |
+| Return it | Shipped or received, and the seller accepts returns | Yes |
+| Ask the seller | Always | **No**: the order doesn't move |
+
+Why it's shaped this way for collectibles:
+
+- **Not every problem is a refund.** A buyer whose coin hasn't shipped after
+  two days usually wants an answer, not their money back. "Ask the seller"
+  records a question without holding the seller's payout.
+- **Returns are the seller's call, per listing.** A raw coin "sold as found"
+  from an estate lot and a graded slab with a cert number are different
+  risks, so each listing says *Returns accepted* or *Ineligible for return*,
+  on the listing page, in checkout and on the order.
+- **"Not as described" can't be switched off.** That's the US buyer-protection
+  norm (eBay's guarantee, PayPal's cover, card chargeback rights), and a
+  marketplace that let sellers opt out would be taking the dispute anyway.
+- **Eligibility is fixed at purchase.** It's written onto each seller's order
+  in the payment metadata when the payment is created, so a seller changing
+  their policy later doesn't change an order already paid for. A refund covers
+  a seller's whole order, so one ineligible item makes that order ineligible.
+- **The server enforces the same rules as the menu** (`issueBlock` in
+  `src/shared/orderState.ts`, used by both), so a request crafted outside the
+  page can't return an ineligible item or cancel a shipped one.
+
+Every refund-type problem ends the same way: the seller sees what was asked
+and refunds that order in full through Hyperswitch. What this doesn't do yet
+is under *Not built*.
 
 ---
 
@@ -253,15 +331,18 @@ commission and net drop to zero.
 | **Capture immediately; the hold is a ledger, not an authorisation** | Card authorisations expire in about 7 days, and an individual seller ships when they reach the post office. The reversal tool is a refund, not a void |
 | **Seller pays the commission, at release** | Nothing is added to a buyer's total after they've decided on a $1,800 item. A sale refunded before release never pays a fee |
 | **Never auto-retry an ambiguous payment** | "Check again", not "Pay again". A double charge is worse than a lost sale |
-| **One payment per seller in a multi-seller cart** | A single split payment can't represent one seller's half failing, and that is the normal failure |
+| **One payment for a multi-seller cart, split per seller on our side** | Collectors buy from several sellers at once and expect to pay once, as on eBay and Etsy. One payment can't end half paid. Each seller's share ships, pays out and refunds on its own, so one seller's dispute never refunds another's sale |
 | **No database; Hyperswitch is the read model** | No reconciliation story to explain. The limit: metadata isn't filterable in the v1 API, so order lists page through the last 90 days of payments (at most 2,000) and filter in memory. Measured: 1.3–2.0 s warm, 4.6–6.5 s on a cold first call. A KV index of order ids is the upgrade |
+| **Checkout opens over the page, not as a page** | The buyer keeps the listing or cart in view while giving an address and paying. It's addressed by `?checkout` on the current URL, so sign-in can send the buyer back into it. It's a fixed layer rather than a native `<dialog>`, because the Hyperswitch SDK appends its own full-screen frames to the page and the dialog's top layer would cover them. It can't be closed while a payment is starting or confirming. Shipping and billing (default "same as shipping") are both stored on the Hyperswitch payment; editing them before paying updates the same unconfirmed payment (`POST /payments/{id}`), so the attempt id and amount stay the same and nothing is charged twice. Pay stays disabled until the SDK reports the form complete (a saved card needs its CVC) |
+| **Returns per listing; "not as described" always open** | See *When something goes wrong*. Collectibles mix as-found raw items with certified slabs, so one blanket return policy would be wrong for one of them |
+| **Show credit or debit on saved cards and receipts** | Read from Hyperswitch (`payment_method_type`, falling back to the card's `card_type`). A buyer's dispute rights and timelines differ between the two, and on a four-figure coin that's worth knowing before choosing which card to pay with |
 | **3DS out of scope for this build** | The dashboard default is untouched, but no challenge flow is built or tested. We're US-only, so it isn't a mandate. It would buy liability shift on stolen-card chargebacks, which matters on a $6,000 coin. It does nothing for "not as described" disputes, and we don't pretend it does |
 
 ### Hyperswitch features, and what we did with each
 
 | Feature | Verdict |
 | --- | --- |
-| Unified Checkout, Payments, Refunds (full only), Metadata update | **Built on** |
+| Unified Checkout, Payments, Refunds (one seller's order in full), Metadata update | **Built on** |
 | Rule-based routing (amount + volume split) | **Configured**, verified |
 | PayPal wallet | **Configured**, plus a return URL passed to the SDK |
 | 3DS | **Out of scope**: dashboard default untouched, no challenge flow built or tested |
@@ -269,7 +350,8 @@ commission and net drop to zero.
 | Auth Rate Based and elimination routing | **Deferred**: needs payment history and real processors |
 | Least Cost (US debit) routing | **Deferred**: sandbox supports it through Adyen only |
 | Webhooks | **Deferred**: nothing durable to write to and no stable URL, and every flow we build has the buyer present |
-| Extended authorisation, overcapture, network tokenisation | **Off**: we capture straight away at a fixed amount and don't save cards |
+| Saved payment methods | **Built on**: a $0 setup payment through the SDK saves a card to the Hyperswitch customer; the account lists and removes cards, and sets the default with `POST /customers/{id}/payment_methods/{pm}/default`, which the SDK then pre-selects at checkout. Re-setting the current default returns `400 IR_16`, treated as success. Card data never reaches us |
+| Extended authorisation, overcapture, network tokenisation | **Off**: we capture straight away at a fixed amount |
 | Surcharge | **Refused**: banned on debit, restricted in several states, and we earn through commission |
 
 ---
@@ -298,13 +380,34 @@ commission and net drop to zero.
   exist. It's the next step after the 80/20 trial.
 - **Apple and Google Pay.** They add speed, not protection, and Apple Pay
   needs a stable verified domain, which preview deployments don't have.
-- **Seller payouts.** Stripe Connect separate charges and transfers, called
-  when the seller ships. Hyperswitch's split payments only support
-  direct/destination charges, which pay the seller too early.
-- **3DS challenges, partial refunds, soft declines on demand, and an
+- **Seller payouts.** Stripe Connect separate charges and transfers: one
+  charge for the cart, then one transfer per seller order, called when that
+  seller ships. Hyperswitch's split payments only support direct/destination
+  charges, which pay the seller too early and can't wait for each seller's
+  shipment. Until then the seller page shows shipped money as *Payout pending*.
+- **3DS challenges, refunding part of one seller's order, soft declines on demand, and an
   abandoned PayPal payment** (the message exists; the flow isn't tested).
+- **The return leg of a return.** A return request today is a refund request
+  with a reason; nothing tracks the item going back, so a seller can refund
+  before it arrives, or not at all. *Approach:* two more fulfilment states,
+  `returning` (buyer adds tracking) and `returned` (seller confirms), with the
+  refund offered only after `returned`, plus a **return window** (14 or 30
+  days from received, the US norm) checked by the same `issueBlock` rule.
+- **Refund requests vs bank disputes.** An in-app "not as described" is a
+  request to the seller; the buyer can still dispute with their bank, and we
+  don't read Hyperswitch's disputes. *Approach:* dispute webhooks, matched to
+  the seller order by payment and amount, freeze that seller's payout and
+  close any open in-app request so the buyer isn't refunded twice.
+- **Two-way questions and notifications.** "Ask the seller" is one question,
+  one way: the seller can read it but not reply, and a second question
+  replaces the first. Nobody is emailed about a question, a refund request or
+  a shipment. *Approach:* a message thread per seller order in a small store,
+  plus email on each order action.
 - **Webhooks, concurrency (two buyers racing for one item), carrier-confirmed
-  release, authenticity checks, seller KYC, saved cards.**
+  release, authenticity checks, seller KYC, saved bank accounts, and saving
+  PayPal** (`paypal_test` doesn't store a PayPal account, so the account page's
+  linked PayPal is for show; PayPal still signs in through Hyperswitch at
+  checkout).
 
 **Known gaps in what is built**
 - `update_metadata` returns a connector error (`IR_20`, seen on both
@@ -312,6 +415,8 @@ commission and net drop to zero.
   is read back before the UI reports success.
 - Order lists take 4.6–6.5 s on a cold first call (see the read-model decision
   above).
+- A chargeback on a multi-seller payment isn't attributed to a seller: there are
+  no webhooks to receive it, and nothing splits it across the orders.
 
 ---
 

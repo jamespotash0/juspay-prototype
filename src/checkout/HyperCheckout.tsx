@@ -17,6 +17,26 @@ interface Props {
   onError(message: string): void
   /** true just before confirmPayment; false if it returns without leaving the page (e.g. a validation error). */
   onSubmittingChange?: (submitting: boolean) => void
+  /** 'save': a $0 payment on the account page that only stores a card. No wallets, no saved-card list. */
+  purpose?: 'pay' | 'save'
+  /** Where a redirect comes back to. Defaults to this payment's order page. */
+  returnUrl?: string
+}
+
+// Matches the site: near-black primary, hairline borders, the same radius and type.
+const APPEARANCE = {
+  theme: 'default',
+  variables: {
+    colorPrimary: '#121418',
+    colorText: '#121418',
+    colorTextSecondary: '#5d6270',
+    colorBackground: '#ffffff',
+    colorDanger: '#b3261e',
+    fontFamily: 'Archivo, system-ui, sans-serif',
+    fontSizeBase: '15px',
+    borderRadius: '10px',
+    spacingUnit: '10px',
+  },
 }
 
 // HyperLoader.js may only be added once per page, so one promise per key.
@@ -32,7 +52,7 @@ export default function HyperCheckout(props: Props) {
   // which tears down and rebuilds the card iframes. A fresh object each render meant clicking Pay
   // (which sets state) wiped the card fields before confirm. Keep it stable per client secret.
   const options = useMemo(
-    () => ({ clientSecret: props.clientSecret }),
+    () => ({ clientSecret: props.clientSecret, appearance: APPEARANCE }),
     [props.clientSecret],
   )
   return (
@@ -48,25 +68,40 @@ function PayForm({
   onSubmitted,
   onError,
   onSubmittingChange,
+  purpose = 'pay',
+  returnUrl = `${location.origin}/order/${paymentId}`,
 }: Props) {
   const hyper = useHyper()
   const [busy, setBusy] = useState(false)
+  // The SDK's change event says whether the selected method is ready to pay: a saved card needs its
+  // CVC, and "New payment methods" with nothing filled in isn't a method yet. Pay waits for it.
+  const [complete, setComplete] = useState(false)
   // react-hyper-js calls elements.create() on every render of UnifiedCheckout, which restarts the
   // SDK iframes. Build the element once per payment so submit-time state changes can't reset it.
   const element = useMemo(
     () => (
       <UnifiedCheckout
         id="unified-checkout"
-        options={{
-          // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
-          wallets: { walletReturnUrl: `${location.origin}/order/${paymentId}` },
-          // "Save card" checkbox (unticked by default) and this buyer's saved cards. Consent is the tick.
-          displaySavedPaymentMethodsCheckbox: true,
-          displaySavedPaymentMethods: true,
-        }}
+        onChange={(e) => setComplete(!!e?.complete)}
+        options={
+          purpose === 'save'
+            ? {
+                // Only a new card: saving is the whole point, so no wallets and no saved-card list.
+                wallets: { walletReturnUrl: returnUrl, payPal: 'never' },
+                displaySavedPaymentMethodsCheckbox: false,
+                displaySavedPaymentMethods: false,
+              }
+            : {
+                // Wallets (PayPal) confirm inside the SDK; without this they send return_url "" and 400.
+                wallets: { walletReturnUrl: returnUrl },
+                // "Save card" checkbox (unticked by default) and this buyer's saved cards. Consent is the tick.
+                displaySavedPaymentMethodsCheckbox: true,
+                displaySavedPaymentMethods: true,
+              }
+        }
       />
     ),
-    [paymentId],
+    [purpose, returnUrl],
   )
 
   async function submit(e: FormEvent) {
@@ -77,7 +112,7 @@ function PayForm({
     try {
       // Redirects (PayPal) leave the page and come back to return_url, the same order page.
       const result = await hyper.confirmPayment({
-        confirmParams: { return_url: `${location.origin}/order/${paymentId}` },
+        confirmParams: { return_url: returnUrl },
         redirect: 'if_required',
       })
       if (result?.error?.type === 'validation_error') {
@@ -96,9 +131,11 @@ function PayForm({
   return (
     <form onSubmit={submit}>
       {element}
-      <Button type="submit" disabled={busy} className="mt-4 w-full">
+      <Button type="submit" disabled={busy || !complete} className="mt-4 w-full">
         {busy ? (
           COPY.checkout.submitting
+        ) : purpose === 'save' ? (
+          COPY.account.saveCard
         ) : totalCents === undefined ? (
           'Pay'
         ) : (

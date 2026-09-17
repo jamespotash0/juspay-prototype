@@ -32,7 +32,7 @@ test('5. Hard decline (generic): decline copy, and the cart keeps the item', asy
   // The cart survives: badge still 1, and the retry action lands on a checkout that still has the item.
   await expect(page.getByLabel('1 item')).toBeVisible()
   await notice.getByRole('button', { name: COPY.decline.generic.action }).click()
-  await expect(page).toHaveURL(/\/checkout\/sel_doubleeagle$/)
+  await expect(page).toHaveURL(/\?checkout$/)
   await expect(page.getByText(COPY.checkoutPage.emptyGroup)).toBeHidden()
   await expect(page.getByText('1908 Saint-Gaudens Double Eagle')).toBeVisible()
 })

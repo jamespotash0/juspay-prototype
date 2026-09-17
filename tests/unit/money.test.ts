@@ -60,6 +60,23 @@ describe('breakdown (buyer)', () => {
     expect(bigShip.taxCents).toBe(800)
   })
 
+  it('rounds tax per seller, so a multi-seller total is the sum of each seller order', () => {
+    // $0.06 each: 8% is 0.48 cents, rounding to 0 per seller, where the combined $0.12 would round to 1.
+    const a = { ...listing('lst_x', 6, 0), sellerId: 'mike' }
+    const b = { ...listing('lst_y', 6, 0), sellerId: 'sel_other' }
+    const both = [a, b]
+    const one = (id: string) => breakdown([{ listingId: id, qty: 1 }], both)
+    const whole = breakdown(
+      [
+        { listingId: 'lst_x', qty: 1 },
+        { listingId: 'lst_y', qty: 1 },
+      ],
+      both,
+    )
+    expect(whole.taxCents).toBe(0)
+    expect(whole.totalCents).toBe(one('lst_x').totalCents + one('lst_y').totalCents)
+  })
+
   it('throws on an unknown listing', () => {
     expect(() => breakdown([{ listingId: 'nope', qty: 1 }], [morgan])).toThrow()
   })
@@ -102,11 +119,11 @@ describe('sellerLedger (seller)', () => {
     expect(l.netCents).toBe(1_899)
   })
 
-  it('balance: pending until shipped, available after, reversed only on a full refund', () => {
+  it('balance: pending until shipped, held again by a refund request, reversed on a refund', () => {
     expect(sellerLedger(b, 'unshipped', 'none').balance).toBe('pending')
     expect(sellerLedger(b, 'shipped', 'none').balance).toBe('available')
     expect(sellerLedger(b, 'received', 'none').balance).toBe('available')
-    expect(sellerLedger(b, 'disputed', 'none').balance).toBe('available')
+    expect(sellerLedger(b, 'disputed', 'none').balance).toBe('pending')
     expect(sellerLedger(b, 'disputed', 'succeeded').balance).toBe('reversed')
     expect(sellerLedger(b, 'unshipped', 'succeeded').balance).toBe('reversed')
   })
@@ -145,7 +162,7 @@ describe('sellerLedger (seller)', () => {
   })
 
   it('a pending or failed refund does not reverse the balance', () => {
-    expect(sellerLedger(b, 'disputed', 'pending').balance).toBe('available')
-    expect(sellerLedger(b, 'disputed', 'failed').balance).toBe('available')
+    expect(sellerLedger(b, 'shipped', 'pending').balance).toBe('available')
+    expect(sellerLedger(b, 'received', 'failed').balance).toBe('available')
   })
 })

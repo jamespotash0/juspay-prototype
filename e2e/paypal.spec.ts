@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { COPY } from '../src/shared/copy.ts'
 import {
   logPayment,
   paypalButton,
@@ -64,7 +63,9 @@ test('6. PayPal: redirect to the simulated PayPal page, complete it, back to a p
 
   await page.waitForURL(new RegExp(`/order/${id}`), { timeout: 60_000 })
   logPayment('journey6-paypal', id)
-  await expect(page.getByText(COPY.checkout.succeeded)).toBeVisible({ timeout: 45_000 })
+  await expect(page.locator('[aria-current="step"]').first()).toBeVisible({
+    timeout: 45_000,
+  })
   const order = await readOrder(request, id)
   expect(order.state).toBe('paid')
   expect(order.paymentMethodType).toBe('paypal')

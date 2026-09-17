@@ -15,14 +15,14 @@ type Look = {
   struck?: boolean
 }
 
-const PAID = 'text-state-paid bg-state-paid-bg border-state-paid'
-const PENDING = 'text-state-pending bg-state-pending-bg border-state-pending'
-const SHIPPED = 'text-state-shipped bg-state-shipped-bg border-state-shipped'
-const DISPUTED = 'text-state-disputed bg-state-disputed-bg border-state-disputed'
-const FAILED = 'text-state-failed bg-state-failed-bg border-state-failed'
-const REFUNDED = 'text-state-refunded bg-state-refunded-bg border-state-refunded'
-const REVIEW = 'text-state-review bg-state-review-bg border-state-review'
-const NEUTRAL = 'text-state-neutral bg-state-neutral-bg border-state-neutral'
+const PAID = 'text-state-paid bg-state-paid-bg border-state-paid/45'
+const PENDING = 'text-state-pending bg-state-pending-bg border-state-pending/45'
+const SHIPPED = 'text-state-shipped bg-state-shipped-bg border-state-shipped/45'
+const DISPUTED = 'text-state-disputed bg-state-disputed-bg border-state-disputed/45'
+const FAILED = 'text-state-failed bg-state-failed-bg border-state-failed/45'
+const REFUNDED = 'text-state-refunded bg-state-refunded-bg border-state-refunded/45'
+const REVIEW = 'text-state-review bg-state-review-bg border-state-review/45'
+const NEUTRAL = 'text-state-neutral bg-state-neutral-bg border-state-neutral/45'
 
 const LOOKS: Record<Status, Look> = {
   // PaymentState
@@ -90,7 +90,7 @@ export function StatusPill({ status, label }: { status: Status; label?: string }
   const look = LOOKS[status]
   return (
     <span
-      className={`inline-flex h-6 items-center gap-1.5 rounded-slab border px-2 text-xs font-semibold whitespace-nowrap ${look.tone} ${look.border}`}
+      className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold whitespace-nowrap ${look.tone} ${look.border}`}
     >
       <Icon name={look.icon} />
       <span className={look.struck ? 'line-through' : ''}>{label ?? look.label}</span>

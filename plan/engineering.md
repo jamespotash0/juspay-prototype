@@ -13,11 +13,11 @@ Request/Response).
 
 | Endpoint | Does | Secrets |
 | --- | --- | --- |
-| `POST /api/checkout` | Validates listings, confirms one seller, checks availability, computes the amount **server-side**, creates the intent | secret key |
+| `POST /api/checkout` | Validates listings across any number of sellers, checks availability, computes the amount **server-side**, creates the intent | secret key |
 | `GET /api/payment?id=` | The authoritative status read. Returns a projection, never the raw body | secret key |
-| `POST /api/order-state` | Records **mark as shipped / received / disputed** into the payment's metadata | secret key |
-| `POST /api/refund` | Full or partial refund against a payment | secret key |
-| `GET /api/orders` | Buyer orders, or seller sales (see read model) | secret key |
+| `POST /api/order-state` | Records **mark as shipped / received / disputed** for one seller's order into the payment's metadata | secret key |
+| `POST /api/refund` | Refunds one seller's order in full: a partial refund of the payment when the cart had several sellers | secret key |
+| `GET /api/orders` | Buyer orders, seller sales (see read model), or every order in one payment (`?payment=`) | secret key |
 
 **No catalogue, cart or auth endpoint.** The catalogue is a shared TypeScript
 constant — the client renders from it, the server prices from it. The cart is
@@ -31,11 +31,20 @@ mocked role switcher.
 1. Buyer clicks Pay. The browser generates `attemptId` and stores it **before**
    the fetch.
 2. → `POST /api/checkout` with listing ids, quantities, ship-to. **No amount.**
-3. Server validates availability, confirms one seller, computes
-   `Σ(price × qty) + shipping + tax`. Unknown id → 400.
+3. Server validates availability, computes each seller's
+   `Σ(price × qty) + shipping + tax` (tax rounded per seller) and charges the
+   sum. Unknown id → 400.
 4. Server → Hyperswitch `POST /payments` with `payment_id: attemptId`,
-   `capture_method: "automatic"`, `confirm: false`, `metadata: { sellerId,
-   listingIds }`.
+   `capture_method: "automatic"`, `confirm: false`, and metadata listing
+   `sellers` plus each seller's share as flat `<sellerId>.<key>` keys
+   (listing ids, amounts, fulfilment). **An order is one seller's share of a
+   payment**, addressed as `<paymentId>.<sellerId>`. Verified on the sandbox
+   2026-09-16: 111 keys (12 sellers) accepted; updating one seller's keys
+   leaves the others untouched; two partial refunds on one payment both
+   succeed and list separately. Refund ids are
+   `ckr_<hash of payment and seller>_<n>`, which ties each refund to its
+   seller and makes a double-click send the same id. Payments made before
+   this change have one unprefixed set of keys and still read.
 5. → browser: `{ paymentId, clientSecret, publishableKey, amount }`. The
    browser learns the amount from the server, never the reverse.
 6. SDK mounts; PAN and CVV stay inside its iframe. The SDK confirms directly
@@ -67,13 +76,20 @@ Two constraints that shape the schema:
 - **The merge is shallow** — a top-level key extend, so nested objects are
   overwritten wholesale. Fulfilment flags stay **flat top-level keys**
   (`fulfilment`, `shippedAt`, `disputedAt`), never a nested object.
-- Limits are 50 keys, 40-char names, 500-char values. We use five.
+- Documented limits are 50 keys, 40-char names, 500-char values. A cart writes
+  3 keys plus 9 per seller, so the documented limit allows 5 sellers; the
+  sandbox accepted 111 keys (12 sellers) on 2026-09-16. Production would cap a
+  cart at 5 sellers or move the per-seller detail to a store keyed by payment id.
 
 ```
 paid ──seller──► shipped ──buyer──► received
-                    │
-                    └──buyer──► disputed ──admin──► refunded
+ │                  │                   │
+ └──────────────────┴──buyer──► disputed ◄┘ ──admin──► refunded
 ```
+
+Per seller's order. A buyer can dispute **before shipping** too (a seller who
+never ships). That dispute keeps the seller's balance `pending`: funds release
+only on a `shippedAt` stamp, never on the dispute itself.
 
 `shipped` is what makes the seller's balance `available`; the balance is
 derived from this flag plus the payment status, never stored separately.
@@ -149,7 +165,7 @@ fetch. Format `cka_` + 22 hex chars = 26 characters.
 
 **Reused** for every retransmission of the same intent — duplicate submit,
 timeout, refresh, second tab, back button. Two tabs converge because
-`localStorage` is shared per origin. **Regenerated** for a new seller group, a
+`localStorage` is shared per origin. **Regenerated** for a
 cart edit, or any retry after terminal `failed`/`expired` — a failed intent
 cannot be re-driven, so reusing the id there would lock the buyer out of that
 cart permanently.
@@ -205,7 +221,7 @@ return status counts, never sums.
 - **Buyer orders** — `GET /payments/list?customer_id=…` ✅
 - **Refund state** — `POST /refunds/list { payment_id }` ✅
 - **Seller sales** — ❌ no server-side filter. Page through payments (cursor,
-  ≤100/page) and filter on `metadata.sellerId` in memory.
+  ≤100/page) and filter on `metadata.sellers` in memory, then keep only that seller's order.
 
 At demo volume the entire payment history fits in one page.
 

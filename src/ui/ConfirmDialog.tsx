@@ -42,16 +42,16 @@ export function ConfirmDialog({
         e.preventDefault() // Esc: let the parent own `open`
         if (!busy) onCancel()
       }}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-slab border border-rule bg-paper p-0 text-ink shadow-hair"
+      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-card border border-rule bg-paper p-0 text-ink shadow-pop"
     >
-      <div className="flex flex-col gap-3 p-5">
-        <h2 id="confirm-title" className="font-display text-lg font-bold">
+      <div className="flex flex-col gap-2 px-6 pt-6 pb-5">
+        <h2 id="confirm-title" className="text-lg font-bold tracking-tight">
           {title}
         </h2>
-        <div className="text-sm">{body}</div>
+        <div className="text-sm text-ink-muted">{body}</div>
       </div>
-      <div className="flex justify-end gap-2 border-t border-rule px-5 py-3">
-        <Button variant="quiet" onClick={onCancel} disabled={busy}>
+      <div className="flex justify-end gap-2 px-6 pb-6">
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
           {cancelLabel}
         </Button>
         <Button

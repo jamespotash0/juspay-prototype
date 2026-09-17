@@ -3,11 +3,13 @@ import { mapStatus } from '../src/shared/orderState.js'
 import { LISTINGS, PERSONAS } from '../src/shared/seed.js'
 import {
   META,
+  type CartLine,
   type CheckoutRequest,
   type CheckoutResponse,
   type Listing,
   type PaymentSource,
   type PaymentState,
+  type ShipTo,
 } from '../src/shared/types.js'
 import { hsFetch } from './_lib/hyperswitch.js'
 import { jsonError, type HsPayment } from './_lib/orderView.js'
@@ -15,9 +17,25 @@ import { jsonError, type HsPayment } from './_lib/orderView.js'
 const ATTEMPT_ID = /^cka_[0-9a-f]{22}$/
 const TERMINAL: PaymentState[] = ['paid', 'failed', 'cancelled', 'refunded']
 const cents = (v: unknown) => Number.isInteger(v) && (v as number) >= 0
+const complete = (a: Partial<ShipTo> | undefined): a is ShipTo =>
+  !!a &&
+  (['name', 'line1', 'city', 'state', 'zip'] as const).every(
+    (k) => typeof a[k] === 'string' && !!a[k].trim(),
+  )
+const hsAddress = (a: ShipTo) => ({
+  address: {
+    first_name: a.name,
+    line1: a.line1,
+    city: a.city,
+    state: a.state,
+    zip: a.zip,
+    country: 'US',
+  },
+})
 
 /**
- * POST /api/checkout — one intent for one seller group.
+ * POST /api/checkout — one intent for the whole cart, however many sellers it spans.
+ * Each seller's share is recorded in metadata, so it ships, pays out and refunds on its own.
  * The amount is computed here from our own catalogue; nothing money-shaped is read from the body.
  */
 export async function POST(request: Request): Promise<Response> {
@@ -32,20 +50,19 @@ async function checkout(request: Request): Promise<Response> {
   const body = (await request.json().catch(() => null)) as Partial<CheckoutRequest> | null
   if (!body) return jsonError(400, 'BAD_REQUEST', 'Expected a JSON body')
 
-  const { attemptId, buyerId, items, userListings, shipTo } = body
+  const { attemptId, buyerId, items, userListings, shipTo, billTo } = body
   if (typeof attemptId !== 'string' || !ATTEMPT_ID.test(attemptId))
     return jsonError(400, 'BAD_REQUEST', 'Invalid attemptId')
   const buyer = PERSONAS.find((p) => p.id === buyerId)
   if (!buyer) return jsonError(400, 'BAD_REQUEST', 'Unknown buyer')
   if (!Array.isArray(items) || items.length === 0)
     return jsonError(400, 'BAD_REQUEST', 'No items')
-  if (
-    !shipTo ||
-    (['name', 'line1', 'city', 'state', 'zip'] as const).some(
-      (k) => typeof shipTo[k] !== 'string' || !shipTo[k].trim(),
-    )
-  )
+  if (!complete(shipTo))
     return jsonError(400, 'BAD_REQUEST', 'Incomplete ship-to address')
+  if (billTo !== undefined && !complete(billTo))
+    return jsonError(400, 'BAD_REQUEST', 'Incomplete billing address')
+  // Hyperswitch keeps both on the payment; the buyer can change them until they pay.
+  const addresses = { shipping: hsAddress(shipTo), billing: hsAddress(billTo ?? shipTo) }
 
   // Seeded listings always come from the server copy. Client-sent listings count only for usr_ ids
   // (demo simplification in the contract), and only with sane integer prices.
@@ -61,7 +78,7 @@ async function checkout(request: Request): Promise<Response> {
     ),
   ]
 
-  const lines = []
+  const lines: { listing: Listing; line: CartLine }[] = []
   for (const item of items) {
     const listing = catalogue.find((l) => l.id === item?.listingId)
     if (!listing)
@@ -71,12 +88,25 @@ async function checkout(request: Request): Promise<Response> {
     lines.push({ listing, line: { listingId: listing.id, qty: item.qty } })
   }
 
-  const sellerId = lines[0].listing.sellerId
-  if (lines.some((l) => l.listing.sellerId !== sellerId))
-    return jsonError(400, 'MULTIPLE_SELLERS', 'One checkout per seller')
-  if (sellerId === buyer.id)
+  if (lines.some((l) => l.listing.sellerId === buyer.id))
     return jsonError(409, 'OWN_LISTING', "You can't buy your own listing")
 
+  // Per seller, in cart order. The charge is the sum of these, so each seller's share can be
+  // refunded exactly (breakdown() rounds tax per seller for the same reason).
+  const sellerIds = [...new Set(lines.map((l) => l.listing.sellerId))]
+  const groups = sellerIds.map((sellerId) => {
+    const own = lines.filter((l) => l.listing.sellerId === sellerId)
+    return {
+      sellerId,
+      listingIds: own.map((l) => l.listing.id),
+      // A return refunds the whole seller order, so one ineligible item makes the order ineligible.
+      noReturns: own.some((l) => l.listing.noReturns === true),
+      b: breakdown(
+        own.map((l) => l.line),
+        catalogue,
+      ),
+    }
+  })
   const b = breakdown(
     lines.map((l) => l.line),
     catalogue,
@@ -88,7 +118,7 @@ async function checkout(request: Request): Promise<Response> {
       paymentId: attemptId,
       clientSecret,
       publishableKey: process.env.JUSPAY_API_PUBLISHABLE_KEY ?? '',
-      sellerId,
+      sellerIds,
       breakdown: b,
     } satisfies CheckoutResponse)
 
@@ -106,28 +136,29 @@ async function checkout(request: Request): Promise<Response> {
       // buying on-session is the case; no off-session / merchant-initiated charges here.
       setup_future_usage: 'on_session',
       return_url: `${new URL(request.url).origin}/order/${attemptId}`,
-      shipping: {
-        address: {
-          first_name: shipTo.name,
-          line1: shipTo.line1,
-          city: shipTo.city,
-          state: shipTo.state,
-          zip: shipTo.zip,
-          country: 'US',
-        },
-      },
+      ...addresses,
       metadata: {
-        [META.sellerId]: sellerId,
+        [META.sellers]: sellerIds.join(','),
         [META.buyerId]: buyer.id,
-        [META.listingIds]: lines.map((l) => l.listing.id).join(','),
-        [META.itemsCents]: String(b.itemsCents),
-        [META.shippingCents]: String(b.shippingCents),
-        [META.taxCents]: String(b.taxCents),
-        [META.fulfilment]: 'unshipped',
-        [META.shippedAt]: '',
-        [META.receivedAt]: '',
-        [META.disputedAt]: '',
-        [META.disputeReason]: '',
+        // ponytail: 3 + 9 keys per seller (+1 if ineligible for return, +3 once disputed and asked). Hyperswitch documents 50 keys (5 sellers); the sandbox accepted
+        // 111 (12 sellers) on 2026-09-16. Cap the cart at 5 sellers if a real account enforces the limit.
+        ...Object.fromEntries(
+          groups.flatMap(({ sellerId, listingIds, noReturns, b: g }) =>
+            Object.entries({
+              [META.listingIds]: listingIds.join(','),
+              [META.itemsCents]: String(g.itemsCents),
+              [META.shippingCents]: String(g.shippingCents),
+              [META.taxCents]: String(g.taxCents),
+              [META.fulfilment]: 'unshipped',
+              [META.shippedAt]: '',
+              [META.receivedAt]: '',
+              [META.disputedAt]: '',
+              [META.disputeReason]: '',
+              // Eligibility is fixed at purchase: a seller changing policy later doesn't change this order.
+              ...(noReturns ? { [META.noReturns]: '1' } : {}),
+            }).map(([k, v]) => [`${sellerId}.${k}`, v]),
+          ),
+        ),
         [META.source]: (request.headers.get('x-slabbed-source') === 'test'
           ? 'test'
           : 'app') satisfies PaymentSource,
@@ -154,8 +185,21 @@ async function checkout(request: Request): Promise<Response> {
     if (
       mapStatus(existing.data.status) === 'awaiting_payment' &&
       existing.data.client_secret
-    )
+    ) {
+      // The same attempt after "Edit": the amount can't have changed, but the addresses can.
+      // Verified on the sandbox 2026-09-16: POST /payments/{id} updates both before confirmation.
+      const updated = await hsFetch(`/payments/${attemptId}`, {
+        method: 'POST',
+        body: JSON.stringify(addresses),
+      })
+      if (!updated.ok)
+        return jsonError(
+          502,
+          'UPSTREAM',
+          "We couldn't update the address. Nothing was charged.",
+        )
       return respond(existing.data.client_secret)
+    }
     return Response.json(
       {
         error: { code: 'IN_PROGRESS', message: 'This payment is already in progress' },

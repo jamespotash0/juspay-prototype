@@ -1,6 +1,6 @@
-import type { MouseEvent } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
 import { COPY } from '../shared/copy'
-import type { Persona, PersonaId } from '../shared/types'
+import { Icon } from './Icon'
 
 export interface NavLink {
   label: string
@@ -9,14 +9,13 @@ export interface NavLink {
 }
 
 interface TopBarProps {
-  personas: Persona[]
-  /** null while signed out: the bar shows a Sign in button instead of the account area. */
-  activePersonaId: PersonaId | null
-  onPersonaChange: (id: PersonaId) => void
-  onSignOut: () => void
+  /** null while signed out: the bar shows a Sign in button instead of the account link. */
+  account: { name: string } | null
+  accountHref?: string
+  /** True on the account page itself. */
+  accountCurrent?: boolean
   onSignIn: () => void
-  onSearch: (query: string) => void
-  searchValue: string
+  onSignOut: () => void
   links: NavLink[]
   cartCount: number
   cartHref?: string
@@ -27,16 +26,16 @@ interface TopBarProps {
 
 const S = COPY.shell
 
-// Desktop: one row — wordmark, search, links, account, cart.
-// Below sm: row 1 wordmark · links · cart; row 2 search · account. Nothing is hidden.
+const PILL =
+  'inline-flex h-8 shrink-0 items-center rounded-full border border-rule-strong bg-paper text-sm font-medium text-ink transition-colors hover:border-ink'
+
+// One row at every width: wordmark, links, then the cart and the account menu at the far right.
 export function TopBar({
-  personas,
-  activePersonaId,
-  onPersonaChange,
-  onSignOut,
+  account,
+  accountHref = '/account',
+  accountCurrent,
   onSignIn,
-  onSearch,
-  searchValue,
+  onSignOut,
   links,
   cartCount,
   cartHref = '/cart',
@@ -50,99 +49,155 @@ export function TopBar({
   }
 
   return (
-    <header className="sticky top-0 z-10 border-b border-rule bg-paper">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:flex-nowrap sm:gap-x-6">
+    <header className="sticky top-0 z-10 border-b px-4 sm:px-6 border-rule bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85">
+      <div className="mx-auto flex max-w-7xl items-center gap-x-1.5 py-2 sm:gap-x-3">
         <a
           href={homeHref}
           onClick={go(homeHref)}
-          className="order-1 font-display text-lg sm:order-none font-bold tracking-tight sm:text-xl"
+          className="inline-flex items-center gap-1.5 font-wordmark text-base font-bold tracking-tight sm:mr-3 sm:text-lg"
         >
-          {S.wordmark}
+          <img
+            src="/favicon.svg"
+            alt=""
+            aria-hidden="true"
+            className="h-[1.25em] w-auto"
+          />
+          <span className="max-[400px]:sr-only">{S.wordmark}</span>
         </a>
 
-        <form
-          role="search"
-          onSubmit={(e) => e.preventDefault()}
-          className="order-4 min-w-0 grow basis-1/2 sm:order-none sm:mx-auto sm:max-w-md sm:basis-auto"
-        >
-          <label className="sr-only" htmlFor="topbar-search">
-            {S.searchLabel}
-          </label>
-          <input
-            id="topbar-search"
-            type="search"
-            value={searchValue}
-            onChange={(e) => onSearch(e.target.value)}
-            placeholder={S.searchPlaceholder}
-            className="h-9 w-full rounded-slab border border-rule bg-bone px-3 text-sm placeholder:text-ink-muted focus-visible:border-accent"
-          />
-        </form>
-
-        <nav className="order-2 ml-auto flex items-center gap-4 text-sm sm:order-none sm:ml-0">
+        <nav className="mr-auto flex min-w-0 items-center text-sm sm:gap-0.5">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
               onClick={go(l.href)}
               aria-current={l.current ? 'page' : undefined}
-              className="font-medium text-ink hover:text-accent aria-[current=page]:underline"
+              className="inline-flex h-8 items-center rounded-full px-2 font-medium text-ink-muted sm:px-3.5 transition-colors hover:text-ink aria-[current=page]:bg-bone aria-[current=page]:text-ink"
             >
               {l.label}
             </a>
           ))}
         </nav>
 
-        {activePersonaId ? (
-          <div className="order-5 flex shrink-0 items-center gap-3 sm:order-none">
-            {/* The select shows the signed-in name; switching keeps the provider. */}
-            <label className="sr-only" htmlFor="topbar-persona">
-              {S.switchAccount}
-            </label>
-            <select
-              id="topbar-persona"
-              value={activePersonaId}
-              onChange={(e) => onPersonaChange(e.target.value as PersonaId)}
-              className="h-9 max-w-36 rounded-slab border border-rule bg-paper px-2 text-sm font-medium text-accent hover:border-accent sm:max-w-none"
-            >
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {/* "Slabbed Admin" already names the role; no suffix, so it fits at 390px. */}
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="text-sm font-medium whitespace-nowrap text-accent hover:underline"
-            >
-              {S.signOut}
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="order-5 inline-flex h-9 shrink-0 items-center rounded-slab border border-accent px-3 text-sm font-semibold text-accent hover:bg-accent/5 sm:order-none"
-          >
-            {S.signIn}
-          </button>
-        )}
-
         <a
           href={cartHref}
           onClick={go(cartHref)}
-          className="order-3 inline-flex items-center gap-1.5 text-sm font-medium text-ink hover:text-accent sm:order-none"
+          className={`${PILL} gap-1.5 pr-1.5 pl-2.5 sm:pl-3`}
         >
-          {S.cart}
+          <Icon name="cart" className="size-4" />
+          <span className="max-sm:sr-only">{S.cart}</span>
           <span
             aria-label={`${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}
-            className={`money inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${cartCount > 0 ? 'bg-accent text-accent-ink' : 'border border-rule text-ink-muted'}`}
+            className={`money inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${cartCount > 0 ? 'bg-primary text-primary-ink' : 'bg-bone text-ink-muted'}`}
           >
             {cartCount}
           </span>
         </a>
+
+        {account ? (
+          <AccountMenu
+            name={account.name}
+            href={accountHref}
+            current={accountCurrent}
+            go={go}
+            onSignOut={onSignOut}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={onSignIn}
+            className={`${PILL} px-4 font-semibold`}
+          >
+            {S.signIn}
+          </button>
+        )}
       </div>
     </header>
+  )
+}
+
+const initials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('')
+
+/** Initials in a circle with a chevron; opens Account and Sign out. Native <details>, closed by Escape or a click outside. */
+function AccountMenu({
+  name,
+  href,
+  current,
+  go,
+  onSignOut,
+}: {
+  name: string
+  href: string
+  current?: boolean
+  go: (href: string) => (e: MouseEvent) => void
+  onSignOut: () => void
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = ref.current
+      if (!el?.open) return
+      if (
+        e instanceof KeyboardEvent ? e.key === 'Escape' : !el.contains(e.target as Node)
+      )
+        el.open = false
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [])
+  const shut = () => ref.current && (ref.current.open = false)
+
+  return (
+    <details ref={ref} className="group relative">
+      <summary
+        aria-label={`${S.account}: ${name}`}
+        className="flex h-8 cursor-pointer list-none items-center gap-1 rounded-full pr-1 hover:text-ink [&::-webkit-details-marker]:hidden"
+      >
+        <span
+          aria-hidden="true"
+          className={`inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-ink ring-offset-2 ring-offset-paper ${current ? 'ring-2 ring-ink' : ''}`}
+        >
+          {initials(name)}
+        </span>
+        <Icon
+          name="chevronDown"
+          className="size-3.5 text-ink-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="absolute right-0 z-20 mt-2 w-56 rounded-control border border-rule bg-paper p-1.5 shadow-pop">
+        <p className="truncate px-2.5 pt-1.5 pb-2 text-sm font-semibold">{name}</p>
+        <a
+          href={href}
+          onClick={(e) => {
+            shut()
+            go(href)(e)
+          }}
+          aria-current={current ? 'page' : undefined}
+          className="block rounded-control px-2.5 py-2 text-sm hover:bg-well aria-[current=page]:font-semibold"
+        >
+          {S.account}
+        </a>
+        <button
+          type="button"
+          onClick={() => {
+            shut()
+            onSignOut()
+          }}
+          className="block w-full rounded-control px-2.5 py-2 text-left text-sm text-ink-muted hover:bg-well hover:text-ink"
+        >
+          {S.signOut}
+        </button>
+      </div>
+    </details>
   )
 }

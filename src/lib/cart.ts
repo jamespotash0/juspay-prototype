@@ -6,7 +6,34 @@ const store = createStore<CartLine[]>('slabbed.cart', [], (v) =>
   Array.isArray(v) ? (v as CartLine[]) : [],
 )
 
+// Carts parked by owner (a persona id, or 'guest') while someone else is signed in.
+const parked = createStore<Record<string, CartLine[]>>('slabbed.parkedCarts', {}, (v) =>
+  v && typeof v === 'object' && !Array.isArray(v)
+    ? (v as Record<string, CartLine[]>)
+    : {},
+)
+
 export const getCart = store.get
+
+/**
+ * Hands the cart to a new owner: parks the current one and loads theirs.
+ * A guest's cart carries into sign-in, so checkout doesn't lose it; the guest is left empty.
+ */
+export function switchCartOwner(from: string, to: string) {
+  if (from === to) return
+  const { [to]: theirs = [], ...rest } = parked.get()
+  const current = store.get()
+  if (from === 'guest') {
+    parked.set(rest)
+    store.set([
+      ...theirs,
+      ...current.filter((c) => !theirs.some((t) => t.listingId === c.listingId)),
+    ])
+  } else {
+    parked.set({ ...rest, [from]: current })
+    store.set(theirs)
+  }
+}
 
 export function useCart(): CartLine[] {
   return useSyncExternalStore(store.subscribe, store.get)
@@ -32,6 +59,19 @@ export function clearCart(listingIds?: string[]) {
   store.set(
     listingIds ? store.get().filter((l) => !listingIds.includes(l.listingId)) : [],
   )
+}
+
+/** What checkout charges for: lines that still exist, aren't sold, and aren't the buyer's own listings. */
+export function checkoutLines(
+  lines: CartLine[],
+  listings: Listing[],
+  sold: Set<string>,
+  buyerId: string | undefined,
+): CartLine[] {
+  return lines.filter((line) => {
+    const listing = listings.find((l) => l.id === line.listingId)
+    return listing && !sold.has(listing.id) && listing.sellerId !== buyerId
+  })
 }
 
 /** Groups lines by the seller of each listing, in cart order. Lines for unknown listings are dropped. */

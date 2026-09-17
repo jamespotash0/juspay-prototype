@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { PersonaId } from '../shared/types.ts'
+import { switchCartOwner } from './cart.ts'
 import { createStore } from './store.ts'
 
 export type AuthProvider = 'google' | 'apple' | 'email'
@@ -20,11 +21,16 @@ export function useSession(): Session | null {
   return useSyncExternalStore(store.subscribe, store.get)
 }
 
+// Every change of who is signed in routes through here, so the cart follows the account.
+const owner = () => store.get()?.persona ?? 'guest'
+
 export function signIn(persona: PersonaId, provider: AuthProvider) {
+  switchCartOwner(owner(), persona)
   store.set({ persona, provider })
 }
 
 export function signOut() {
+  switchCartOwner(owner(), 'guest')
   store.set(null)
 }
 
@@ -34,7 +40,9 @@ export const getPersona = (): PersonaId => store.get()?.persona ?? 'alex'
 /** Switch demo account without re-signing in. No-op while signed out. */
 export function setPersona(persona: PersonaId) {
   const s = store.get()
-  if (s && s.persona !== persona) store.set({ ...s, persona })
+  if (!s || s.persona === persona) return
+  switchCartOwner(s.persona, persona)
+  store.set({ ...s, persona })
 }
 
 export function usePersona(): PersonaId {

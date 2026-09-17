@@ -1,7 +1,9 @@
 import { useEffect, type ComponentType } from 'react'
-import { navigate, type Params } from './lib/navigation.ts'
+import { navigate, useSearchParams, type Params } from './lib/navigation.ts'
 import { Router, type Route } from './lib/router.tsx'
 import { useSession } from './lib/session.ts'
+import Account from './pages/Account.tsx'
+import AccountPaypal from './pages/AccountPaypal.tsx'
 import Admin from './pages/Admin.tsx'
 import AdminPayment from './pages/AdminPayment.tsx'
 import Cart from './pages/Cart.tsx'
@@ -30,6 +32,9 @@ function signedIn(Page: Page): Page {
   }
 }
 
+// Checkout isn't a route: it opens over whichever page has ?checkout.
+const GuardedCheckout = signedIn(Checkout)
+
 // Pages receive { params }; stubs may ignore it.
 const routes: Route[] = [
   { path: '/', component: Catalogue },
@@ -37,9 +42,11 @@ const routes: Route[] = [
   { path: '/cart', component: Cart },
   { path: '/signin', component: SignIn },
   { path: '/signin/:provider', component: SignInProvider },
-  { path: '/checkout/:sellerId', component: signedIn(Checkout) },
+  // A bare payment id shows every seller's order in that purchase; <paymentId>.<sellerId> shows one.
   { path: '/order/:paymentId', component: signedIn(Order) },
   { path: '/orders', component: signedIn(Orders) },
+  { path: '/account', component: signedIn(Account) },
+  { path: '/account/paypal', component: signedIn(AccountPaypal) },
   { path: '/sell', component: signedIn(Sell) },
   { path: '/sell/new', component: signedIn(SellNew) },
   { path: '/admin', component: signedIn(Admin) },
@@ -51,5 +58,11 @@ function NotFound() {
 }
 
 export default function App() {
-  return <Router routes={routes} notFound={NotFound} />
+  const checkout = useSearchParams().has('checkout')
+  return (
+    <>
+      <Router routes={routes} notFound={NotFound} />
+      {checkout && <GuardedCheckout params={{}} />}
+    </>
+  )
 }

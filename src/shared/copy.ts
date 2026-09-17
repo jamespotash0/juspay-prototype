@@ -24,8 +24,6 @@ interface DeclineCopy {
 }
 
 export const COPY = {
-  hold: "The seller isn't paid until they ship. If something's wrong with your order, tell us from the order page and we can refund you.",
-
   empty: {
     noResults: {
       title: 'No listings match',
@@ -38,8 +36,8 @@ export const COPY = {
       action: 'Browse',
     },
     listings: {
-      title: 'No listings yet',
-      fact: 'Graded coins and slabbed cards sell fastest.',
+      title: 'Nothing listed yet',
+      fact: 'List a graded coin or slabbed card with its cert number, price and shipping. It goes live in the shop as soon as you publish.',
       action: 'Create a listing',
     },
     orders: {
@@ -49,12 +47,12 @@ export const COPY = {
     },
     sales: {
       title: 'No sales yet',
-      fact: 'When someone buys, you ship directly — funds become available when you mark it shipped.',
+      fact: 'When a buyer checks out, the sale shows up here with their shipping details. Ship it, mark it shipped, and your earnings are released.',
       action: 'List an item',
     },
     balance: {
-      title: 'No balance yet',
-      fact: 'Sold → Shipped → Available.',
+      title: 'No earnings yet',
+      fact: 'A sale counts as pending until you ship it. Once it is marked shipped, the price plus shipping, minus 5% commission, becomes available.',
       action: 'List an item',
     },
   } satisfies Record<string, EmptyCopy>,
@@ -72,7 +70,6 @@ export const COPY = {
       reference: 'Reference',
       action: 'Check again',
     },
-    succeeded: "Payment complete. We're holding it until the seller ships.",
   },
 
   decline: {
@@ -108,11 +105,6 @@ export const COPY = {
 
   postPayment: {
     actionDidNotSave: "That didn't save — try again.",
-    /** No dispute on the order. */
-    refundFailed: 'No money has moved. You can retry the refund.',
-    refundFailedDispute:
-      'No money has moved. The dispute is still open, and you can retry the refund.',
-    refundSucceeded: "Refunded. The seller's balance has been reversed.",
     /** Buyer-facing: where the money goes, not the seller's ledger. */
     refundSucceededBuyer:
       'Refunded in full to your original payment method. Your bank may take a few days to show it.',
@@ -122,26 +114,73 @@ export const COPY = {
     ship: 'Mark shipped',
     receive: 'Mark received',
     refund: 'Refund',
-    haveIssue: 'Have an issue?',
-    whatsWrong: "What's wrong?",
+    haveIssue: 'Have a problem?',
+    /** Every option shows every time; a blocked one says why. */
     issues: {
-      notArrived: "It hasn't arrived",
-      wrongItem: "Something's wrong with my item",
+      cancel: {
+        label: 'Cancel and refund',
+        hint: 'The seller cancels before shipping and refunds you in full.',
+        submit: 'Request cancellation',
+        step: 'Cancellation requested',
+      },
+      notArrived: {
+        label: "It hasn't arrived",
+        hint: 'The seller checks tracking, then refunds you if it’s lost.',
+        submit: 'Request refund',
+        step: 'Refund requested',
+      },
+      notAsDescribed: {
+        label: 'Not as described',
+        hint: 'Wrong item, damaged, or not the grade listed. This applies even if the item is ineligible for return.',
+        submit: 'Request refund',
+        step: 'Refund requested',
+      },
+      return: {
+        label: 'Return it',
+        hint: 'Changed your mind? Send it back and the seller refunds you once they have it.',
+        submit: 'Request return',
+        step: 'Return requested',
+      },
+      question: {
+        label: 'Ask the seller',
+        hint: 'A question, not a refund. Nothing about your order changes.',
+        submit: 'Send question',
+        step: '',
+      },
     },
-    issueHint:
-      'Tell us what happened. The seller stays unpaid while Slabbed reviews your request.',
+    blocked: {
+      alreadyShipped: 'Already shipped',
+      notShipped: 'Not shipped yet',
+      received: 'You marked it received',
+      ineligible: 'Ineligible for return', // COPY.common.noReturns
+    },
     details: 'Details (optional)',
-    requestRefund: 'Request refund',
-    refundRequested:
-      "Refund requested. Slabbed is reviewing it, and the seller stays unpaid until it's resolved.",
+    yourQuestion: 'Your question',
+    refundHint: 'The seller stays unpaid until they answer.',
+    youAsked: 'You asked the seller',
+    buyerAsked: 'The buyer asked',
+    sellerRequest: 'The buyer asked for a refund',
+    sellerRequestFact: 'You stay unpaid for this sale until you refund it.',
+    noReason: 'The buyer gave no reason.',
+    refundBuyer: 'Refund buyer',
+    refundTitle: (amount: string, buyer: string) => `Refund ${amount} to ${buyer}?`,
+    refundBody:
+      "The buyer's whole order from you goes back to how they paid. It can't be undone, and this sale pays you nothing.",
+    refunding: 'Refunding…',
+    refundConfirm: (amount: string) => `Refund ${amount}`,
+    refundFailed:
+      "The refund didn't go through. No money has moved, so you can try again.",
   },
 
   // ── Shared across pages ───────────────────────────────────────────────────
 
   common: {
+    returns: 'Returns accepted',
+    noReturns: 'Ineligible for return',
     tryAgain: 'Try again',
     cancel: 'Cancel',
     back: 'Back',
+    save: 'Save',
     saving: 'Saving…',
     freeShipping: 'Free shipping',
     plusShipping: 'shipping',
@@ -167,10 +206,66 @@ export const COPY = {
     admin: 'Admin',
     signIn: 'Sign in',
     signOut: 'Sign out',
+    account: 'Account',
     switchAccount: 'Switch demo account',
+    /** What each demo account stands in for, shown wherever you pick one. */
+    personaRole: {
+      alex: { short: 'Buyer Flow', long: 'Buyer Flow' },
+      mike: { short: 'Seller Flow', long: 'Seller Flow' },
+      admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
+    },
+    resetConfirm:
+      'Reset the demo? This clears your cart, created listings and sign-in in this browser.',
+    footer:
+      'Slabbed is a demo. Listings, sellers and accounts are synthetic; payments run in the Hyperswitch sandbox.',
+  },
+
+  account: {
+    title: 'Account',
+    profile: 'Profile',
+    name: 'Name',
+    nameHint: 'Shown in the top bar and filled in as your ship-to name at checkout.',
+    email: 'Email',
+    signedInWith: (provider: string) => `Signed in with ${provider}`,
+    saved: 'Saved',
+    addresses: 'Addresses',
+    addressesFact: 'Checkout fills these in for you. Anything you use at checkout is saved here too.',
+    methods: 'Payment methods',
+    methodsLoading: 'Loading saved cards…',
+    methodsFailed: "We couldn't load your saved cards.",
+    noCards: 'No saved payment methods yet.',
+    card: (network: string | undefined, last4: string, funding?: string) =>
+      `${[network ?? 'Card', funding].filter(Boolean).join(' ')} ending in ${last4}`,
+    expires: (expiry: string) => `Expires ${expiry}`,
+    remove: 'Remove',
+    defaultBadge: 'Default',
+    makeDefault: 'Make default',
+    addCard: 'Add Payment Method',
+    saveCard: 'Save card',
+    addCardFact: 'Nothing is charged. Your card is checked and stored with Hyperswitch.',
+    addCardFailed: "We couldn't start adding a card. Nothing was saved.",
+    cardSaving: 'Saving your card…',
+    cardNotSaved: "That card wasn't saved. Try again or use another card.",
+    removeConfirm: (label: string) => `Remove ${label} from your account?`,
+    removeFailed: "That didn't save. Try again.",
+    otherMethods:
+      'Bank accounts aren’t saved yet. Cards are stored with Hyperswitch, never by Slabbed.',
+    paypal: 'PayPal',
+    paypalLinked: (email: string) => `Linked as ${email}`,
+    paypalNone: 'Not linked',
+    paypalLink: 'Link PayPal',
+    paypalUnlink: 'Unlink',
+    paypalDemo:
+      'Demo link: nothing is sent to PayPal. At checkout, PayPal still signs in through Hyperswitch.',
+    paypalTitle: 'Link PayPal (demo)',
+    paypalChoose: 'Choose the PayPal account to link',
+    paypalConsent:
+      'Slabbed will see this PayPal email address. You can unlink it any time.',
     reset: 'Reset demo',
-    resetBody:
-      "Clears this browser's cart, created listings, sold markers and sign-in. Real sandbox orders are never touched.",
+    resetFact:
+      "Clears this browser's cart, created listings, sold markers, saved name and addresses, linked PayPal and sign-in. Real sandbox orders and saved cards are never touched.",
+    demo: 'Demo account',
+    demoFact: 'Switch to another demo person to see the marketplace from their side.',
   },
 
   signIn: {
@@ -197,6 +292,24 @@ export const COPY = {
     back: 'Back to sign-in options',
   },
 
+  /** Shared labels for the catalogue listing card. */
+  tile: {
+    grade: 'Grade',
+    cert: 'Cert',
+    year: 'Year',
+    viewDetails: 'View details',
+    watch: 'Add to watch list',
+    unwatch: 'Remove from watch list',
+  },
+
+  /** Page headers: a short eyebrow over one plain headline. */
+  pageHeaders: {
+    orders: { eyebrow: 'Your collection', title: 'Orders' },
+    sell: { eyebrow: 'Seller', title: 'Your sales and listings' },
+    admin: { eyebrow: 'Marketplace operations', title: 'Payments and disputes' },
+    adminPayment: { eyebrow: 'Payment review' },
+  },
+
   sold: {
     label: 'Sold',
     listing: 'This one-of-one item has sold.',
@@ -205,15 +318,24 @@ export const COPY = {
   },
 
   catalogue: {
+    watchlist: 'Watchlist',
     chips: {
       coin: 'Coins',
       card: 'Cards',
       graded: 'Graded',
       raw: 'Raw',
       free: 'Free shipping',
+      watching: 'Watching',
     },
+    filters: 'Filters',
+    filterGroups: [
+      { label: 'Category', chips: ['coin', 'card'] },
+      { label: 'Grading', chips: ['graded', 'raw'] },
+      { label: 'Shipping', chips: ['free'] },
+    ],
+    clearFilters: 'Clear',
+    results: 'listings',
     of: 'of',
-    for: 'for',
     allListings: 'All listings',
     pagination: 'Pages',
     page: 'Page',
@@ -228,14 +350,14 @@ export const COPY = {
     notFound: "This listing isn't here",
     notFoundFact: 'The link may be wrong, or the listing was created in another browser.',
     back: 'Back to listings',
+    backToOrder: 'Back to order',
     cert: 'Cert',
-    buyNow: 'Buy now',
-    addToCart: 'Add to cart',
-    inCart: 'In your cart ·',
-    viewCart: 'View cart',
+    buyNow: 'Buy Now',
+    addToCart: 'Add to Cart',
+    viewInCart: 'View in Cart',
     own: 'This is your listing.',
     ownLink: 'See it on your seller page',
-    adminCantBuy: "Admins can't buy. Switch to a collector to buy this.",
+    adminCantBuy: "Admins can't buy. Switch to Alex or Mike to buy this.",
     details: 'Details',
     seller: 'Seller',
     rating: 'rating',
@@ -248,6 +370,7 @@ export const COPY = {
       year: 'Year',
       mintMark: 'Mint mark',
       category: 'Category',
+      returns: 'Returns',
     },
     coin: 'Coin',
     card: 'Card',
@@ -255,35 +378,38 @@ export const COPY = {
 
   cart: {
     title: 'Cart',
-    manySellers: (n: number) =>
-      `Items from ${n} sellers. Each seller is checked out and paid separately.`,
-    oneSeller: 'Each seller is checked out and paid separately.',
     remove: 'Remove',
     qty: 'Qty',
     items: 'Items',
     shipping: 'Shipping',
     subtotal: 'Subtotal',
-    taxLater: 'Sales tax is added at checkout.',
-    own: "This is your listing — you can't buy it.",
-    admin: "Admins can't buy. Switch to a collector to check out.",
-    checkOutWith: (handle: string) => `Check out with ${handle}`,
+    tax: 'Sales tax',
+    total: 'Total',
+    summary: 'Order summary',
+    own: "Your listing — it isn't included at checkout.",
+    admin: "Admins can't buy. Switch to Alex or Mike to check out.",
+    checkOut: 'Proceed to Checkout',
+    nothingToBuy: 'Nothing in your cart can be bought right now.',
   },
 
   checkoutPage: {
     title: 'Checkout',
-    emptyGroup: 'Nothing from this seller in your cart',
+    close: 'Close checkout',
+    emptyGroup: 'Nothing in your cart to check out',
     backToCart: 'Back to cart',
-    ownListing: "You can't buy your own listing",
-    ownListingBody: 'Switch to another collector in the top bar to buy it.',
     admin: 'Admins don’t check out',
     adminBody: 'Switch to Alex or Mike in the top bar to buy.',
     shipTo: 'Ship to',
     fields: { name: 'Name', line1: 'Address', city: 'City', state: 'State', zip: 'ZIP' },
-    continue: 'Continue to payment',
+    continue: 'Continue to Payment',
+    billing: 'Billing address',
+    sameAsShipping: 'Same as shipping address',
+    edit: 'Edit',
+    savedHint: (card: string) =>
+      `Your default card, ${card}, is selected below. Enter its CVC to pay, or choose New payment methods for another card or PayPal. Change your default in Account.`,
     starting: 'Starting…',
     payment: 'Payment',
     summary: 'Summary',
-    from: 'From',
     items: 'Items',
     shipping: 'Shipping',
     tax: 'Tax',
@@ -293,6 +419,9 @@ export const COPY = {
 
   order: {
     title: 'Order',
+    heading: (number: string) => `Order #: ${number}`,
+    number: 'Order number',
+    placed: 'Placed',
     loading: 'Loading order…',
     backToOrders: 'Back to orders',
     backToSales: 'Back to sales',
@@ -302,25 +431,34 @@ export const COPY = {
     toOrders: 'Your orders',
     paymentFailed: "Payment didn't go through",
     supportRef: 'Support ref',
+    shipment: (n: number, of: number, handle: string) =>
+      `Shipment ${n} of ${of} · from ${handle}`,
     review: 'This payment is being reviewed',
     reviewBody: "Don't pay again. We'll update this order when the review finishes.",
     cancelled: 'This payment was cancelled. Nothing has been charged.',
     other: "This payment needs a look from us. Don't pay again.",
-    items: 'Items',
-    amounts: 'Amounts',
+    summary: 'Order summary',
+    steps: {
+      paid: 'Paid',
+      shipped: 'Shipped',
+      received: 'Received',
+      refundRequested: 'Refund requested',
+      refunding: 'Refunding',
+      refunded: 'Refunded',
+      refundFailed: 'Refund failed',
+      done: 'done',
+      notYet: 'not yet',
+    },
     yourSale: 'Your sale',
     gross: 'Items + shipping',
     commission: 'Commission',
     refunded: 'Refunded to buyer',
     net: 'You receive',
-    progress: 'Progress',
-    steps: {
-      paid: 'Paid',
-      shipped: 'Shipped',
-      received: 'Received',
-      disputed: 'Refund requested',
-      refunded: 'Refunded',
-    },
+    paidWith: 'Paid with',
+    card: (network: string | undefined, last4: string, funding?: string) =>
+      `${[network ?? 'Card', funding].filter(Boolean).join(' ')} ending in ${last4}`,
+    expires: (expiry: string) => `expires ${expiry}`,
+    paypal: 'PayPal',
     refund: 'Refund',
   },
 
@@ -329,45 +467,67 @@ export const COPY = {
     loadFailed: "We couldn't load your orders.",
     loadFailedFact: 'Your payments are unaffected. This only failed to read them.',
     loading: 'Loading orders',
+    updating: 'Checking for updates…',
     gone: 'Listing no longer available',
     more: (n: number) => ` + ${n} more`,
+    itemCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
   },
 
   sell: {
     title: 'Selling',
-    adminOnly: 'Selling is for collector accounts',
+    adminOnly: 'Selling is for buyer and seller accounts',
     adminFact: 'Switch to Alex or Mike to list items and ship sales.',
-    listings: 'Your listings',
+    listings: 'Active listings',
     newListing: 'Create a listing',
-    sales: 'Your sales',
-    loading: 'Loading sales…',
+    remove: 'Remove',
+    removeTitle: 'Remove this listing?',
+    removeBody: (title: string) =>
+      `${title} comes off the shop straight away and can no longer be bought. Sales you have already made are not affected.`,
+    removeConfirm: 'Remove listing',
+    keepListing: 'Keep it',
+    sales: 'Recently sold',
+    loading: 'Loading sales',
+    loadingListings: 'Loading listings',
+    summary: 'Sales summary',
+    toShipCard: 'Waiting on shipping',
+    toShipNote: (n: number) =>
+      n === 0
+        ? 'Nothing to ship'
+        : `Paid to you once ${n === 1 ? 'it ships' : `${n} sales ship`}`,
+    recentCard: 'Sales, last 90 days',
+    recentNote: (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'}, before fees`,
+    payoutCard: 'Pending payouts',
+    payoutNote: (n: number) =>
+      n === 0
+        ? 'Ship a sale to start a payout'
+        : `${n} shipped ${n === 1 ? 'sale' : 'sales'}, queued for payout`,
+    requestsCard: 'Refund requests',
+    requestsNote: (n: number) => (n === 0 ? 'None open' : `${n} waiting on you`),
     boughtBy: 'Bought by',
-    balance: 'Balance',
     loadFailed: "We couldn't load your sales.",
     loadFailedFact: 'Nothing has changed. Check your connection and try again.',
-    noPayouts: 'Payouts to PayPal or a bank are not part of this demo.',
-    gross: 'Gross (items + shipping)',
-    grossShort: 'Gross',
-    commission: 'Commission',
-    refunded: 'Refunded to buyer',
-    net: 'Net',
-    expected: ' (expected)',
-    pending: 'Pending',
-    available: 'Available',
+    pending: 'Awaiting shipment',
+    available: 'Payout pending',
     reversed: 'Reversed',
-    pendingBox: 'Pending (expected)',
-    notShipped: (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'} not shipped yet`,
-    shipped: (n: number) => `${n} shipped ${n === 1 ? 'sale' : 'sales'}`,
-    allSales: 'All sales',
-    reversedNote: (n: number) =>
-      `${n} refunded ${n === 1 ? 'sale' : 'sales'} reversed, not counted.`,
-    released: 'Now available',
-    balanceLabel: 'Balance',
+    filterSales: 'Filter sales by status',
+    saleFilters: {
+      all: 'All',
+      toShip: 'To ship',
+      shipped: 'Shipped',
+      received: 'Delivered',
+      issue: 'Issue raised',
+      refunded: 'Refunded',
+    },
+    filterListings: 'Filter listings by category',
+    listingFilters: { all: 'All', coin: 'Coins', card: 'Cards' },
+    searchListings: 'Search your listings',
+    listedOn: 'Listed',
+    noneInFilter: 'Nothing matches this filter.',
   },
 
   sellNew: {
     title: 'Create a listing',
-    adminOnly: 'Listings are created by collector accounts',
+    adminOnly: 'Listings are created by buyer and seller accounts',
     adminFact: 'Switch to Alex or Mike to list an item.',
     publish: 'Publish listing',
     fixErrors: 'Check the highlighted fields.',
@@ -382,6 +542,7 @@ export const COPY = {
     mintMark: 'Mint mark',
     mintMarkHint: 'Optional, e.g. CC, S, D',
     graded: 'Graded',
+    returns: 'Accept returns',
     service: 'Service',
     choose: 'Choose',
     grade: 'Grade',
@@ -435,13 +596,10 @@ export const COPY = {
     disputed: 'The buyer disputed this order',
     disputeResolved: 'Dispute resolved by refund',
     disputedFact:
-      'The seller stays unpaid while Slabbed reviews it. Refund the buyer if the item did not arrive as described.',
+      'The seller decides whether to refund. Their balance for this sale is held until then.',
+    sellerRefunds: 'Refunds are issued by the seller from their sales.',
     disputeReason: 'Buyer’s reason',
     noDisputeReason: 'The buyer gave no reason.',
-    refundPending: 'Refund sent — waiting on the connector.',
-    refundPendingFact: 'Reload this page to check whether it has settled.',
-    refundFailedTitle: 'Refund failed',
-    refundDoneTitle: 'Refund complete',
     declinedTitle: 'Payment declined',
     declineCode: 'Decline code',
     retriable: ' · retriable',
@@ -473,14 +631,8 @@ export const COPY = {
     net: 'Net',
     expected: ' (expected)',
     balance: 'Balance',
-    pending: 'Pending',
-    available: 'Available',
+    pending: 'Awaiting shipment',
+    available: 'Payout pending',
     reversed: 'Reversed',
-    fullRefund: 'Full refund of',
-    confirmTitle: (amount: string, buyer: string) => `Refund ${amount} to ${buyer}?`,
-    confirmBody:
-      "The whole order goes back to the buyer's card and cannot be taken back. The seller's balance for this sale is reversed.",
-    refunding: 'Refunding…',
-    confirm: (amount: string) => `Refund ${amount}`,
   },
 } as const

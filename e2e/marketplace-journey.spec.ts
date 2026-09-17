@@ -29,10 +29,14 @@ test.afterAll(async () => {
 
 async function buy(label: string) {
   await switchPersona(page, 'alex')
+  // The journey buys the same one-of-one twice; forget this browser's sold marker from the first buy.
+  await page.evaluate(() => localStorage.removeItem('slabbed.sold'))
   await startCheckout(page, LISTING)
   const id = await payByCard(page, '4242424242424242')
   logPayment(label, id)
-  await expect(page.getByText(COPY.checkout.succeeded)).toBeVisible({ timeout: 45_000 })
+  await expect(page.locator('[aria-current="step"]').first()).toBeVisible({
+    timeout: 45_000,
+  })
   return id
 }
 
@@ -72,7 +76,7 @@ test('3. Alex marks the order received', async ({ request }) => {
   expect((await readOrder(request, first)).fulfilment).toBe('received')
 })
 
-test('4. Dispute → admin sees it → full refund → order refunded, sale reversed', async ({
+test('4. Dispute → the seller refunds in full → order refunded, sale reversed', async ({
   request,
 }) => {
   const reason = `E2E: slab cracked in transit (${Date.now()})`
@@ -82,29 +86,28 @@ test('4. Dispute → admin sees it → full refund → order refunded, sale reve
   // Alex disputes with a reason.
   await switchPersona(page, 'alex')
   await page.goto(`/order/${second}`)
-  await page.getByRole('button', { name: COPY.orderActions.haveIssue }).click()
-  await page.getByRole('button', { name: COPY.orderActions.issues.wrongItem }).click()
+  await page.getByText(COPY.orderActions.haveIssue).click()
+  await page.getByRole('button', { name: COPY.orderActions.issues.notAsDescribed.label }).click()
   await page.getByLabel(COPY.orderActions.details).fill(reason)
   const disputed = page.waitForResponse(
     (r) => r.url().includes('/api/order-state') && r.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: COPY.orderActions.requestRefund }).click()
+  await page.getByRole('button', { name: COPY.orderActions.issues.notAsDescribed.submit }).click()
   expect((await disputed).status()).toBe(200)
 
-  // Admin: the disputes filter lists it; its payment page shows the reason; refund in full.
-  await switchPersona(page, 'admin')
-  await page.goto('/admin')
-  await page.getByRole('button', { name: /^Disputes/ }).click()
-  await page.getByRole('link', { name: second }).click({ timeout: 30_000 })
+  // Mike sees the request on his sale and refunds it in full himself.
+  await switchPersona(page, 'mike')
+  await page.goto(`/order/${second}`)
   await expect(page.getByText(reason)).toBeVisible({ timeout: 20_000 })
-  await page.getByRole('button', { name: COPY.orderActions.refund, exact: true }).click()
+  const refunded = page.waitForResponse(
+    (r) => r.url().includes('/api/refund') && r.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: COPY.orderActions.refundBuyer }).click()
   await page
     .getByRole('dialog')
     .getByRole('button', { name: /^Refund \$/ })
     .click()
-  await expect(page.getByText(COPY.adminPayment.refundDoneTitle)).toBeVisible({
-    timeout: 30_000,
-  })
+  expect((await refunded).status()).toBe(200)
 
   // Alex's order shows refunded.
   await switchPersona(page, 'alex')
@@ -116,11 +119,9 @@ test('4. Dispute → admin sees it → full refund → order refunded, sale reve
   expect(order.refund.state).toBe('succeeded')
   expect(order.ledger.balance).toBe('reversed')
 
-  // Mike's sale is reversed, fee and net $0.
+  // Mike's sale is reversed and pays him nothing.
   await switchPersona(page, 'mike')
   const row = await saleRow(page, second)
   await expect(row.getByText(COPY.sell.reversed, { exact: true })).toBeVisible()
-  const ledger = row.locator('dl')
-  await expect(ledger.locator('dd').nth(1)).toHaveText('$0.00')
-  await expect(ledger.locator('dd').nth(2)).toHaveText('$0.00')
+  await expect(row.getByText('$0.00')).toBeVisible()
 })

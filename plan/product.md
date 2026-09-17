@@ -79,7 +79,7 @@ dropdown — a demo device, not auth.
 | --- | --- |
 | **Buyer** | Catalogue + search · listing detail · cart · checkout · confirmation · orders, with **mark as received** and **dispute** |
 | **Seller** | One page: my listings, my sales, and balance (gross → commission → net) · **mark as shipped** · create a listing |
-| **Admin** | Transactions table · payment detail · dispute queue · refund |
+| **Admin** | Transactions table · payment detail · dispute queue (read-only; the seller refunds) |
 
 The three role actions — **mark as shipped**, **mark as received**, **dispute**
 — are what move money. There is no timer.
@@ -92,8 +92,15 @@ dual-role premise is an assertion rather than something you can do, and
 
 **The cart earns its place too**, despite being the largest block of
 non-payment complexity: it is the only place the per-seller split is
-*demonstrable* rather than described, and N-intents-not-one-split-intent is the
-most interesting money decision in the build.
+*demonstrable* rather than described. **One payment for the whole cart, split
+per seller on our side** (changed 2026-09-16 from one payment per seller). US
+collectors buy from several sellers in one sitting, and eBay and Etsy both take a
+mixed cart in one payment; paying seller by seller means entering the card, or
+doing the PayPal redirect, once per seller. One payment also removes the worst
+state of the old model, a cart half paid because one seller's charge declined.
+Each seller's share is recorded on the payment, ships and pays out on its own,
+and is refunded on its own as a partial refund, so one seller's fake slab never
+refunds another seller's sale.
 
 ### What Hyperswitch must visibly do
 
@@ -105,9 +112,10 @@ This is the grade:
 - ✅ PayPal — a redirect to PayPal and back, confirmed server-side like any other payment
 - ✅ Routing — a $40 card and a $2,000 coin land on different connectors, visible per payment in the dashboard; the buyer sees only "Card" or "PayPal", never the processor
 - ✅ Payment status — authoritative server-side read, never the redirect
-- ✅ Refund — full, reached through a buyer dispute
+- ✅ Refund — one seller's order in full (a partial refund of a multi-seller payment), reached through a buyer dispute
 - ✅ Marketplace fee calculation — visible on the seller page
 - ✅ Seller balance — `pending → available`, moved by the seller shipping
+- ✅ Saved cards — a card saved at checkout is listed on the account page from Hyperswitch's customer payment methods, and can be removed (added 2026-09-16 at the user's request; repeat collectors buy on-session, so this is the card-on-file they expect)
 
 ### Out of scope
 
@@ -115,13 +123,13 @@ Accessibility conformance · **webhooks** (a stateless receiver on a rotating
 preview URL cannot demonstrate what webhooks are for) · **concurrency** — no
 locks, reservations or sold-out races · **hold timers** — money moves on
 actions · per-state sales tax · seller onboarding and KYC · shipping and
-tracking integration · messaging · reviews · auctions · offers · saved cards ·
+tracking integration · messaging · reviews · auctions · offers · saving bank accounts or PayPal (cards are saved, see below) ·
 Apple and Google Pay · **ACH bank debit** and **Affirm** (both approaches in
 §4) · a real Stripe or PayPal account behind the connectors · Stripe Connect split
 payments · real payouts · card-network dispute
 handling (our "dispute" is an in-marketplace claim, not a chargeback) ·
 authenticity guarantee · promoted listings · seller subscriptions · real auth ·
-sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds** — refunds are full only · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
+sign-up (the mocked sign-in covers it) · **3DS challenges** — not needed for this marketplace: 3DS only shifts stolen-card chargebacks, and our dominant dispute is not-as-described · **partial refunds of one order** — a refund is always one seller's whole order · handling a buyer who abandons PayPal (the message exists; it is not demonstrated or tested).
 
 ---
 
@@ -173,8 +181,8 @@ Every state change is something a person does and a reviewer can click.
   pending          available               │
                                            │ buyer disputes
                                            ▼
-                                       DISPUTED ──► admin refunds ──► REFUNDED
-                                                    (reverses the balance)
+                                       DISPUTED ──► seller refunds ──► REFUNDED
+          (balance held again)         (reverses the balance)
 ```
 
 Seller balance is `pending` while the item is unshipped and `available` once
@@ -225,11 +233,16 @@ reviewer has to wait fourteen days to see. *Known gap:* release on a
 seller-controlled event is the obvious fraud, and a real build gates it on
 carrier delivery confirmation.
 
-**Refunds are reached through a buyer dispute, not only an admin god-button.**
-The buyer disputes from their own order, it lands in an admin queue, and the
-admin issues a real Hyperswitch refund that reverses the seller's balance. This
-is what a marketplace holding funds is *for* — someone adjudicates — and it
-closes the circuit with real money: real payment in, real refund out.
+**The seller issues refunds** (changed 2026-09-16 at the user's request; it was
+the admin). The buyer asks from their order, the request shows on the seller's
+sale, and the seller issues a real Hyperswitch refund of that order in full.
+While a request is open the seller's money for that sale is held (`pending`),
+so the marketplace still protects the buyer without adjudicating every case:
+a seller who ignores a request stays unpaid. *Known gap:* a seller who refuses
+a fair claim leaves the buyer with a chargeback or PayPal claim against us, as
+merchant of record. Production adds an escalation to Slabbed after a set
+number of days. The admin view stays read-only: every payment, dispute and
+refund, for oversight.
 
 **A negative balance blocks payouts, not selling or buying.** Documented only,
 since nothing reaches `paid_out` in the sandbox. Selling is how they repay, so

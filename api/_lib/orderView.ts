@@ -1,11 +1,13 @@
+import { createHash } from 'node:crypto'
 import { COPY, type DeclineReason } from '../../src/shared/copy.js'
 import { sellerLedger } from '../../src/shared/money.js'
-import { mapStatus } from '../../src/shared/orderState.js'
+import { ISSUES, mapStatus } from '../../src/shared/orderState.js'
 import {
   META,
   type Breakdown,
   type Decline,
   type Fulfilment,
+  type Funding,
   type OrderView,
   type PaymentState,
   type RefundState,
@@ -21,6 +23,15 @@ export interface HsPayment {
   created: string
   connector?: string | null
   payment_method_type?: string | null
+  payment_method_data?: {
+    card?: {
+      last4?: string | null
+      card_network?: string | null
+      card_type?: string | null
+      card_exp_month?: string | null
+      card_exp_year?: string | null
+    } | null
+  } | null
   metadata?: Record<string, string> | null
   error_code?: string | null
   error_message?: string | null
@@ -30,7 +41,7 @@ export interface HsPayment {
 }
 
 interface HsRefundList {
-  data: { amount: number; status: string }[]
+  data: { refund_id: string; amount: number; status: string }[]
 }
 
 const FULFILMENTS: Fulfilment[] = ['unshipped', 'shipped', 'received', 'disputed']
@@ -38,53 +49,69 @@ const REFUNDABLE: PaymentState[] = ['paid', 'paid_partial', 'refunded']
 
 /** Payment ids we accept in a path: ours are cka_…, but any Hyperswitch-shaped id reads. */
 export const PAYMENT_ID = /^[A-Za-z0-9_-]{1,64}$/
+/** `<paymentId>.<sellerId>`, or a bare paymentId. Neither part can contain a dot. */
+export const ORDER_ID = /^([A-Za-z0-9_-]{1,64})(?:\.([A-Za-z0-9_-]{1,64}))?$/
+
+export const orderIdOf = (paymentId: string, sellerId: string) =>
+  `${paymentId}.${sellerId}`
+
+/** The metadata key for one seller's field: prefixed on multi-seller payments, bare on legacy ones. */
+export const sellerKey = (m: Record<string, string>, sellerId: string, key: string) =>
+  m[META.sellers] ? `${sellerId}.${key}` : key
+
+/** Seller ids on a payment, in cart order. */
+export const sellersOf = (m: Record<string, string>) =>
+  m[META.sellers]
+    ? m[META.sellers].split(',').filter(Boolean)
+    : m[META.sellerId]
+      ? [m[META.sellerId]]
+      : []
+
+/**
+ * Refund ids are `ckr_<20 hex of paymentId:sellerId>_<n>`, so each refund on a shared payment can
+ * be traced to its seller, and n counts retries after a failed refund.
+ */
+export const refundPrefix = (paymentId: string, sellerId: string) =>
+  'ckr_' +
+  createHash('sha256').update(`${paymentId}:${sellerId}`).digest('hex').slice(0, 20) +
+  '_'
+
+/** Credit, debit or prepaid: Hyperswitch's payment_method_type, else the card's own card_type. */
+export function fundingOf(
+  methodType: string | null | undefined,
+  cardType: string | null | undefined,
+): Funding | undefined {
+  const t = [methodType, cardType?.toLowerCase()]
+  return FUNDING.find((f) => t.includes(f))
+}
+const FUNDING: Funding[] = ['credit', 'debit', 'prepaid']
 
 const int = (v: string | undefined) => {
   const n = Number(v)
   return Number.isInteger(n) ? n : 0
 }
 
-/** Builds the one read shape from a payment; fetches its refunds (a refunded payment still reads succeeded). */
 const readRefunds = (paymentId: string) =>
   hsFetch<HsRefundList>('/refunds/list', {
     method: 'POST',
     body: JSON.stringify({ payment_id: paymentId }),
   })
 
-export async function toOrderView(
+/** Every seller's order on a payment; fetches its refunds (a refunded payment still reads succeeded). */
+export async function toOrderViews(
   p: HsPayment,
   /** Already started by the caller, so it runs alongside the payment read. */
   refundsRead?: Promise<HsResult<HsRefundList>>,
-): Promise<OrderView> {
+): Promise<OrderView[]> {
   const m = p.metadata ?? {}
-  const itemsCents = int(m[META.itemsCents])
-  const shippingCents = int(m[META.shippingCents])
-  const taxCents = int(m[META.taxCents])
-  const breakdown: Breakdown = {
-    itemsCents,
-    shippingCents,
-    taxCents,
-    totalCents: itemsCents + shippingCents + taxCents,
-  }
-  const fulfilment = FULFILMENTS.find((f) => f === m[META.fulfilment]) ?? 'unshipped'
-
+  const sellers = sellersOf(m)
   const state = mapStatus(p.status)
   // Only money that moved can be refunded, so skip the lookup otherwise (saves N calls in /api/orders).
   const refunds = REFUNDABLE.includes(state)
     ? await (refundsRead ?? readRefunds(p.payment_id))
     : null
   // ponytail: a failed refunds read reports 'none'; the order page re-reads, add an error field if admin needs to see it
-  const list = refunds?.ok ? refunds.data.data : []
-  const refundedCents = list
-    .filter((r) => r.status === 'succeeded')
-    .reduce((sum, r) => sum + r.amount, 0)
-  const refundState: RefundState = refundedCents
-    ? 'succeeded'
-    : list.some((r) => r.status === 'pending' || r.status === 'review')
-      ? 'pending'
-      : list.length
-        ? 'failed'
-        : 'none'
+  const allRefunds = refunds?.ok ? refunds.data.data : []
 
   let decline: Decline | undefined
   if (p.error_code || p.unified_code) {
@@ -99,30 +126,82 @@ export async function toOrderView(
     }
   }
 
-  // Metadata stores '' for an unset step; emit only the steps that happened.
-  const fulfilledAt = Object.fromEntries(
-    (['shippedAt', 'receivedAt', 'disputedAt'] as const)
-      .filter((k) => m[META[k]])
-      .map((k) => [k, m[META[k]]]),
-  ) as NonNullable<OrderView['fulfilledAt']>
+  const card = p.payment_method_data?.card
+  const funding = fundingOf(p.payment_method_type, card?.card_type)
+  const paymentMethod = card?.last4
+    ? {
+        ...(card.card_network ? { network: card.card_network } : {}),
+        ...(funding ? { funding } : {}),
+        last4: card.last4,
+        ...(card.card_exp_month && card.card_exp_year
+          ? { expiry: `${card.card_exp_month}/${card.card_exp_year.slice(-2)}` }
+          : {}),
+      }
+    : undefined
 
-  return {
-    paymentId: p.payment_id,
-    state,
-    fulfilment,
-    refund: { state: refundState, refundedCents },
-    breakdown,
-    ledger: sellerLedger(breakdown, fulfilment, refundState),
-    sellerId: m[META.sellerId] ?? '',
-    buyerId: m[META.buyerId] ?? '',
-    listingIds: m[META.listingIds] ? m[META.listingIds].split(',') : [],
-    createdAt: p.created,
-    ...(p.connector ? { connector: p.connector } : {}),
-    ...(p.payment_method_type ? { paymentMethodType: p.payment_method_type } : {}),
-    ...(decline ? { decline } : {}),
-    ...(m[META.disputeReason] ? { disputeReason: m[META.disputeReason] } : {}),
-    ...(Object.keys(fulfilledAt).length ? { fulfilledAt } : {}),
-  }
+  return sellers.map((sellerId) => {
+    const get = (key: string) => m[sellerKey(m, sellerId, key)]
+    const itemsCents = int(get(META.itemsCents))
+    const shippingCents = int(get(META.shippingCents))
+    const taxCents = int(get(META.taxCents))
+    const breakdown: Breakdown = {
+      itemsCents,
+      shippingCents,
+      taxCents,
+      totalCents: itemsCents + shippingCents + taxCents,
+    }
+    const fulfilment = FULFILMENTS.find((f) => f === get(META.fulfilment)) ?? 'unshipped'
+
+    // A legacy payment has one seller, so every refund on it is theirs.
+    const prefix = refundPrefix(p.payment_id, sellerId)
+    const list = m[META.sellers]
+      ? allRefunds.filter((r) => r.refund_id.startsWith(prefix))
+      : allRefunds
+    const refundedCents = list
+      .filter((r) => r.status === 'succeeded')
+      .reduce((sum, r) => sum + r.amount, 0)
+    const refundState: RefundState = refundedCents
+      ? 'succeeded'
+      : list.some((r) => r.status === 'pending' || r.status === 'review')
+        ? 'pending'
+        : list.length
+          ? 'failed'
+          : 'none'
+
+    // Metadata stores '' for an unset step; emit only the steps that happened.
+    const fulfilledAt = Object.fromEntries(
+      (['shippedAt', 'receivedAt', 'disputedAt', 'askedAt'] as const)
+        .filter((k) => get(META[k]))
+        .map((k) => [k, get(META[k])]),
+    ) as NonNullable<OrderView['fulfilledAt']>
+    const disputeReason = get(META.disputeReason)
+    const issue = ISSUES.find((k) => k === get(META.issue))
+    const question = get(META.question)
+    const listingIds = get(META.listingIds)
+
+    return {
+      orderId: orderIdOf(p.payment_id, sellerId),
+      paymentId: p.payment_id,
+      state,
+      fulfilment,
+      refund: { state: refundState, refundedCents },
+      breakdown,
+      ledger: sellerLedger(breakdown, fulfilment, refundState),
+      sellerId,
+      buyerId: m[META.buyerId] ?? '',
+      listingIds: listingIds ? listingIds.split(',') : [],
+      createdAt: p.created,
+      ...(p.connector ? { connector: p.connector } : {}),
+      ...(p.payment_method_type ? { paymentMethodType: p.payment_method_type } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
+      ...(decline ? { decline } : {}),
+      ...(disputeReason ? { disputeReason } : {}),
+      ...(issue ? { issue } : {}),
+      returnable: get(META.noReturns) !== '1',
+      ...(question ? { question } : {}),
+      ...(Object.keys(fulfilledAt).length ? { fulfilledAt } : {}),
+    }
+  })
 }
 
 // Soft declines: the same card may work on a second try (design.md §4). manual_retry_allowed is not
@@ -151,15 +230,47 @@ export function declineReason(
   return 'generic'
 }
 
-/** Reads a payment as an OrderView, or the error Response to return. */
-export async function readOrder(paymentId: string): Promise<OrderView | Response> {
+/** Reads a payment and every order on it, or the error Response to return. */
+export async function readPayment(
+  paymentId: string,
+): Promise<{ payment: HsPayment; orders: OrderView[] } | Response> {
   // The refunds read doesn't depend on the payment read, so run both at once rather than one
   // after the other. For an unpaid payment the refunds result is simply unused (hsFetch never throws).
   const refundsRead = readRefunds(paymentId)
   const res = await hsFetch<HsPayment>(`/payments/${paymentId}`)
-  if (res.ok) return toOrderView(res.data, refundsRead)
+  if (res.ok)
+    return { payment: res.data, orders: await toOrderViews(res.data, refundsRead) }
   if (res.status === 404) return jsonError(404, 'NOT_FOUND', 'Payment not found')
   return jsonError(502, 'UPSTREAM', 'Could not read the payment')
+}
+
+/** One seller's order by orderId (or a bare paymentId with one seller), with its payment. */
+export async function findOrder(
+  id: string,
+): Promise<{ payment: HsPayment; order: OrderView } | Response> {
+  const match = ORDER_ID.exec(id)
+  if (!match) return jsonError(400, 'BAD_REQUEST', 'Invalid order id')
+  const read = await readPayment(match[1])
+  if (read instanceof Response) return read
+  const sellerId = match[2]
+  if (!sellerId && read.orders.length > 1)
+    return jsonError(
+      400,
+      'AMBIGUOUS_ORDER',
+      'This payment has several orders; pass an order id',
+    )
+  const order = sellerId
+    ? read.orders.find((v) => v.sellerId === sellerId)
+    : read.orders[0]
+  return order
+    ? { payment: read.payment, order }
+    : jsonError(404, 'NOT_FOUND', 'Order not found')
+}
+
+/** Reads one seller's order, or the error Response to return. */
+export async function readOrder(id: string): Promise<OrderView | Response> {
+  const found = await findOrder(id)
+  return found instanceof Response ? found : found.order
 }
 
 export const jsonError = (status: number, code: string, message: string) =>

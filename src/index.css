@@ -2,54 +2,68 @@
 
 @theme {
   --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
-  /* Archivo Expanded = Archivo at wdth 125. Pair with the `font-display` utility below. */
+  /* Headings: plain Archivo, bold and tight. The expanded cut is kept for the wordmark only. */
   --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
 
-  /* Ground and ink */
-  --color-bone: #f6f3ec;
-  --color-paper: #fcfbf7;
-  --color-ink: #16150f;
-  --color-ink-muted: #5c5a52;
-  --color-rule: #dcd7cb;
+  /* Ground and ink. `bone` = the cool grey page, `paper` = white surfaces. */
+  --color-bone: #f2f3f5;
+  --color-paper: #ffffff;
+  --color-well: #f7f8fa; /* image wells and inset rows on a white card */
+  --color-ink: #121418;
+  --color-ink-muted: #5d6270;
+  --color-rule: #e4e6ea; /* hairline */
+  --color-rule-strong: #cfd3da; /* control borders, hover hairline */
 
-  /* The one accent. Only on things that can be pressed. */
-  --color-accent: #1f45d6;
-  --color-accent-hover: #1636ad;
+  /* Pressable. Primary actions are near-black; links and focus are a quieter blue. */
+  --color-primary: #121418;
+  --color-primary-hover: #2b2f37;
+  --color-primary-ink: #ffffff;
+  --color-accent: #2f5a9e;
+  --color-accent-hover: #244a85;
   --color-accent-ink: #ffffff;
 
-  /* State colours. Reserved for state; never decoration, never the accent. */
+  /* State colours. Reserved for status pills and notices; never decoration. */
   --color-state-paid: #13703f;
-  --color-state-paid-bg: #e3f1e7;
+  --color-state-paid-bg: #e6f3ea;
   --color-state-pending: #8a5a00;
-  --color-state-pending-bg: #f8edd2;
+  --color-state-pending-bg: #faf0d7;
   --color-state-shipped: #0d6b78;
-  --color-state-shipped-bg: #ddf0f1;
+  --color-state-shipped-bg: #e0f1f3;
   --color-state-disputed: #a3401a;
-  --color-state-disputed-bg: #f8e4da;
+  --color-state-disputed-bg: #f9e7de;
   --color-state-failed: #b3261e;
-  --color-state-failed-bg: #f9e1df;
+  --color-state-failed-bg: #fbe5e3;
   --color-state-refunded: #6a3fa0;
-  --color-state-refunded-bg: #ece4f5;
+  --color-state-refunded-bg: #efe8f7;
   --color-state-review: #7a4f86;
-  --color-state-review-bg: #f1e6f2;
-  --color-state-neutral: #5c5a52;
-  --color-state-neutral-bg: #ebe7dd;
+  --color-state-review-bg: #f3e9f4;
+  --color-state-neutral: #535866;
+  --color-state-neutral-bg: #eceef1;
 
   /* Seller insights chart. Available = the paid state; pending needs a lighter amber than
      the pill ink to stay apart from green (validated: protan ΔE 16, normal ΔE 26). Table view
      carries every value, since this step is under 3:1 on paper. */
   --color-chart-pending: #c98f1c;
 
-  /* Form: square-ish, hairlines, no shadow above 1dp */
+  /* Form: soft rounded cards, pill chips, one soft shadow. */
   --radius-*: initial;
-  --radius-slab: 4px;
+  --radius-slab: 10px; /* legacy name = control radius */
+  --radius-control: 10px;
+  --radius-card: 14px;
   --radius-full: 9999px;
   --shadow-*: initial;
-  --shadow-hair: 0 1px 1px rgb(22 21 15 / 0.08);
+  --shadow-hair: 0 1px 2px rgb(18 20 24 / 0.05);
+  --shadow-card: 0 1px 2px rgb(18 20 24 / 0.04), 0 4px 16px rgb(18 20 24 / 0.04);
+  --shadow-pop: 0 4px 12px rgb(18 20 24 / 0.08), 0 16px 40px rgb(18 20 24 / 0.1);
 }
 
-/* Archivo Expanded for display type. */
+/* Legacy utility: headings now use plain Archivo, so this only sets the family. */
 @utility font-display {
+  font-family: var(--font-display);
+}
+
+/* The wordmark keeps Archivo Expanded. */
+@utility font-wordmark {
   font-family: var(--font-display);
   font-stretch: 125%;
 }
@@ -67,9 +81,15 @@
     @apply bg-bone font-sans text-ink antialiased;
     caret-color: var(--color-accent);
   }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
   ::selection {
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
+    background: rgb(47 90 158 / 0.2);
+    color: var(--color-ink);
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);
@@ -79,7 +99,7 @@
     text-underline-offset: 3px;
   }
   dialog::backdrop {
-    background: rgb(22 21 15 / 0.45);
+    background: rgb(18 20 24 / 0.4);
   }
 }
 

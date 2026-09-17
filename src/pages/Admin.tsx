@@ -4,6 +4,7 @@ import { Link } from '../lib/router.tsx'
 import { usePersona } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import type { OrderView } from '../shared/types.ts'
+import { Card } from '../ui/Card.tsx'
 import { Money } from '../ui/Money.tsx'
 import { Notice } from '../ui/Notice.tsx'
 import { StatusPill } from '../ui/StatusPill.tsx'
@@ -11,6 +12,7 @@ import { personName, refundLabel, shortDate } from '../ui/format.ts'
 import { PageLayout } from './Layout.tsx'
 
 const T = COPY.admin
+const H = COPY.pageHeaders.admin
 
 export default function Admin() {
   const persona = usePersona()
@@ -42,7 +44,7 @@ export default function Admin() {
 
   if (persona !== 'admin') {
     return (
-      <PageLayout title={T.title}>
+      <PageLayout title={H.title} eyebrow={H.eyebrow}>
         <Notice tone="info" title={T.onlyTitle} body={T.onlyBody} />
       </PageLayout>
     )
@@ -51,28 +53,30 @@ export default function Admin() {
   const disputes = orders?.filter((o) => o.fulfilment === 'disputed') ?? []
   const rows = filter === 'disputes' ? disputes : (orders ?? [])
 
-  return (
-    <PageLayout title={T.title}>
-      <div className="flex flex-col gap-4">
-        <div className="flex gap-2" role="group" aria-label={T.filter}>
-          {(['all', 'disputes'] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={filter === f}
-              onClick={() => setFilter(f)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-slab border border-rule bg-paper px-3 text-sm font-medium text-accent hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-accent-ink"
-            >
-              {f === 'all' ? T.all : T.disputes}
-              {orders && (
-                <span className="money text-xs">
-                  {f === 'all' ? orders.length : disputes.length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+  const filters = (
+    <div className="flex gap-2" role="group" aria-label={T.filter}>
+      {(['all', 'disputes'] as const).map((f) => (
+        <button
+          key={f}
+          type="button"
+          aria-pressed={filter === f}
+          onClick={() => setFilter(f)}
+          className="inline-flex h-9 items-center gap-2 rounded-full border border-rule-strong bg-paper px-4 text-sm font-medium text-ink hover:border-ink aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-ink"
+        >
+          {f === 'all' ? T.all : T.disputes}
+          {orders && (
+            <span className="money text-xs opacity-70">
+              {f === 'all' ? orders.length : disputes.length}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  )
 
+  return (
+    <PageLayout title={H.title} eyebrow={H.eyebrow} actions={filters}>
+      <div className="flex flex-col gap-4">
         {loadError ? (
           <Notice
             tone="danger"
@@ -88,19 +92,19 @@ export default function Admin() {
             {T.loading}
           </p>
         ) : rows.length === 0 ? (
-          <p className="border-y border-rule py-10 text-ink-muted">
+          <Card as="div" className="text-center text-sm text-ink-muted">
             {filter === 'disputes' ? T.noDisputes : T.none}
-          </p>
+          </Card>
         ) : (
-          <div className="overflow-x-auto rounded-slab border border-rule bg-paper">
+          <Card padding="none" className="overflow-x-auto">
             <table className="w-full text-left text-sm max-md:block md:min-w-[56rem]">
-              <thead className="border-b border-rule bg-bone text-xs text-ink-muted max-md:hidden">
+              <thead className="border-b border-rule text-xs text-ink-muted max-md:hidden">
                 <tr>
                   {T.columns.map((h, i) => (
                     <th
                       key={h}
                       scope="col"
-                      className={`px-3 py-2 font-semibold ${i === 4 ? 'text-right' : ''}`}
+                      className={`px-4 py-3 font-medium first:pl-5 last:pr-5 ${i === 4 ? 'text-right' : ''}`}
                     >
                       {h}
                     </th>
@@ -110,39 +114,39 @@ export default function Admin() {
               <tbody className="divide-y divide-rule max-md:block">
                 {rows.map((o) => (
                   <tr
-                    key={o.paymentId}
-                    className="hover:bg-bone max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5 max-md:px-3 max-md:py-3 max-md:[&>td]:p-0"
+                    key={o.orderId}
+                    className="hover:bg-well max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5 max-md:px-4 max-md:py-3 md:[&>td]:px-4 md:[&>td]:py-3.5 md:[&>td:first-child]:pl-5 md:[&>td:last-child]:pr-5 max-md:[&>td]:p-0"
                   >
-                    <td className="px-3 py-2 max-md:w-full">
+                    <td className="max-md:w-full">
                       <Link
-                        to={`/admin/payment/${o.paymentId}`}
+                        to={`/admin/payment/${o.orderId}`}
                         className="money font-medium text-accent hover:underline"
                       >
                         {o.paymentId}
                       </Link>
                     </td>
-                    <td className="money px-3 py-2 whitespace-nowrap">
+                    <td className="money whitespace-nowrap text-ink-muted">
                       {shortDate(o.createdAt)}
                     </td>
-                    <td className="px-3 py-2">{personName(o.buyerId)}</td>
-                    <td className="px-3 py-2">{personName(o.sellerId)}</td>
-                    <td className="px-3 py-2 text-right">
-                      <Money cents={o.breakdown.totalCents} />
+                    <td>{personName(o.buyerId)}</td>
+                    <td>{personName(o.sellerId)}</td>
+                    <td className="text-right">
+                      <Money cents={o.breakdown.totalCents} className="font-semibold" />
                     </td>
-                    <td className="px-3 py-2">
+                    <td>
                       <StatusPill status={o.state} />
                     </td>
-                    <td className="px-3 py-2">
+                    <td>
                       <StatusPill status={o.fulfilment} />
                     </td>
-                    <td className="px-3 py-2">
+                    <td>
                       <StatusPill status={o.refund.state} label={refundLabel(o)} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         )}
       </div>
     </PageLayout>

@@ -18,7 +18,8 @@ PayPal and 80/20 routing). Sandbox verified end to end.
 > **Scope note.** `CLAUDE.md` says "core flow only". The user widened scope to
 > include refunds, a seller page and an admin view so the marketplace payment
 > model is demonstrable end to end. (Webhooks were in that widening and have
-> since moved out of scope.) That direction
+> since moved out of scope.) Returns, questions to the seller and saved/default
+> cards were added the same way (sections 14–15). That direction
 > supersedes the rule; `plan/product.md` §2 is the authority on what gets built.
 
 ---
@@ -41,6 +42,9 @@ Each section is approved, changed, or moved out of scope before any code.
 | 10 | Design — Direction & system | ✅ approved — top bar + grid, every screen a page; system tokens approved |
 | 11 | Design — Screens | ✅ approved — ten screens; confirmation = order detail; disputes = a transactions filter |
 | 12 | Design — States, edge cases, empty states | ✅ approved — stale hold copy fixed; added "action didn't save" and "refund failed" |
+| 13 | Product — Multi-seller cart | ✅ requested by the user 2026-09-16 — **one payment for the whole cart**, split per seller in metadata; refunds are one seller's order in full (partial against the payment). Replaces one payment per seller. Server side built and sandbox-verified; pages follow the restyle commit. |
+| 14 | Product — Problems, returns, questions | ✅ requested by the user 2026-09-16 — **"Have a problem?" lists every option, blocked ones say why**; returns eligibility set **per listing by the seller**, fixed on the order at purchase; "not as described" always open; "Ask the seller" doesn't request a refund; a return is a refund request (no return shipping leg). Same rule enforced on the server. Sandbox-verified. |
+| 15 | Design — Checkout overlay, order page, saved methods | ✅ requested by the user 2026-09-16 — checkout opens over the current page (`?checkout`); order page is one card: each shipment (seller, progress tracker, items, actions) then totals; saved cards and PayPal in one list with "Add payment method" opening the Hyperswitch form; default card; credit/debit shown. |
 
 ---
 
@@ -57,7 +61,7 @@ Thinnest path to a real payment first:
 4. Catalogue, search, listing detail, cart
 5. Seller page — mark as shipped, fee calculation, balance
 6. Buyer order actions — mark as received, dispute
-7. Admin — transactions, dispute queue, refund
+7. Admin — transactions, dispute queue (read-only); the seller refunds
 8. Listing creation form
 9. Role switcher, empty states, polish
 
@@ -73,7 +77,7 @@ PayPal payment `succeeded` after the redirect · a failed payment showing its
 decline reason ·
 the routing rule visible in the control center, with a small and a large card
 payment on different connectors · the ambiguous-outcome state
-handled · a buyer dispute reaching admin and producing a real **full** refund against
-that payment · the commission and seller balance visible and moved by the
+handled · a buyer dispute reaching the seller and producing a real refund of that seller's
+order in full · the commission and seller balance visible and moved by the
 seller marking an item shipped · the statuses in engineering §4 mapped ·
 README written · deployed on Vercel.

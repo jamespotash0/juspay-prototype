@@ -5,6 +5,8 @@ import type {
   OrderStateRequest,
   OrderView,
   OrdersResponse,
+  PaymentMethodsResponse,
+  SaveCardResponse,
   PersonaId,
   RefundRequest,
 } from '../shared/types.ts'
@@ -54,7 +56,7 @@ const post = <T>(path: string, body: unknown) =>
 // buyer, seller or admin just looked at, and refresh from the server behind it.
 // ponytail: in-memory only, gone on reload; the order page always re-reads, so it's never the truth.
 const orderCache = new Map<string, OrderView>()
-const remember = (o: OrderView) => (orderCache.set(o.paymentId, o), o)
+const remember = (o: OrderView) => (orderCache.set(o.orderId, o), o)
 export const cachedOrder = (id: string) => orderCache.get(id)
 
 export const api = {
@@ -71,4 +73,24 @@ export const api = {
           'all' in filter ? { all: '1' } : (filter as Record<string, string>),
         ),
     ).then((r) => (r.orders.forEach(remember), r)),
+  saveCard: (customer: PersonaId) =>
+    post<SaveCardResponse>('/api/save-card', { customer }),
+  paymentMethods: (customer: PersonaId) =>
+    call<PaymentMethodsResponse>(
+      `/api/payment-methods?customer=${encodeURIComponent(customer)}`,
+    ).then((r) => r.methods),
+  setDefaultPaymentMethod: (customer: PersonaId, id: string) =>
+    post<PaymentMethodsResponse>('/api/payment-methods', { customer, id }).then(
+      (r) => r.methods,
+    ),
+  removePaymentMethod: (customer: PersonaId, id: string) =>
+    call<PaymentMethodsResponse>(
+      `/api/payment-methods?${new URLSearchParams({ customer, id })}`,
+      { method: 'DELETE' },
+    ).then((r) => r.methods),
+  /** Every seller's order in one purchase, in cart order. */
+  purchase: (paymentId: string) =>
+    call<OrdersResponse>(`/api/orders?payment=${encodeURIComponent(paymentId)}`).then(
+      (r) => (r.orders.forEach(remember), r.orders),
+    ),
 }

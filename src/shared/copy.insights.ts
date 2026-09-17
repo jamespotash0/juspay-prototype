@@ -4,16 +4,16 @@ const sales = (n: number) => `${n} ${n === 1 ? 'sale' : 'sales'}`
 
 export const INSIGHTS_COPY = {
   title: 'Sales and payouts',
-  lead: 'What your payouts would have been. Payouts to PayPal or a bank are not part of this demo.',
+  lead: 'What you have earned after commission, sale by sale and over time.',
 
   gross: 'Gross sold (items + shipping)',
   reversed: 'Reversed by refund',
   commission: 'Commission',
   net: 'Net earned',
-  available: 'Available now',
-  pending: 'Pending (expected)',
+  available: 'Payout pending',
+  pending: 'Awaiting shipment',
   sales,
-  shippedSales: (n: number) => `${sales(n)} shipped`,
+  shippedSales: (n: number) => `${sales(n)} shipped, queued for payout`,
   unshippedSales: (n: number) => `${sales(n)} not shipped yet`,
   refundedSales: (n: number) => `${sales(n)} refunded`,
   commissionNote: 'Taken when you mark a sale shipped. None on refunded sales.',

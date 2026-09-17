@@ -7,23 +7,33 @@ export function logPayment(label: string, id: string) {
   console.log(`PAYMENT_ID ${label} ${id}`)
 }
 
-/** Switch persona the way a reviewer does: the top-bar select. */
+/** Switch persona the way a reviewer does: the demo account select on the account page. */
 export async function switchPersona(page: Page, persona: PersonaId) {
-  if (!page.url().startsWith('http')) await page.goto('/')
-  await page.getByLabel('Signed in as').selectOption(persona)
+  await page.goto('/account')
+  // Signed out, the account page sends you to sign-in first: take the email option.
+  const account = page.locator('#demo-account')
+  const email = page.getByRole('button', { name: 'Continue with email' })
+  await expect(account.or(email)).toBeVisible()
+  if (await email.isVisible()) {
+    await email.click()
+    await page.getByLabel('Email address').fill(`${persona}@example.com`)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await expect(account).toBeVisible({ timeout: 15_000 })
+  }
+  if ((await account.inputValue()) !== persona) await account.selectOption(persona)
 }
 
 /** Listing page → Buy now → demo sign-in → Continue to payment. Leaves the SDK mounted. */
 export async function startCheckout(page: Page, listingId: string) {
   await page.goto(`/listing/${listingId}`)
-  await page.getByRole('button', { name: 'Buy now' }).click()
+  await page.getByRole('button', { name: 'Buy Now' }).click()
   // The demo sign-in gate shows once per browser session per persona, so only click it if it's there.
   const gate = page.getByRole('button', { name: 'Continue with email' })
-  const next = page.getByRole('button', { name: 'Continue to payment' })
+  const next = page.getByRole('button', { name: 'Continue to Payment' })
   await expect(gate.or(next)).toBeVisible()
   if (await gate.isVisible()) await gate.click()
   const created = page.waitForResponse((r) => r.url().includes('/api/checkout'))
-  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await page.getByRole('button', { name: 'Continue to Payment' }).click()
   const { paymentId } = (await (await created).json()) as { paymentId: string }
   logPayment(`created-for-${listingId}`, paymentId)
   return paymentId
@@ -44,6 +54,13 @@ export async function payByCard(page: Page, card: string): Promise<string> {
     [fields.locator('[data-testid="expiryInput"]'), '1230'],
     [fields.locator('[data-testid="cvvInput"]'), '123'],
   ] as const
+  // A buyer with a saved card sees that card first; typing a card needs the new-method form.
+  const newMethod = sdk(page).getByText('New payment methods')
+  // The two live in different iframes, so .or() can't combine them: poll for either.
+  await expect(async () => {
+    expect((await inputs[0][0].isVisible()) || (await newMethod.isVisible())).toBe(true)
+  }).toPass({ timeout: 30_000 })
+  if (await newMethod.isVisible()) await newMethod.click()
   await expect(inputs[0][0]).toBeVisible({ timeout: 30_000 })
   // The SDK can re-render its fields just after they appear and drop what was typed; retype until all three hold.
   await expect(async () => {
@@ -91,7 +108,7 @@ export async function saleRow(page: Page, paymentId: string) {
   const { orders } = (await (await loaded).json()) as { orders: OrderView[] }
   const index = orders.findIndex((o) => o.paymentId === paymentId)
   expect(index, `sale ${paymentId} on /sell`).toBeGreaterThanOrEqual(0)
-  const row = page.locator('section:has(> h2:text-is("Your sales")) > ul > li').nth(index)
+  const row = page.locator('section[aria-labelledby="sell-sold"] ul > li').nth(index)
   // The page can fire this request more than once (persona change, dev-mode double effects), and a
   // cold /api/orders takes ~5 s — so the list may still read "Loading sales…" after the first reply.
   await expect(row).toBeVisible({ timeout: 30_000 })

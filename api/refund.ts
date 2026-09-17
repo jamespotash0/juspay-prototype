@@ -1,9 +1,14 @@
-import { createHash } from 'node:crypto'
 import type { RefundRequest } from '../src/shared/types.js'
 import { hsFetch } from './_lib/hyperswitch.js'
-import { jsonError, PAYMENT_ID, readOrder } from './_lib/orderView.js'
+import {
+  findOrder,
+  jsonError,
+  ORDER_ID,
+  readOrder,
+  refundPrefix,
+} from './_lib/orderView.js'
 
-/** POST /api/refund — admin only, always a full refund. Returns the re-read OrderView. */
+/** POST /api/refund — the order's seller refunds their order in full. Returns the re-read OrderView. */
 export async function POST(request: Request): Promise<Response> {
   try {
     return await refund(request)
@@ -14,18 +19,21 @@ export async function POST(request: Request): Promise<Response> {
 
 async function refund(request: Request): Promise<Response> {
   const body = (await request.json().catch(() => null)) as Partial<RefundRequest> | null
-  const { paymentId, actorId, reason } = body ?? {}
-  if (typeof paymentId !== 'string' || !PAYMENT_ID.test(paymentId))
-    return jsonError(400, 'BAD_REQUEST', 'Invalid payment id')
-  if (actorId !== 'admin') return jsonError(403, 'FORBIDDEN', 'Only an admin can refund')
+  const { paymentId: id, actorId, reason } = body ?? {}
+  if (typeof id !== 'string' || !ORDER_ID.test(id))
+    return jsonError(400, 'BAD_REQUEST', 'Invalid order id')
 
-  const order = await readOrder(paymentId)
-  if (order instanceof Response) return order
+  const found = await findOrder(id)
+  if (found instanceof Response) return found
+  const { order } = found
+  // The seller decides (product decision, 2026-09-16): they know the item and answer the buyer.
+  if (!actorId || actorId !== order.sellerId)
+    return jsonError(403, 'FORBIDDEN', 'Only the seller can refund this order')
   if (order.state !== 'paid')
     return jsonError(409, 'INVALID_TRANSITION', 'Only a paid order can be refunded')
 
-  // Refunds are full only (product decision). A refund already done or still in flight means
-  // there is nothing to send — a second request would refund twice.
+  // Refunds are full per seller (product decision): this seller's whole share, and nobody else's.
+  // A refund already done or still in flight means there is nothing to send.
   if (order.refund.state === 'succeeded')
     return jsonError(409, 'ALREADY_REFUNDED', 'This order has already been refunded')
   if (order.refund.state === 'pending')
@@ -36,21 +44,18 @@ async function refund(request: Request): Promise<Response> {
     )
   const amount = order.breakdown.totalCents
 
-  // Idempotency key: one full refund per payment, so a double-click or retransmission can't
-  // refund twice. Hyperswitch caps refund_id at 30 chars.
-  // ponytail: refund.state in the key allows one retry after a failed refund; a second identical
-  // failure dedupes to the first. Add a refund count to OrderView if admins need repeated retries.
-  const refundId =
-    'ckr_' +
-    createHash('sha256')
-      .update(`${paymentId}:full:${order.refund.state}`)
-      .digest('hex')
-      .slice(0, 22)
+  // Idempotency key: the seller's prefix plus the attempt number. A double-click or retransmission
+  // reads the same refund list, so it sends the same id and Hyperswitch dedupes it (HE_01). Only a
+  // failed refund moves the count on, allowing a retry. Hyperswitch caps refund_id at 30 chars (ours: 27).
+  // ponytail: one retry after a failed refund; a second identical failure dedupes to the first.
+  // Add a refund attempt count to OrderView if admins need repeated retries.
+  const attempt = order.refund.state === 'failed' ? 2 : 1
+  const refundId = refundPrefix(order.paymentId, order.sellerId) + attempt
 
   const created = await hsFetch('/refunds', {
     method: 'POST',
     body: JSON.stringify({
-      payment_id: paymentId,
+      payment_id: order.paymentId,
       refund_id: refundId,
       amount,
       reason:
@@ -60,7 +65,7 @@ async function refund(request: Request): Promise<Response> {
   // A duplicate refund_id means this exact refund already exists — fall through to the re-read.
   // A refund the connector declines still exists with status failed, and reads back as refund.state 'failed'.
   if (!created.ok && created.hsCode !== 'HE_01') {
-    console.error(`[refund] ${paymentId} failed`, created.status, created.hsCode)
+    console.error(`[refund] ${order.orderId} failed`, created.status, created.hsCode)
     return jsonError(
       502,
       'UPSTREAM',
@@ -68,6 +73,6 @@ async function refund(request: Request): Promise<Response> {
     )
   }
 
-  const fresh = await readOrder(paymentId)
+  const fresh = await readOrder(order.orderId)
   return fresh instanceof Response ? fresh : Response.json(fresh)
 }
