@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { useCart } from '../lib/cart.ts'
 import { navigate, usePath, useSearchParams } from '../lib/navigation.ts'
 import { resetDemo } from '../lib/reset.ts'
-import { setMode, useDisplayName, useMode, type Mode } from '../lib/profile.ts'
+import { useDisplayName } from '../lib/profile.ts'
 import { useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
@@ -34,20 +34,6 @@ export function PageLayout({
   const isAdmin = PERSONAS.find((p) => p.id === session?.persona)?.kind === 'admin'
 
   const name = useDisplayName(session?.persona ?? 'alex')
-  const storedMode = useMode()
-  // Selling pages mean selling, and your orders or cart mean buying, however you got there.
-  const mode: Mode = path.startsWith('/sell')
-    ? 'selling'
-    : /^\/(orders|order|cart|checkout)(\/|$)/.test(path)
-      ? 'buying'
-      : storedMode
-  useEffect(() => setMode(mode), [mode])
-
-  function changeMode(next: Mode) {
-    setMode(next)
-    navigate(next === 'selling' ? '/sell' : '/')
-  }
-
   useEffect(() => {
     document.title = title ? `${title} · Slabbed` : 'Slabbed'
   }, [title])
@@ -55,15 +41,11 @@ export function PageLayout({
   const links = (
     isAdmin
       ? [{ label: COPY.shell.admin, href: '/admin' }]
-      : mode === 'selling'
-        ? [
-            { label: COPY.shell.sell, href: '/sell' },
-            { label: COPY.shell.shop, href: '/' },
-          ]
-        : [
-            { label: COPY.shell.shop, href: '/' },
-            { label: COPY.shell.orders, href: '/orders' },
-          ]
+      : [
+          { label: COPY.shell.shop, href: '/' },
+          { label: COPY.shell.orders, href: '/orders' },
+          { label: COPY.shell.sell, href: '/sell' },
+        ]
   ).map((l) => ({
     ...l,
     current: l.href === '/' ? path === '/' : path.startsWith(l.href),
@@ -74,7 +56,6 @@ export function PageLayout({
       <TopBar
         account={session ? { name } : null}
         accountCurrent={path === '/account'}
-        {...(session && !isAdmin ? { mode, onModeChange: changeMode } : {})}
         onSignIn={() => {
           const here = path + (params.size ? `?${params}` : '')
           navigate(`/signin?next=${encodeURIComponent(here)}`)

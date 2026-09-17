@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.ts'
 import { navigate } from '../lib/navigation.ts'
-import { setDisplayName, setMode, useDisplayName, useMode } from '../lib/profile.ts'
+import { setDisplayName, useDisplayName } from '../lib/profile.ts'
 import { signIn, signOut, useSession } from '../lib/session.ts'
 import { COPY } from '../shared/copy.ts'
 import { PERSONAS } from '../shared/seed.ts'
@@ -51,7 +51,6 @@ export default function Account() {
           email={persona.email}
           provider={session.provider}
         />
-        {isCollector && <ModeCard />}
         {isCollector && <PaymentMethods key={persona.id} customer={persona.id} />}
 
         <Card as="section" aria-labelledby="demo">
@@ -134,38 +133,6 @@ function Profile({
           </span>
         </div>
       </form>
-    </Card>
-  )
-}
-
-function ModeCard() {
-  const mode = useMode()
-  return (
-    <Card as="section" aria-labelledby="mode">
-      <SectionHeading id="mode">{T.mode}</SectionHeading>
-      <p className="mb-3 text-sm text-ink-muted">{T.modeFact}</p>
-      <div
-        role="group"
-        aria-label={COPY.shell.modeLabel}
-        className="grid gap-2 sm:grid-cols-2"
-      >
-        {(['buying', 'selling'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            aria-pressed={mode === m}
-            onClick={() => setMode(m)}
-            className="flex flex-col items-start gap-0.5 rounded-control border border-rule-strong bg-paper px-4 py-3 text-left hover:border-ink aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-ink"
-          >
-            <span className="text-sm font-semibold">
-              {m === 'buying' ? COPY.shell.buying : COPY.shell.selling}
-            </span>
-            <span className="text-xs opacity-75">
-              {m === 'buying' ? T.buyingFact : T.sellingFact}
-            </span>
-          </button>
-        ))}
-      </div>
     </Card>
   )
 }

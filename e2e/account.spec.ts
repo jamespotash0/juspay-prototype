@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 // The account page against the live sandbox: Alex's saved Visa is read from Hyperswitch.
 // Nothing is deleted: removing a card is checked only for a card this account doesn't own.
-test('account: name, saved cards, buying/selling switch, sign out', async ({ page }) => {
+test('account: name, saved cards, nav, sign out', async ({ page }) => {
   await page.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return
     sessionStorage.setItem('seeded', '1')
@@ -28,12 +28,8 @@ test('account: name, saved cards, buying/selling switch, sign out', async ({ pag
   await page.screenshot({ path: test.info().outputPath('account.png'), fullPage: true })
 
   const bar = page.getByRole('banner')
-  await bar.getByRole('button', { name: 'Selling' }).click()
-  await expect(page).toHaveURL(/\/sell$/)
-  await expect(bar.getByRole('link', { name: 'Orders' })).toHaveCount(0)
-  await bar.getByRole('button', { name: 'Buying' }).click()
-  await expect(page).toHaveURL(/\/$/)
-  await expect(bar.getByRole('link', { name: 'Orders' })).toBeVisible()
+  for (const name of ['Shop', 'Orders', 'Sell'])
+    await expect(bar.getByRole('link', { name, exact: true })).toBeVisible()
 
   await page.goto('/account')
   await page.getByRole('button', { name: 'Sign out' }).click()

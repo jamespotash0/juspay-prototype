@@ -1,7 +1,6 @@
 import type { MouseEvent } from 'react'
 import { COPY } from '../shared/copy'
 import { Icon } from './Icon'
-import type { Mode } from '../lib/profile'
 
 export interface NavLink {
   label: string
@@ -15,9 +14,6 @@ interface TopBarProps {
   accountHref?: string
   /** True on the account page itself. */
   accountCurrent?: boolean
-  /** Collectors only: whether the app leads with buying or selling. */
-  mode?: Mode
-  onModeChange?: (mode: Mode) => void
   onSignIn: () => void
   /** Clears this browser's demo state. The bar asks for confirmation first. */
   onReset: () => void
@@ -40,8 +36,6 @@ export function TopBar({
   account,
   accountHref = '/account',
   accountCurrent,
-  mode,
-  onModeChange,
   onSignIn,
   onReset,
   links,
@@ -89,25 +83,6 @@ export function TopBar({
 
         {account ? (
           <div className="order-5 flex min-w-0 items-center gap-1.5 max-sm:w-full sm:order-none">
-            {mode && onModeChange && (
-              <div
-                role="group"
-                aria-label={S.modeLabel}
-                className="flex shrink-0 rounded-full border border-rule-strong bg-paper p-0.5 text-[13px]"
-              >
-                {(['buying', 'selling'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    aria-pressed={mode === m}
-                    onClick={() => onModeChange(m)}
-                    className="h-6.5 rounded-full px-3 font-medium text-ink-muted hover:text-ink aria-pressed:bg-primary aria-pressed:text-primary-ink"
-                  >
-                    {m === 'buying' ? S.buying : S.selling}
-                  </button>
-                ))}
-              </div>
-            )}
             <a
               href={accountHref}
               onClick={go(accountHref)}

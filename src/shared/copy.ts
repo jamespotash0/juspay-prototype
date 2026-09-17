@@ -170,9 +170,6 @@ export const COPY = {
     signIn: 'Sign in',
     signOut: 'Sign out',
     account: 'Account',
-    buying: 'Buying',
-    selling: 'Selling',
-    modeLabel: 'Buying or selling',
     switchAccount: 'Switch demo account',
     /** What each demo account stands in for, shown wherever you pick one. */
     personaRole: {
@@ -197,11 +194,6 @@ export const COPY = {
     email: 'Email',
     signedInWith: (provider: string) => `Signed in with ${provider}`,
     saved: 'Saved',
-    mode: 'Buying and selling',
-    modeFact:
-      'Every Slabbed account can buy and sell. Choose what the app leads with; you can switch any time.',
-    buyingFact: 'Shop and your orders',
-    sellingFact: 'Your listings, sales and earnings',
     methods: 'Payment methods',
     methodsLoading: 'Loading saved cards…',
     methodsFailed: "We couldn't load your saved cards.",
