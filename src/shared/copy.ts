@@ -435,9 +435,6 @@ export const COPY = {
     cancelled: 'This payment was cancelled. Nothing has been charged.',
     other: "This payment needs a look from us. Don't pay again.",
     summary: 'Order summary',
-    itemsFrom: (items: number, sellers: number) =>
-      `${items} ${items === 1 ? 'item' : 'items'}${sellers > 1 ? ` from ${sellers} sellers` : ''}`,
-    priceDetails: 'Price details',
     steps: {
       paid: 'Paid',
       shipped: 'Shipped',

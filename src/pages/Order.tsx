@@ -143,8 +143,6 @@ export default function Order({ params }: { params: Params }) {
         ? { to: '/sell', label: TEXT.backToSales }
         : { to: '/orders', label: TEXT.backToOrders }
 
-  const itemCount = shown?.reduce((n, o) => n + o.listingIds.length, 0) ?? 0
-
   return (
     <PageLayout
       // The order number is what the buyer and support quote, so it is the heading.
@@ -194,49 +192,34 @@ export default function Order({ params }: { params: Params }) {
           <StateNotice order={summary} />
         )}
 
-        {!isSeller && total && first && (
-          <Card as="section" aria-label={TEXT.summary}>
-            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-ink-muted">
-                  {TEXT.itemsFrom(itemCount, shown!.length)}
-                </span>
-                <Money
-                  cents={total.totalCents}
-                  className="text-2xl leading-none font-bold tracking-tight"
-                />
-              </div>
-              <PaidWith order={first} />
-            </div>
-            <details className="group mt-4 border-t border-rule pt-3">
-              <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink">
-                {TEXT.priceDetails}
-                <Icon
-                  name="chevronDown"
-                  className="size-4 transition group-open:rotate-180"
-                />
-              </summary>
-              <div className="mt-3 [&>dl]:border-t-0 [&>dl]:pt-0">
+        {/* One card for the whole order: each shipment (seller, progress, items), then what was paid. */}
+        {shown && shown.length > 0 && (
+          <Card padding="none" className="flex flex-col divide-y-8 divide-bone">
+            {shown.map((order, i) => (
+              <SellerOrder
+                key={order.orderId}
+                shipment={shown.length > 1 ? [i + 1, shown.length] : null}
+                order={order}
+                persona={persona}
+                isSeller={isSeller}
+                onChange={(next) =>
+                  setOrders((all) =>
+                    all ? all.map((o) => (o.orderId === next.orderId ? next : o)) : all,
+                  )
+                }
+              />
+            ))}
+            {!isSeller && total && first && (
+              <section
+                aria-label={TEXT.summary}
+                className="flex flex-col gap-3 px-5 py-5 sm:px-6 [&>dl]:border-t-0 [&>dl]:pt-0"
+              >
                 <BreakdownList b={total} />
-              </div>
-            </details>
+                <PaidWith order={first} />
+              </section>
+            )}
           </Card>
         )}
-
-        {shown?.map((order, i) => (
-          <SellerOrder
-            key={order.orderId}
-            shipment={shown.length > 1 ? [i + 1, shown.length] : null}
-            order={order}
-            persona={persona}
-            isSeller={isSeller}
-            onChange={(next) =>
-              setOrders((all) =>
-                all ? all.map((o) => (o.orderId === next.orderId ? next : o)) : all,
-              )
-            }
-          />
-        ))}
       </div>
     </PageLayout>
   )
@@ -480,12 +463,7 @@ function SellerOrder({
   const pad = 'px-5 sm:px-6'
 
   return (
-    <Card
-      as="section"
-      padding="none"
-      aria-labelledby={`seller-${order.orderId}`}
-      className="flex flex-col"
-    >
+    <section aria-labelledby={`seller-${order.orderId}`} className="flex flex-col">
       <header className={`flex items-start justify-between gap-4 pt-5 ${pad}`}>
         <div className="min-w-0">
           <h2 id={`seller-${order.orderId}`} className="font-bold tracking-tight">
@@ -625,7 +603,7 @@ function SellerOrder({
             e.preventDefault()
             act(issue === 'question' ? 'ask' : 'dispute')
           }}
-          className={`flex flex-col gap-3 rounded-b-card border-t border-rule bg-well py-4 ${pad}`}
+          className={`flex flex-col gap-3 border-t border-rule bg-well py-4 ${pad}`}
         >
           <div>
             <p className="text-sm font-semibold">{A.issues[issue].label}</p>
@@ -656,7 +634,7 @@ function SellerOrder({
           </div>
         </form>
       )}
-    </Card>
+    </section>
   )
 }
 
