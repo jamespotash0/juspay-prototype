@@ -360,7 +360,7 @@ and "needs the buyer" are never shown as failures.
 | **3DS challenges** | Request 3DS above a value threshold, where liability shift pays for the friction |
 | **Smarter routing** | Approval-rate-based routing once each processor has about 25 real payments |
 | **Apple Pay and Google Pay** | Faster checkout; Apple Pay needs a stable verified domain |
-| **Also** | Partial refunds within one seller's order; releasing the payout on carrier-confirmed delivery rather than on "marked shipped"; automatically refunding a second buyer if two pay for the same item at once |
+| **Smaller gaps** | Refunding part of one seller's order; releasing the payout on carrier-confirmed delivery rather than on "marked shipped"; automatically refunding a second buyer if two pay for the same item at once |
 
 ---
 
