@@ -179,8 +179,8 @@ export const COPY = {
     switchAccount: 'Switch demo account',
     /** What each demo account stands in for, shown wherever you pick one. */
     personaRole: {
-      alex: { short: 'Buyer & seller', long: 'Buys and sells on Slabbed' },
-      mike: { short: 'Buyer & seller', long: 'Buys and sells on Slabbed' },
+      alex: { short: 'Buyer Flow', long: 'Buyer Flow' },
+      mike: { short: 'Seller Flow', long: 'Seller Flow' },
       admin: { short: 'Admin', long: 'Admin: reviews payments, refunds, disputes' },
     },
     resetConfirm:

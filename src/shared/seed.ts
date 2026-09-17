@@ -206,7 +206,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_005',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     category: 'coin',
     title: '1889-P Morgan Dollar',
     year: 1889,
@@ -224,7 +224,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_006',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     category: 'coin',
     title: '1922 Peace Dollar',
     year: 1922,
@@ -241,7 +241,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_007',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     category: 'coin',
     title: '2004 American Silver Eagle',
     year: 2004,
@@ -258,7 +258,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_008',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     category: 'coin',
     title: '1921 Peace Dollar, High Relief',
     year: 1921,
@@ -275,7 +275,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_009',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     category: 'coin',
     title: '1940-S Walking Liberty Half Dollar',
     year: 1940,
@@ -293,7 +293,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_010',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     category: 'coin',
     title: '1917-S Standing Liberty Quarter, Type 1',
     year: 1917,
@@ -311,7 +311,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_011',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     category: 'coin',
     title: '1909-S VDB Lincoln Cent',
     year: 1909,
@@ -329,7 +329,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_012',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     category: 'coin',
     title: '1888 Indian Head Cent',
     year: 1888,
@@ -343,7 +343,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_013',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     category: 'coin',
     title: '1935 Buffalo Nickel',
     year: 1935,
@@ -360,7 +360,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_014',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     category: 'coin',
     title: '1908 Saint-Gaudens Double Eagle, No Motto',
     year: 1908,
@@ -377,7 +377,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_015',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     category: 'coin',
     title: '1907 Saint-Gaudens Double Eagle, High Relief',
     year: 1907,
@@ -394,7 +394,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_016',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     category: 'coin',
     title: '1963-D Franklin Half Dollar',
     year: 1963,
@@ -409,7 +409,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_017',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     category: 'coin',
     title: 'Mercury Dime, Date Worn',
     priceCents: 2000,
@@ -424,7 +424,7 @@ export const LISTINGS: Listing[] = [
   // ── Cards ────────────────────────────────────────────────────────────────
   {
     id: 'lst_018',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Ty Cobb, Portrait Green Background',
     year: 1909,
@@ -441,7 +441,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_019',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Walter Johnson, Portrait',
     year: 1909,
@@ -458,7 +458,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_020',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Joe Tinker, Portrait',
     year: 1909,
@@ -475,7 +475,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_021',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Roger Bresnahan, Portrait',
     year: 1909,
@@ -492,7 +492,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_022',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Tris Speaker',
     year: 1909,
@@ -509,7 +509,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_023',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Johnny Evers, Portrait',
     year: 1909,
@@ -543,7 +543,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_025',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T3 Turkey Red Ty Cobb',
     year: 1911,
@@ -560,7 +560,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_026',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Chief Bender, Portrait',
     year: 1909,
@@ -577,7 +577,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_027',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 John McGraw, Portrait',
     year: 1909,
@@ -594,7 +594,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_028',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1912 T207 Brown Background Zack Wheat',
     year: 1912,
@@ -608,7 +608,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_029',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T3 Turkey Red Christy Mathewson',
     year: 1911,
@@ -625,7 +625,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_030',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T205 Gold Border Ty Cobb',
     year: 1911,
@@ -643,7 +643,7 @@ export const LISTINGS: Listing[] = [
   // ── More coins ───────────────────────────────────────────────────────────
   coin({
     id: 'lst_031',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'kennedy',
     title: '1964 Kennedy Half Dollar',
     year: 1964,
@@ -675,7 +675,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_033',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'barberQuarter',
     title: '1899 Barber Quarter',
     year: 1899,
@@ -691,7 +691,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_034',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'washington',
     title: '1932-D Washington Quarter',
     year: 1932,
@@ -708,7 +708,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_035',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'washington',
     title: '1932-S Washington Quarter',
     year: 1932,
@@ -725,7 +725,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_036',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'franklin',
     title: '1958 Franklin Half Dollar',
     year: 1958,
@@ -741,7 +741,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_037',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'washington',
     title: '1964-D Washington Quarter',
     year: 1964,
@@ -758,7 +758,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_038',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'jefferson',
     title: '1942-P Jefferson Nickel, Silver',
     year: 1942,
@@ -775,7 +775,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_039',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'jefferson',
     title: '1939-D Jefferson Nickel',
     year: 1939,
@@ -792,7 +792,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_040',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'eagle',
     title: '2021 American Silver Eagle, Type 2',
     year: 2021,
@@ -824,7 +824,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_042',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'libertyNickel',
     title: '1900 Liberty Head Nickel',
     year: 1900,
@@ -840,7 +840,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_043',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'seatedDollar',
     title: '1860-O Seated Liberty Dollar',
     year: 1860,
@@ -857,7 +857,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_044',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'seatedDollar',
     title: '1872 Seated Liberty Dollar',
     year: 1872,
@@ -873,7 +873,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_045',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     type: 'indianEagle',
     title: '1911 Indian Head Eagle',
     year: 1911,
@@ -889,7 +889,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_046',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     type: 'indianEagle',
     title: '1932 Indian Head Eagle',
     year: 1932,
@@ -905,7 +905,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_047',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     type: 'libertyDoubleEagle',
     title: '1904 Liberty Head Double Eagle',
     year: 1904,
@@ -921,7 +921,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_048',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     type: 'libertyDoubleEagle',
     title: '1900-S Liberty Head Double Eagle',
     year: 1900,
@@ -938,7 +938,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_049',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'barberDime',
     title: '1899 Barber Dime',
     year: 1899,
@@ -954,7 +954,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_050',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'mercury',
     title: '1916-D Mercury Dime',
     year: 1916,
@@ -987,7 +987,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_052',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'tradeDollar',
     title: '1874-S Trade Dollar',
     year: 1874,
@@ -1004,7 +1004,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_053',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'tradeDollar',
     title: '1878-CC Trade Dollar',
     year: 1878,
@@ -1021,7 +1021,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_054',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'ike',
     title: '1971-S Eisenhower Dollar, Silver Proof',
     year: 1971,
@@ -1038,7 +1038,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_055',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     type: 'saint',
     title: '1924 Saint-Gaudens Double Eagle',
     year: 1924,
@@ -1054,7 +1054,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_056',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'morgan',
     title: '1881-S Morgan Dollar',
     year: 1881,
@@ -1071,7 +1071,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_057',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'morgan',
     title: '1878-CC Morgan Dollar',
     year: 1878,
@@ -1105,7 +1105,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_059',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     type: 'morgan',
     title: '1921 Morgan Dollar',
     year: 1921,
@@ -1118,7 +1118,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_060',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'peace',
     title: '1923 Peace Dollar',
     year: 1923,
@@ -1134,7 +1134,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_061',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'peace',
     title: '1928 Peace Dollar',
     year: 1928,
@@ -1167,7 +1167,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_063',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     type: 'walker',
     title: '1942 Walking Liberty Half Dollar',
     year: 1942,
@@ -1196,7 +1196,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_065',
-    sellerId: 'sel_carsoncity',
+    sellerId: 'mike',
     type: 'slq',
     title: '1928-S Standing Liberty Quarter',
     year: 1928,
@@ -1213,7 +1213,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_066',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'lincoln',
     title: '1955 Lincoln Cent, Doubled Die Obverse',
     year: 1955,
@@ -1229,7 +1229,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_067',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'lincoln',
     title: '1914-D Lincoln Cent',
     year: 1914,
@@ -1246,7 +1246,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_068',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'indianCent',
     title: '1877 Indian Head Cent',
     year: 1877,
@@ -1262,7 +1262,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_069',
-    sellerId: 'sel_wheatieshunter',
+    sellerId: 'mike',
     type: 'buffalo',
     title: '1937-D Buffalo Nickel, 3-Legged',
     year: 1937,
@@ -1279,7 +1279,7 @@ export const LISTINGS: Listing[] = [
   }),
   coin({
     id: 'lst_070',
-    sellerId: 'sel_bluesheet',
+    sellerId: 'mike',
     type: 'buffalo',
     title: '1938-D Buffalo Nickel',
     year: 1938,
@@ -1298,7 +1298,7 @@ export const LISTINGS: Listing[] = [
   // ── More cards ───────────────────────────────────────────────────────────
   {
     id: 'lst_071',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Christy Mathewson, Portrait',
     year: 1909,
@@ -1315,7 +1315,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_072',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T3 Turkey Red Nap Lajoie',
     year: 1911,
@@ -1332,7 +1332,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_073',
-    sellerId: 'sel_doubleeagle',
+    sellerId: 'mike',
     category: 'card',
     title: '1909 T206 Sweet Caporal Honus Wagner',
     year: 1909,
@@ -1350,7 +1350,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_074',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Cy Young, Glove Shows',
     year: 1909,
@@ -1367,7 +1367,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_075',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Rube Waddell, Portrait',
     year: 1909,
@@ -1381,7 +1381,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_076',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Sam Crawford, Batting',
     year: 1909,
@@ -1398,7 +1398,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_077',
-    sellerId: 'sel_attictreasure',
+    sellerId: 'mike',
     category: 'card',
     title: '1909 T206 Piedmont 150 Sherry Magie Error',
     year: 1909,
@@ -1416,7 +1416,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_078',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Ed Walsh',
     year: 1909,
@@ -1433,7 +1433,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_079',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Addie Joss, Portrait',
     year: 1909,
@@ -1450,7 +1450,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_080',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Walter Johnson, Hands at Chest',
     year: 1909,
@@ -1467,7 +1467,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_081',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Frank Chance, Portrait Red Background',
     year: 1909,
@@ -1484,7 +1484,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_082',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Three Finger Brown, Portrait',
     year: 1909,
@@ -1501,7 +1501,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_083',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1914 T330-2 Piedmont Art Stamps Eddie Collins',
     year: 1914,
@@ -1515,7 +1515,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_084',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T205 Gold Border Tris Speaker',
     year: 1911,
@@ -1532,7 +1532,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_085',
-    sellerId: 'sel_hoopslabs',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Eddie Collins',
     year: 1909,
@@ -1549,7 +1549,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_086',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T205 Gold Border Cy Young',
     year: 1911,
@@ -1566,7 +1566,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_087',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Ty Cobb, Portrait Red Background',
     year: 1909,
@@ -1583,7 +1583,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_088',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Jack Chesbro',
     year: 1909,
@@ -1600,7 +1600,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_089',
-    sellerId: 'sel_rookiecards',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Frank Baker',
     year: 1909,
@@ -1617,7 +1617,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_090',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1912 T227 Series of Champions Rube Marquard',
     year: 1912,
@@ -1634,7 +1634,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_091',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T3 Turkey Red Chief Bender',
     year: 1911,
@@ -1651,7 +1651,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_092',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Willie Keeler, Batting',
     year: 1909,
@@ -1668,7 +1668,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_093',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1912 T227 Series of Champions Home Run Baker',
     year: 1912,
@@ -1685,7 +1685,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_094',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Hughie Jennings, Both Hands Showing',
     year: 1909,
@@ -1702,7 +1702,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_095',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Hal Chase, Portrait Blue Background',
     year: 1909,
@@ -1716,7 +1716,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_096',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T3 Turkey Red Ed Walsh',
     year: 1911,
@@ -1733,7 +1733,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_097',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Rube Marquard, Portrait',
     year: 1909,
@@ -1750,7 +1750,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_098',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1911 T205 Gold Border Frank Baker',
     year: 1911,
@@ -1767,7 +1767,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_099',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Miller Huggins, Portrait',
     year: 1909,
@@ -1781,7 +1781,7 @@ export const LISTINGS: Listing[] = [
   },
   {
     id: 'lst_100',
-    sellerId: 'sel_holofoil',
+    sellerId: 'mike',
     category: 'card',
     title: '1909-11 T206 Christy Mathewson, Dark Cap',
     year: 1909,
