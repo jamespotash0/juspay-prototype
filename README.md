@@ -7,8 +7,6 @@ on through shipping, problems, returns and refunds.
 **Live demo:** <https://juspay-prototype.vercel.app>. [Try it](#try-it), right below,
 says how to sign in and what to click.
 
-[PLAN.md](PLAN.md) holds the full reasoning and sign-off log.
-
 ## Contents
 
 1. [Try it](#try-it)
