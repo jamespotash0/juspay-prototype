@@ -115,14 +115,7 @@ export default function Sell() {
       }
     >
       <div className="flex flex-col gap-10">
-        {orders && !loadError && (
-          <SellInsights
-            sales={orders.map((o) => ({
-              createdAt: o.createdAt,
-              ledger: shown(o.ledger),
-            }))}
-          />
-        )}
+        {!loadError && <BalanceStrip orders={orders} released={released} />}
 
         <section aria-labelledby="sell-sold">
           <SectionHeading id="sell-sold">{T.sales}</SectionHeading>
@@ -137,20 +130,7 @@ export default function Sell() {
               }}
             />
           ) : orders === null ? (
-            <Card padding="none">
-              <ul
-                aria-busy="true"
-                aria-label={T.loading}
-                className="divide-y divide-rule"
-              >
-                {[0, 1, 2].map((i) => (
-                  <li key={i} className="flex items-center gap-4 px-4 py-3 sm:px-5">
-                    <span className="size-12 shrink-0 animate-pulse rounded-control bg-well" />
-                    <span className="h-3 w-1/3 animate-pulse rounded-full bg-well" />
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            <SkeletonRows kind="sale" label={T.loading} />
           ) : orders.length === 0 ? (
             <EmptyState
               title={COPY.empty.sales.title}
@@ -172,7 +152,10 @@ export default function Sell() {
 
         <section aria-labelledby="sell-listings">
           <SectionHeading id="sell-listings">{T.listings}</SectionHeading>
-          {active.length === 0 ? (
+          {orders === null && !loadError ? (
+            // Wait for sales: until then we can't tell which listings have sold.
+            <SkeletonRows kind="listing" label={T.loadingListings} />
+          ) : active.length === 0 ? (
             <EmptyState
               title={COPY.empty.listings.title}
               fact={COPY.empty.listings.fact}
@@ -185,6 +168,15 @@ export default function Sell() {
             <Active listings={active} />
           )}
         </section>
+
+        {orders && !loadError && (
+          <SellInsights
+            sales={orders.map((o) => ({
+              createdAt: o.createdAt,
+              ledger: shown(o.ledger),
+            }))}
+          />
+        )}
       </div>
     </PageLayout>
   )
@@ -441,6 +433,10 @@ function Active({ listings }: { listings: Listing[] }) {
                   >
                     {l.title}
                   </Link>
+                  <Money
+                    cents={l.priceCents}
+                    className="text-sm font-semibold sm:hidden"
+                  />
                   <p className="truncate text-xs text-ink-muted">
                     {T.listedOn} {shortDate(l.createdAt)} ·{' '}
                     {l.shippingCents === 0 ? (
@@ -452,7 +448,10 @@ function Active({ listings }: { listings: Listing[] }) {
                     )}
                   </p>
                 </div>
-                <Money cents={l.priceCents} className="text-sm font-semibold" />
+                <Money
+                  cents={l.priceCents}
+                  className="text-sm font-semibold max-sm:hidden"
+                />
                 <Button size="sm" variant="quiet" onClick={() => setRemoving(l)}>
                   {T.remove}
                 </Button>
@@ -476,5 +475,112 @@ function Active({ listings }: { listings: Listing[] }) {
         onCancel={() => setRemoving(null)}
       />
     </div>
+  )
+}
+
+/** Pending, available and commission at a glance. Marking a sale shipped moves money across. */
+function BalanceStrip({
+  orders,
+  released,
+}: {
+  orders: OrderView[] | null
+  released: string | null
+}) {
+  const ledgers = (orders ?? []).map((o) => shown(o.ledger))
+  const total = (b: SellerLedger['balance']) =>
+    ledgers.filter((l) => l.balance === b).reduce((n, l) => n + l.netCents, 0)
+  const count = (b: SellerLedger['balance']) =>
+    ledgers.filter((l) => l.balance === b).length
+  const commission = ledgers.reduce((n, l) => n + l.commissionCents, 0)
+  const boxes = [
+    {
+      label: T.pendingBox,
+      cents: total('pending'),
+      note: T.notShipped(count('pending')),
+      swatch: 'bg-chart-pending',
+      motion: released ? 'release-out' : '',
+    },
+    {
+      label: T.available,
+      cents: total('available'),
+      note: T.shipped(count('available')),
+      swatch: 'bg-state-paid',
+      motion: released ? 'release-in' : '',
+    },
+    {
+      label: T.commission,
+      cents: commission,
+      note: T.commissionNote,
+      swatch: 'bg-ink-muted',
+      motion: '',
+    },
+  ]
+  return (
+    <section aria-label={T.balance} className="grid grid-cols-3 gap-2 sm:gap-4">
+      {boxes.map((b) => (
+        // A new key replays the animation for each release.
+        <Card
+          key={`${b.label}-${released}`}
+          padding="sm"
+          className="flex min-w-0 flex-col gap-1 max-sm:p-3"
+        >
+          <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-muted sm:gap-2">
+            <span
+              aria-hidden="true"
+              className={`size-2 shrink-0 rounded-full ${b.swatch}`}
+            />
+            <span className="truncate">{b.label}</span>
+          </p>
+          {orders ? (
+            <>
+              <Money
+                cents={b.cents}
+                className={`text-base font-bold tracking-tight sm:text-2xl ${b.motion}`}
+              />
+              <p className="hidden text-xs text-ink-muted sm:block">{b.note}</p>
+            </>
+          ) : (
+            <div aria-hidden="true" className="flex flex-col gap-2 py-1">
+              <span className="h-6 w-28 animate-pulse rounded-full bg-well" />
+              <span className="h-3 w-36 animate-pulse rounded-full bg-well" />
+            </div>
+          )}
+        </Card>
+      ))}
+    </section>
+  )
+}
+
+/** Placeholder rows the same shape as a sale or listing row, while /api/orders loads. */
+function SkeletonRows({ kind, label }: { kind: 'sale' | 'listing'; label: string }) {
+  return (
+    <Card padding="none">
+      <ul aria-busy="true" aria-label={label} className="divide-y divide-rule">
+        {[0, 1, 2].map((i) => (
+          <li
+            key={i}
+            className={`flex items-center gap-3 px-4 sm:gap-4 sm:px-5 ${kind === 'sale' ? 'py-3' : 'py-2.5'}`}
+          >
+            <span className="size-12 shrink-0 animate-pulse rounded-control bg-well" />
+            <span className="flex min-w-0 flex-1 flex-col gap-2">
+              <span className="h-3.5 w-3/5 max-w-72 animate-pulse rounded-full bg-well" />
+              <span className="h-3 w-2/5 max-w-48 animate-pulse rounded-full bg-well" />
+            </span>
+            {kind === 'sale' && (
+              <span className="hidden h-6 w-20 animate-pulse rounded-full bg-well sm:block" />
+            )}
+            <span className="flex shrink-0 flex-col items-end gap-1.5 sm:w-28">
+              <span className="h-3.5 w-16 animate-pulse rounded-full bg-well" />
+              {kind === 'sale' && (
+                <span className="h-3 w-12 animate-pulse rounded-full bg-well" />
+              )}
+            </span>
+            {kind === 'listing' && (
+              <span className="h-8 w-16 animate-pulse rounded-full bg-well" />
+            )}
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }
