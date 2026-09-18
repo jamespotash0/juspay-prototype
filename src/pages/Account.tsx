@@ -59,14 +59,15 @@ export default function Account() {
       }
     >
       <div className="flex flex-col gap-4 sm:gap-5">
+        {/* Each key is prefixed: same-key siblings warn, and switching account must remount all three. */}
         <Profile
-          key={persona.id}
+          key={`profile-${persona.id}`}
           id={persona.id}
           email={persona.email}
           provider={session.provider}
         />
         {isCollector && <Addresses key={`addr-${persona.id}`} id={persona.id} />}
-        {isCollector && <PaymentMethods key={persona.id} customer={persona.id} />}
+        {isCollector && <PaymentMethods key={`pm-${persona.id}`} customer={persona.id} />}
 
         <Card as="section" aria-labelledby="demo">
           <SectionHeading id="demo">{T.demo}</SectionHeading>
