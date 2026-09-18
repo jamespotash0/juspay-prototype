@@ -42,7 +42,9 @@ export default function Checkout() {
   const [busy, setBusy] = useState(false)
   // True while the SDK is confirming: the address can't change under a live payment.
   const [paying, setPaying] = useState(false)
+  // A decline shows the reason as the title and the "what now" line as the body.
   const [message, setMessage] = useState('')
+  const [hint, setHint] = useState('')
 
   const close = () => navigate(location.pathname, { replace: true, scroll: false })
 
@@ -77,10 +79,16 @@ export default function Checkout() {
       </Sheet>
     )
 
-  async function start(e: FormEvent) {
+  function start(e: FormEvent) {
     e.preventDefault()
-    setBusy(true)
     setMessage('')
+    setHint('')
+    void startSession()
+  }
+
+  /** Creates the payment for this cart, or resumes the attempt already stored for it. */
+  async function startSession() {
+    setBusy(true)
     // Stored before the fetch: a timeout, refresh or double-submit resumes this same payment.
     const attemptId = attemptFor(lines)
     saveAddresses(persona, { shipTo, billTo: billingSame ? null : billTo })
@@ -106,8 +114,30 @@ export default function Checkout() {
       if (code === 'IN_PROGRESS') return navigate(`/order/${attemptId}`)
       if (code === 'AMOUNT_MISMATCH') clearAttempt(attemptId)
       setMessage(err instanceof Error && err.message ? err.message : TEXT.startFailed)
+      setHint('')
     } finally {
       setBusy(false)
+    }
+  }
+
+  // A decline keeps the buyer in checkout, but the SDK's word isn't taken for it: the server reads
+  // the real status, and only a definite 'failed' stays here. Anything else goes to the order page.
+  async function afterSubmit(paymentId: string) {
+    try {
+      const view = await api.payment(paymentId)
+      if (view.state !== 'failed') return navigate(`/order/${paymentId}`)
+      setPaying(false)
+      setMessage(view.decline?.message ?? COPY.decline.generic.message)
+      setHint(
+        view.decline?.retriable ? COPY.checkout.softDecline : COPY.checkout.hardDecline,
+      )
+      // A failed payment can't be confirmed again, so trying another card needs a fresh one.
+      clearAttempt(paymentId)
+      setSession(null)
+      await startSession()
+    } catch {
+      // Outcome unknown: the order page reads the truth and tells the buyer not to pay again.
+      navigate(`/order/${paymentId}`)
     }
   }
 
@@ -245,7 +275,7 @@ export default function Checkout() {
 
       <section className={step} aria-labelledby="pay">
         <div id="pay">{stepTitle(2, TEXT.payment)}</div>
-        {message && <Notice tone="danger" title={message} body={null} />}
+        {message && <Notice tone="danger" title={message} body={hint || null} />}
         {session && defaultCard && (
           <p className="text-sm text-ink-muted">
             {TEXT.savedHint(
@@ -263,7 +293,7 @@ export default function Checkout() {
             publishableKey={session.publishableKey}
             paymentId={session.paymentId}
             totalCents={session.breakdown.totalCents}
-            onSubmitted={() => navigate(`/order/${session.paymentId}`)}
+            onSubmitted={() => void afterSubmit(session.paymentId)}
             onError={setMessage}
             onSubmittingChange={setPaying}
           />

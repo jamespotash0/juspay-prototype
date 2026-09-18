@@ -44,8 +44,8 @@ const sdk = (page: Page) =>
     'iframe[name="orca-payment-element-iframeRef-orca-elements-payment-element-unified-checkout"]',
   )
 
-/** Card details go into the Hyperswitch iframe only, never our DOM. Returns the new order's payment id. */
-export async function payByCard(page: Page, card: string): Promise<string> {
+/** Card details go into the Hyperswitch iframe only, never our DOM. Fills the form and presses Pay. */
+export async function submitCard(page: Page, card: string) {
   const fields = sdk(page).frameLocator(
     'iframe[name="orca-payment-element-iframeRef-parent-card-inner-iframe-container"]',
   )
@@ -73,6 +73,11 @@ export async function payByCard(page: Page, card: string): Promise<string> {
   }).toPass({ timeout: 30_000 })
   // The button reads "Pay $X.XX" once the server total is known.
   await page.getByRole('button', { name: /^Pay\b/ }).click()
+}
+
+/** Pays with a card that goes through: the buyer lands on the order page. Returns its payment id. */
+export async function payByCard(page: Page, card: string): Promise<string> {
+  await submitCard(page, card)
   await page
     .waitForURL(/\/order\/cka_[0-9a-f]{22}$/, { timeout: 45_000 })
     .catch(async (err) => {
@@ -83,6 +88,18 @@ export async function payByCard(page: Page, card: string): Promise<string> {
       throw err
     })
   return page.url().split('/order/')[1]
+}
+
+/**
+ * Pays with a card that will be declined. A decline keeps the buyer in checkout, so there is no
+ * redirect to wait for: the notice appears in the sheet and the payment form is rebuilt behind it.
+ */
+export async function payExpectingDecline(page: Page, card: string, message: string) {
+  await submitCard(page, card)
+  const notice = page.getByRole('alert').filter({ hasText: message })
+  await expect(notice).toBeVisible({ timeout: 45_000 })
+  await expect(page).not.toHaveURL(/\/order\//)
+  return notice
 }
 
 export function paypalButton(page: Page) {
