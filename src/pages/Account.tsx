@@ -256,19 +256,24 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
     }
   }
 
-  // The SDK doesn't report the outcome; the saved-card list is the truth. It can lag the confirm by a
-  // moment, so look a few times before saying it didn't save.
-  async function confirmSaved() {
+  // The SDK doesn't report the outcome, so the server reads the $0 payment. The card list can't
+  // answer this: Hyperswitch dedupes a card the buyer already has, so a successful re-save adds
+  // nothing to it. The payment can still be settling, so look a few times before giving up.
+  async function confirmSaved(paymentId: string) {
     setAddState('saving')
-    const before = new Set(cards?.map((c) => c.id))
     for (let i = 0; i < 5; i++) {
       try {
-        const next = await api.paymentMethods(customer)
-        if (next.some((c) => !before.has(c.id))) {
-          setCards(next)
+        const { state } = await api.saveCardStatus(paymentId)
+        if (state === 'paid') {
+          // Best effort: the card is saved either way, so a slow list read mustn't read as a failure.
+          await api
+            .paymentMethods(customer)
+            .then(setCards)
+            .catch(() => setAttempt((n) => n + 1))
           closeAdding()
           return
         }
+        if (state === 'failed' || state === 'cancelled') break
       } catch {
         // try again below
       }
@@ -447,7 +452,7 @@ function PaymentMethods({ customer }: { customer: PersonaId }) {
                   publishableKey={adding.publishableKey}
                   paymentId={adding.paymentId}
                   returnUrl={`${location.origin}/account`}
-                  onSubmitted={confirmSaved}
+                  onSubmitted={() => void confirmSaved(adding.paymentId)}
                   onError={() => setAddState('notSaved')}
                 />
               </Suspense>

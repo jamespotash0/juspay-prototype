@@ -7,6 +7,7 @@ import type {
   OrdersResponse,
   PaymentMethodsResponse,
   SaveCardResponse,
+  SaveCardStatus,
   PersonaId,
   RefundRequest,
 } from '../shared/types.ts'
@@ -75,6 +76,8 @@ export const api = {
     ).then((r) => (r.orders.forEach(remember), r)),
   saveCard: (customer: PersonaId) =>
     post<SaveCardResponse>('/api/save-card', { customer }),
+  saveCardStatus: (id: string) =>
+    call<SaveCardStatus>(`/api/save-card?id=${encodeURIComponent(id)}`),
   paymentMethods: (customer: PersonaId) =>
     call<PaymentMethodsResponse>(
       `/api/payment-methods?customer=${encodeURIComponent(customer)}`,

@@ -261,6 +261,11 @@ export interface SaveCardResponse {
   publishableKey: string
 }
 
+/** GET /api/save-card?id=<paymentId>: how the $0 card-saving payment ended. */
+export interface SaveCardStatus {
+  state: PaymentState
+}
+
 /** GET /api/payment-methods?customer=<id>, and DELETE …&id=<id> */
 export interface PaymentMethodsResponse {
   methods: SavedCard[]

@@ -1,6 +1,7 @@
 import { newAttemptId } from '../src/shared/attempt.js'
+import { mapStatus } from '../src/shared/orderState.js'
 import { PERSONAS } from '../src/shared/seed.js'
-import type { SaveCardResponse } from '../src/shared/types.js'
+import type { SaveCardStatus, SaveCardResponse } from '../src/shared/types.js'
 import { hsFetch } from './_lib/hyperswitch.js'
 import { jsonError, type HsPayment } from './_lib/orderView.js'
 
@@ -61,5 +62,24 @@ export async function POST(request: Request): Promise<Response> {
     } satisfies SaveCardResponse)
   } catch {
     return jsonError(500, 'INTERNAL', 'Something went wrong starting to save a card')
+  }
+}
+
+/**
+ * GET /api/save-card?id=<cks_…> → the $0 payment's state.
+ * The saved-card list can't answer "did this save work": Hyperswitch dedupes a card the buyer
+ * already has to the same payment_method_id, so a successful re-save adds nothing to the list.
+ */
+export async function GET(request: Request): Promise<Response> {
+  try {
+    const id = new URL(request.url).searchParams.get('id') ?? ''
+    // Only ids this endpoint issues: anything else is a checkout payment or someone guessing.
+    if (!/^cks_[0-9a-f]{22}$/.test(id))
+      return jsonError(400, 'BAD_REQUEST', 'Invalid save-card id')
+    const read = await hsFetch<HsPayment>(`/payments/${id}`)
+    if (!read.ok) return jsonError(502, 'UPSTREAM', "We couldn't read that card save")
+    return Response.json({ state: mapStatus(read.data.status) } satisfies SaveCardStatus)
+  } catch {
+    return jsonError(500, 'INTERNAL', 'Something went wrong reading that card save')
   }
 }
